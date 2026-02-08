@@ -1,0 +1,29 @@
+{
+  "name": "voyager",
+  "version": "0.1.0",
+  "private": false,
+  "description": "Voyager — visual agent builder with flow execution, structured outputs, webhooks, and websockets.",
+  "scripts": {
+    "dev": "bun --watch src/server.ts",
+    "build": "bunx tsc -p tsconfig.json",
+    "start": "bun dist/server.js",
+    "check": "bunx tsc -p tsconfig.json --noEmit",
+    "test": "bun test"
+  },
+  "dependencies": {
+    "express": "^4.21.2",
+    "openai": "^4.104.0",
+    "ws": "^8.18.0"
+  },
+  "devDependencies": {
+    "@types/express": "^4.17.23",
+    "@types/node": "^22.13.4",
+    "@types/ws": "^8.5.14",
+    "typescript": "^5.8.2"
+  },
+  "engines": {
+    "node": ">=20"
+  },
+  "license": "MIT",
+  "packageManager": "bun@1.3.3"
+}

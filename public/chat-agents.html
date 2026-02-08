@@ -1,0 +1,171 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Chat Console - Voyager</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
+    <link rel="stylesheet" href="/design-system.css" />
+    <link rel="stylesheet" href="/chat/chat.css" />
+  </head>
+  <body>
+    <!-- Navigation -->
+    <nav class="top-nav">
+      <div class="top-nav-inner">
+        <a href="/" class="nav-brand">
+          <div class="nav-brand-icon">
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2L2 7l10 5 10-5-10-5z"/><path d="M2 17l10 5 10-5"/><path d="M2 12l10 5 10-5"/></svg>
+          </div>
+          <span class="nav-brand-text">Voyager</span>
+        </a>
+        
+        <div class="nav-links">
+          <a href="/editor" class="nav-link">
+            <svg class="nav-link-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 19l7-7 3 3-7 7-3-3z"/><path d="M18 13l-1.5-7.5L2 2l3.5 14.5L13 18l5-5z"/><path d="M2 2l7.586 7.586"/><circle cx="11" cy="11" r="2"/></svg>
+            Flow Editor
+          </a>
+          <a href="/chat" class="nav-link active">
+            <svg class="nav-link-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+            Chat Console
+          </a>
+          <a href="/ops" class="nav-link">
+            <svg class="nav-link-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
+            Ops Console
+          </a>
+        </div>
+        
+        <div class="nav-actions">
+          <button id="refreshBtn" class="btn btn-ghost btn-sm">
+            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg>
+            Refresh
+          </button>
+        </div>
+      </div>
+    </nav>
+
+    <!-- Chat Layout -->
+    <main class="chat-layout">
+      <!-- Left Sidebar: Agents & Threads -->
+      <aside class="chat-sidebar">
+        <!-- Agents Section -->
+        <div class="sidebar-section">
+          <div class="section-header">
+            <h3 class="section-title">
+              <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+              Agents
+            </h3>
+            <label class="toggle-label">
+              <input id="showAllToggle" type="checkbox" />
+              <span>Show all</span>
+            </label>
+          </div>
+          <div id="agentList" class="agent-list">
+            <div class="empty-state">
+              <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+              <p>No agents available</p>
+            </div>
+          </div>
+        </div>
+
+        <!-- Threads Section -->
+        <div class="sidebar-section sidebar-section-threads">
+          <div class="section-header">
+            <h3 class="section-title">
+              <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+              Threads
+            </h3>
+            <button id="newThreadBtn" class="btn btn-primary btn-sm">
+              <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+              New
+            </button>
+          </div>
+          <div id="threadList" class="thread-list">
+            <div class="empty-state">
+              <p>No threads yet</p>
+            </div>
+          </div>
+          <div class="thread-actions">
+            <button id="renameThreadBtn" class="btn btn-ghost btn-sm" disabled>Rename</button>
+            <button id="archiveThreadBtn" class="btn btn-ghost btn-sm" disabled>Archive</button>
+            <button id="deleteThreadBtn" class="btn btn-danger btn-sm" disabled>Delete</button>
+          </div>
+        </div>
+      </aside>
+
+      <!-- Center: Chat Area -->
+      <section class="chat-main">
+        <header class="chat-header">
+          <div class="chat-header-info">
+            <div id="agentBadge" class="agent-badge">
+              <span class="badge-dot"></span>
+              Select an agent
+            </div>
+            <h2 id="chatTitle" class="chat-title">Chat Console</h2>
+            <p id="threadBadge" class="thread-badge">No thread selected</p>
+          </div>
+          <button id="finalizeBtn" class="btn btn-primary">
+            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
+            Finalize + Deploy
+          </button>
+        </header>
+
+        <div id="messages" class="messages">
+          <div class="welcome-message">
+            <div class="welcome-icon">
+              <svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+            </div>
+            <h3>Welcome to Chat Console</h3>
+            <p>Select an agent from the sidebar to start chatting.<br>Only finalized agents can be prompted by default.</p>
+          </div>
+        </div>
+
+        <footer class="chat-composer">
+          <div class="composer-input-wrap">
+            <textarea id="promptInput" class="composer-input" placeholder="Message finalized agent..." spellcheck="false" disabled></textarea>
+            <button id="sendBtn" class="composer-send" disabled>
+              <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
+            </button>
+          </div>
+          <p id="sendHint" class="composer-hint">Only finalized + deployed agents can be prompted by default</p>
+        </footer>
+      </section>
+
+      <!-- Right Sidebar: Agent Details -->
+      <aside class="chat-details">
+        <div class="details-section">
+          <h4 class="details-title">Agent Status</h4>
+          <pre id="statusPane" class="details-code">{ "status": "ready" }</pre>
+        </div>
+        
+        <div class="details-section">
+          <h4 class="details-title">Agent Details</h4>
+          <div id="agentDetails" class="details-list">
+            <div class="details-empty">Select an agent to view details</div>
+          </div>
+        </div>
+
+        <div class="details-section details-section-meta">
+          <h4 class="details-title">Quick Stats</h4>
+          <div class="stats-grid">
+            <div class="stat-item">
+              <span class="stat-value">-</span>
+              <span class="stat-label">Eval Pass Rate</span>
+            </div>
+            <div class="stat-item">
+              <span class="stat-value">-</span>
+              <span class="stat-label">Deployments</span>
+            </div>
+            <div class="stat-item">
+              <span class="stat-value">-</span>
+              <span class="stat-label">Threads</span>
+            </div>
+          </div>
+        </div>
+      </aside>
+    </main>
+
+    <script src="/chat-agents.js"></script>
+  </body>
+</html>

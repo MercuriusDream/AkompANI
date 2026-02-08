@@ -1,0 +1,177 @@
+/* Ops Console - Clean, Minimal Style */
+
+.ops-layout {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 24px;
+  width: 100%;
+}
+
+.ops-header {
+  margin-bottom: 24px;
+}
+
+.ops-header h1 {
+  font-size: var(--text-2xl);
+  font-weight: var(--font-semibold);
+  margin: 0 0 6px;
+}
+
+.ops-header p {
+  color: var(--text-secondary);
+  margin: 0;
+}
+
+/* Context Grid */
+.context-grid {
+  display: grid;
+  grid-template-columns: 300px minmax(0, 1fr);
+  gap: 16px;
+  margin-bottom: 24px;
+}
+
+.ops-panel {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  padding: 16px;
+}
+
+.ops-panel h2 {
+  margin: 0 0 16px;
+  font-size: var(--text-base);
+  font-weight: var(--font-semibold);
+}
+
+.ops-field {
+  margin-bottom: 12px;
+}
+
+.ops-field label {
+  display: block;
+  font-size: var(--text-xs);
+  font-weight: var(--font-semibold);
+  color: var(--text-secondary);
+  margin-bottom: 4px;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.ops-field input,
+.ops-field select,
+.ops-field textarea {
+  width: 100%;
+  padding: 8px 10px;
+  font-size: var(--text-sm);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  background: var(--bg);
+  color: var(--text);
+  font-family: var(--font-sans);
+}
+
+.ops-field textarea {
+  min-height: 140px;
+  font-family: var(--font-mono);
+  font-size: 12px;
+  resize: vertical;
+}
+
+.ops-field input:focus,
+.ops-field select:focus,
+.ops-field textarea:focus {
+  outline: none;
+  border-color: var(--brand);
+  box-shadow: 0 0 0 2px rgba(99, 102, 241, 0.1);
+}
+
+.ops-output {
+  margin: 0;
+  min-height: 200px;
+  max-height: 360px;
+  overflow: auto;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  padding: 12px;
+  background: var(--bg);
+  font-family: var(--font-mono);
+  font-size: 12px;
+  line-height: 1.5;
+  white-space: pre-wrap;
+  word-break: break-word;
+  color: var(--text-secondary);
+}
+
+/* Prompt Grid */
+.prompt-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 16px;
+}
+
+.prompt-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  transition: all var(--transition-fast);
+}
+
+.prompt-card:hover {
+  border-color: var(--border-strong);
+  box-shadow: var(--shadow-sm);
+}
+
+.prompt-title {
+  margin: 0;
+  font-size: var(--text-base);
+  font-weight: var(--font-semibold);
+}
+
+.prompt-desc {
+  margin: 0;
+  color: var(--text-secondary);
+  font-size: var(--text-sm);
+  min-height: 40px;
+}
+
+.prompt-actions {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+  margin-top: auto;
+}
+
+/* Dark Mode Overrides */
+[data-theme="dark"] .ops-field input:focus,
+[data-theme="dark"] .ops-field select:focus,
+[data-theme="dark"] .ops-field textarea:focus {
+  box-shadow: 0 0 0 2px rgba(129, 140, 248, 0.15);
+}
+
+/* Responsive */
+@media (max-width: 1024px) {
+  .context-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .prompt-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+@media (max-width: 640px) {
+  .ops-layout {
+    padding: 16px;
+  }
+  
+  .prompt-grid {
+    grid-template-columns: 1fr;
+  }
+}

@@ -1,0 +1,656 @@
+<!doctype html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Voyager</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="/design-system.css" />
+  <link rel="stylesheet" href="/landing.css" />
+  <link rel="manifest" href="/manifest.json" />
+  <script>(function () { var t = localStorage.getItem('voyager-theme'); if (!t) t = matchMedia('(prefers-color-scheme:dark)').matches ? 'dark' : 'light'; document.documentElement.setAttribute('data-theme', t) })()</script>
+</head>
+
+<body>
+  <!-- Navigation -->
+  <nav class="top-nav landing-nav">
+    <div class="top-nav-inner">
+      <div class="nav-links">
+        <a href="/editor" class="nav-link">Flow Editor</a>
+        <a href="/chat" class="nav-link">Chat</a>
+        <a href="/ops" class="nav-link">Ops</a>
+        <a href="https://docs.voyager.dev" target="_blank" class="nav-link">Docs</a>
+      </div>
+      <div class="nav-actions">
+        <button id="themeToggle" class="btn btn-ghost btn-icon btn-sm" title="Toggle theme">
+          <svg class="theme-icon-light" xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24"
+            fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <circle cx="12" cy="12" r="5" />
+            <line x1="12" y1="1" x2="12" y2="3" />
+            <line x1="12" y1="21" x2="12" y2="23" />
+            <line x1="4.22" y1="4.22" x2="5.64" y2="5.64" />
+            <line x1="18.36" y1="18.36" x2="19.78" y2="19.78" />
+            <line x1="1" y1="12" x2="3" y2="12" />
+            <line x1="21" y1="12" x2="23" y2="12" />
+            <line x1="4.22" y1="19.78" x2="5.64" y2="18.36" />
+            <line x1="18.36" y1="5.64" x2="19.78" y2="4.22" />
+          </svg>
+          <svg class="theme-icon-dark" xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24"
+            fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z" />
+          </svg>
+        </button>
+        <a href="https://github.com" target="_blank" class="btn btn-ghost btn-sm">
+          <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
+            <path
+              d="M12 0c-6.626 0-12 5.373-12 12 0 5.302 3.438 9.8 8.207 11.387.599.111.793-.261.793-.577v-2.234c-3.338.726-4.033-1.416-4.033-1.416-.546-1.387-1.333-1.756-1.333-1.756-1.089-.745.083-.729.083-.729 1.205.084 1.839 1.237 1.839 1.237 1.07 1.834 2.807 1.304 3.492.997.107-.775.418-1.305.762-1.604-2.665-.305-5.467-1.334-5.467-5.931 0-1.311.469-2.381 1.236-3.221-.124-.303-.535-1.524.117-3.176 0 0 1.008-.322 3.301 1.23.957-.266 1.983-.399 3.003-.404 1.02.005 2.047.138 3.006.404 2.291-1.552 3.297-1.23 3.297-1.23.653 1.653.242 2.874.118 3.176.77.84 1.235 1.911 1.235 3.221 0 4.609-2.807 5.624-5.479 5.921.43.372.823 1.102.823 2.222v3.293c0 .319.192.694.801.576 4.765-1.589 8.199-6.086 8.199-11.386 0-6.627-5.373-12-12-12z" />
+          </svg>
+        </a>
+      </div>
+    </div>
+  </nav>
+
+  <!-- Hero -->
+  <header class="hero">
+    <canvas class="hero-canvas" id="heroCanvas"></canvas>
+    <canvas class="hero-particles" id="heroParticles"></canvas>
+    <div class="container">
+      <div class="hero-content">
+        <h1 class="hero-title">
+          <a href="/editor" class="hero-word"><span class="hero-word-text">Build</span><span
+              class="hero-word-label">Flow Editor</span></a><span class="hero-punct">,</span>
+          <a href="/chat" class="hero-word"><span class="hero-word-text">run</span><span class="hero-word-label">Chat
+              Console</span></a><span class="hero-punct">,</span>
+          <a href="/ops" class="hero-word"><span class="hero-word-text">deploy</span><span class="hero-word-label">Ops
+              Console</span></a><span class="hero-punct">.</span>
+          <br />Voyage the Frontier.
+        </h1>
+        <div class="hero-actions">
+          <a href="/editor" class="btn btn-primary btn-lg press-feedback">Get Started</a>
+          <a href="https://docs.voyager.dev" target="_blank" class="btn btn-secondary btn-lg">Documentation</a>
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <!-- Features -->
+  <section class="features">
+    <div class="container">
+      <div class="features-grid">
+
+        <!-- Visual Flow Runtime -->
+        <div class="feature-card reveal hover-lift" data-modal="flow">
+          <div class="feature-card-visual">
+            <div class="fv-flow">
+              <div class="fv-node fv-node--green">
+                <span class="fv-node-dot"></span>
+                <span class="fv-node-label">Start</span>
+                <span class="fv-node-type">webhook</span>
+              </div>
+              <div class="fv-edge"><span class="fv-edge-tip"></span></div>
+              <div class="fv-node fv-node--blue">
+                <span class="fv-node-dot"></span>
+                <span class="fv-node-label">LLM Call</span>
+                <span class="fv-node-type">gpt-4o</span>
+              </div>
+              <div class="fv-edge"><span class="fv-edge-tip"></span></div>
+              <div class="fv-node fv-node--purple">
+                <span class="fv-node-dot"></span>
+                <span class="fv-node-label">If / Else</span>
+                <span class="fv-node-type">score &gt; 0.8</span>
+              </div>
+              <div class="fv-edge"><span class="fv-edge-tip"></span></div>
+              <div class="fv-node fv-node--amber">
+                <span class="fv-node-dot"></span>
+                <span class="fv-node-label">Tool Call</span>
+                <span class="fv-node-type">web_search</span>
+              </div>
+              <div class="fv-edge"><span class="fv-edge-tip"></span></div>
+              <div class="fv-node fv-node--green">
+                <span class="fv-node-dot"></span>
+                <span class="fv-node-label">Response</span>
+                <span class="fv-node-type">json</span>
+              </div>
+            </div>
+          </div>
+          <div class="feature-card-body">
+            <h3>Visual Flow Runtime</h3>
+            <p class="feature-card-agenda">Wire agents visually with a node-based editor</p>
+            <p class="feature-card-brief">Drag-and-drop 20+ node types to build multi-step agent pipelines. No code
+              required.</p>
+          </div>
+        </div>
+
+        <!-- Built-in Eval -->
+        <div class="feature-card reveal hover-lift" data-modal="eval">
+          <div class="feature-card-visual">
+            <div class="fv-eval">
+              <div class="fv-eval-bar">
+                <div class="fv-eval-dots">
+                  <span></span><span></span><span></span>
+                </div>
+                <span class="fv-eval-bartitle">eval — 3/4 passed</span>
+              </div>
+              <div class="fv-eval-row fv-eval-row--pass">
+                <span class="fv-eval-icon">
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"
+                    stroke-linecap="round" stroke-linejoin="round">
+                    <polyline points="20 6 9 17 4 12" />
+                  </svg>
+                </span>
+                <span class="fv-eval-label">validates output schema</span>
+                <span class="fv-eval-bar fv-eval-bar--pass"></span>
+                <span class="fv-eval-time">42ms</span>
+              </div>
+              <div class="fv-eval-row fv-eval-row--pass">
+                <span class="fv-eval-icon">
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"
+                    stroke-linecap="round" stroke-linejoin="round">
+                    <polyline points="20 6 9 17 4 12" />
+                  </svg>
+                </span>
+                <span class="fv-eval-label">handles edge cases</span>
+                <span class="fv-eval-bar fv-eval-bar--pass"></span>
+                <span class="fv-eval-time">67ms</span>
+              </div>
+              <div class="fv-eval-row fv-eval-row--fail">
+                <span class="fv-eval-icon">
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"
+                    stroke-linecap="round" stroke-linejoin="round">
+                    <line x1="18" y1="6" x2="6" y2="18" />
+                    <line x1="6" y1="6" x2="18" y2="18" />
+                  </svg>
+                </span>
+                <span class="fv-eval-label">tone matches brand</span>
+                <span class="fv-eval-bar fv-eval-bar--fail"></span>
+                <span class="fv-eval-time">128ms</span>
+              </div>
+              <div class="fv-eval-row fv-eval-row--pass">
+                <span class="fv-eval-icon">
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"
+                    stroke-linecap="round" stroke-linejoin="round">
+                    <polyline points="20 6 9 17 4 12" />
+                  </svg>
+                </span>
+                <span class="fv-eval-label">latency under 200ms</span>
+                <span class="fv-eval-bar fv-eval-bar--pass"></span>
+                <span class="fv-eval-time">31ms</span>
+              </div>
+            </div>
+          </div>
+          <div class="feature-card-body">
+            <h3>Built-in Eval</h3>
+            <p class="feature-card-agenda">Catch regressions before they ship</p>
+            <p class="feature-card-brief">Define test cases with assertions. Run suites against your agents. Track pass
+              rates over time.</p>
+          </div>
+        </div>
+
+        <!-- One-Click Deploy -->
+        <div class="feature-card reveal hover-lift" data-modal="deploy">
+          <div class="feature-card-visual">
+            <div class="fv-deploy">
+              <div class="fv-deploy-window">
+                <div class="fv-deploy-bar">
+                  <div class="fv-deploy-dots">
+                    <span></span><span></span><span></span>
+                  </div>
+                  <span class="fv-deploy-title">Terminal</span>
+                </div>
+                <div class="fv-deploy-lines">
+                  <div class="fv-deploy-line fv-deploy-line--dim"><span class="fv-deploy-prompt">$</span> wrangler
+                    deploy --env production</div>
+                  <div class="fv-deploy-line fv-deploy-line--muted">Compiling worker...</div>
+                  <div class="fv-deploy-line fv-deploy-line--muted">Uploading bundle (24.3 KB)</div>
+                  <div class="fv-deploy-line fv-deploy-line--success">Deployed to production</div>
+                  <div class="fv-deploy-line fv-deploy-line--url">https://agent.workers.dev</div>
+                  <div class="fv-deploy-line fv-deploy-line--dim"><span class="fv-deploy-prompt">$</span> <span
+                      class="fv-deploy-cursor"></span></div>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div class="feature-card-body">
+            <h3>One-Click Deploy</h3>
+            <p class="feature-card-agenda">From local to 300+ edge locations in seconds</p>
+            <p class="feature-card-brief">Generate a production-ready Cloudflare Worker with Bun runtime and Elysia REST
+              server.</p>
+          </div>
+        </div>
+
+        <!-- Bring Your Own Model -->
+        <div class="feature-card reveal hover-lift" data-modal="models">
+          <div class="feature-card-visual">
+            <div class="fv-models">
+              <div class="fv-model-chip fv-model-chip--active">
+                <span class="fv-model-indicator"></span>Claude 4.6 Opus
+              </div>
+              <div class="fv-model-chip">
+                <span class="fv-model-indicator"></span>GPT-5.3-Codex
+              </div>
+              <div class="fv-model-chip">
+                <span class="fv-model-indicator"></span>Gemini 3.0 Pro
+              </div>
+              <div class="fv-model-chip">
+                <span class="fv-model-indicator"></span>Grok 4.1 Thinking
+              </div>
+              <div class="fv-model-chip">
+                <span class="fv-model-indicator"></span>Claude 4.5 Sonnet
+              </div>
+              <div class="fv-model-chip">
+                <span class="fv-model-indicator"></span>Gemini 3.0 Flash
+              </div>
+              <div class="fv-model-chip">
+                <span class="fv-model-indicator"></span>KIMI K2.5 Thinking
+              </div>
+              <div class="fv-model-chip">
+                <span class="fv-model-indicator"></span>GPT-OSS-120B
+              </div>
+              <div class="fv-model-chip">
+                <span class="fv-model-indicator"></span>K-EXAONE-236B-A32B
+              </div>
+              <div class="fv-model-chip">
+                <span class="fv-model-indicator"></span>GPT-5.2-Chat
+              </div>
+            </div>
+          </div>
+          <div class="feature-card-body">
+            <h3>Bring Your Own Model</h3>
+            <p class="feature-card-agenda">Never locked to one provider</p>
+            <p class="feature-card-brief">Every LLM node accepts any API-compatible endpoint. Swap models per-node or
+              route by cost.</p>
+          </div>
+        </div>
+
+        <!-- Open Source (pinned — always expanded) -->
+        <div class="feature-card reveal hover-lift" data-modal="oss">
+          <div class="feature-card-visual">
+            <div class="fv-oss">
+              <svg class="fv-oss-network" viewBox="0 0 880 150" fill="none">
+                <!-- Main branch -->
+                <line class="fv-net-line fv-net-main" x1="24" y1="75" x2="856" y2="75" stroke="currentColor"
+                  stroke-width="2.5" stroke-linecap="round" />
+
+                <!-- Branch: custom-nodes (upper, blue) -->
+                <path class="fv-net-line fv-net-feat1" d="M130 75 C155 75,155 28,180 28 L330 28 C355 28,355 75,380 75"
+                  stroke="#3b82f6" stroke-width="2" stroke-linecap="round" />
+
+                <!-- Branch: runtime-fix (lower, purple) -->
+                <path class="fv-net-line fv-net-feat2"
+                  d="M320 75 C345 75,345 122,370 122 L480 122 C505 122,505 75,530 75" stroke="#a855f7" stroke-width="2"
+                  stroke-linecap="round" />
+
+                <!-- Branch: streaming (upper, amber, open-ended) -->
+                <path class="fv-net-line fv-net-feat3" d="M580 75 C605 75,605 28,630 28 L856 28" stroke="#f59e0b"
+                  stroke-width="2" stroke-linecap="round" />
+
+                <!-- Main branch commits -->
+                <circle class="fv-net-dot" cx="24" cy="75" r="5" fill="var(--brand)" />
+                <circle class="fv-net-dot" cx="130" cy="75" r="4" fill="var(--brand)" />
+                <circle class="fv-net-dot" cx="225" cy="75" r="4" fill="var(--brand)" />
+                <circle class="fv-net-dot" cx="320" cy="75" r="4" fill="var(--brand)" />
+                <circle class="fv-net-dot" cx="380" cy="75" r="5" fill="var(--brand)" />
+                <circle class="fv-net-dot" cx="455" cy="75" r="4" fill="var(--brand)" />
+                <circle class="fv-net-dot" cx="530" cy="75" r="5" fill="var(--brand)" />
+                <circle class="fv-net-dot" cx="580" cy="75" r="4" fill="var(--brand)" />
+                <circle class="fv-net-dot" cx="680" cy="75" r="4" fill="var(--brand)" />
+                <circle class="fv-net-dot" cx="780" cy="75" r="4" fill="var(--brand)" />
+                <circle class="fv-net-dot" cx="856" cy="75" r="5" fill="var(--brand)" />
+
+                <!-- Branch 1 commits (blue) -->
+                <circle class="fv-net-dot" cx="220" cy="28" r="3.5" fill="#3b82f6" />
+                <circle class="fv-net-dot" cx="280" cy="28" r="3.5" fill="#3b82f6" />
+
+                <!-- Branch 2 commits (purple) -->
+                <circle class="fv-net-dot" cx="410" cy="122" r="3.5" fill="#a855f7" />
+                <circle class="fv-net-dot" cx="460" cy="122" r="3.5" fill="#a855f7" />
+
+                <!-- Branch 3 commits (amber) -->
+                <circle class="fv-net-dot" cx="700" cy="28" r="3.5" fill="#f59e0b" />
+                <circle class="fv-net-dot" cx="780" cy="28" r="3.5" fill="#f59e0b" />
+                <circle class="fv-net-dot" cx="840" cy="28" r="3.5" fill="#f59e0b" />
+
+                <!-- Branch labels -->
+                <text class="fv-net-label" x="24" y="64" fill="var(--brand)">main</text>
+                <text class="fv-net-label" x="185" y="20" fill="#3b82f6">feat/custom-nodes</text>
+                <text class="fv-net-label" x="375" y="145" fill="#a855f7">fix/runtime</text>
+                <text class="fv-net-label" x="635" y="20" fill="#f59e0b">feat/streaming</text>
+
+                <!-- Version tags -->
+                <rect x="365" y="52" width="30" height="16" rx="4" fill="var(--brand)" opacity="0.15" />
+                <text class="fv-net-tag" x="380" y="64" text-anchor="middle" fill="var(--brand)">v1.0</text>
+                <rect x="515" y="52" width="30" height="16" rx="4" fill="var(--brand)" opacity="0.15" />
+                <text class="fv-net-tag" x="530" y="64" text-anchor="middle" fill="var(--brand)">v1.1</text>
+
+                <!-- Traveling pulse along main -->
+                <circle class="fv-net-pulse" cx="24" cy="75" r="4" fill="var(--brand)" />
+              </svg>
+
+            </div>
+          </div>
+          <div class="feature-card-body">
+            <h3>Open Source</h3>
+            <p class="feature-card-agenda">MIT licensed, zero strings attached</p>
+            <p class="feature-card-brief">Read every line. Add custom nodes, swap the executor, embed the runtime in
+              your product.</p>
+          </div>
+        </div>
+
+      </div>
+    </div>
+  </section>
+
+  <!-- Quick Start -->
+  <section class="section">
+    <div class="container">
+      <div class="quickstart reveal">
+        <div class="code-block">
+          <code>git clone https://github.com/your-org/voyager.git && cd voyager && bun install && bun run dev</code>
+          <button class="code-copy"
+            onclick="navigator.clipboard.writeText('git clone https://github.com/your-org/voyager.git && cd voyager && bun install && bun run dev')">
+            <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none"
+              stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <rect x="9" y="9" width="13" height="13" rx="2" ry="2" />
+              <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1" />
+            </svg>
+          </button>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Chat CTA -->
+  <section class="section cta-section">
+    <div class="container">
+      <div class="cta-card reveal">
+        <div class="cta-preview">
+          <div class="cta-chat-bubbles">
+            <div class="cta-bubble cta-bubble--user">
+              <span class="cta-bubble-avatar">You</span>
+              <span class="cta-bubble-text">Summarize the latest reports</span>
+            </div>
+            <div class="cta-bubble cta-bubble--agent">
+              <span class="cta-bubble-avatar">
+                <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+              </span>
+              <span class="cta-bubble-text">Found 3 reports. Revenue up 12%, user signups increased 28%, churn reduced to 4.1%. Key takeaway: growth accelerating across all metrics.</span>
+            </div>
+            <div class="cta-bubble cta-bubble--agent">
+              <span class="cta-bubble-avatar">
+                <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+              </span>
+              <span class="cta-bubble-text">Want me to draft an executive summary?</span>
+            </div>
+          </div>
+        </div>
+        <div class="cta-body">
+          <h2 class="cta-title">Chat with agents you've built</h2>
+          <p class="cta-desc">Test your agents in a real conversation. Select any finalized agent and start chatting — see how it handles real inputs, iterates on responses, and uses your configured tools.</p>
+          <a href="/chat" class="btn btn-primary btn-lg press-feedback">Open Chat Console</a>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Footer -->
+  <footer class="footer">
+    <div class="container">
+      <div class="footer-inner">
+        <p class="footer-copy">Voyager</p>
+        <div class="footer-links">
+          <a href="/editor">Editor</a>
+          <a href="/chat">Chat</a>
+          <a href="/ops">Ops</a>
+          <a href="https://docs.voyager.dev" target="_blank">Docs</a>
+          <a href="https://github.com" target="_blank">GitHub</a>
+        </div>
+      </div>
+    </div>
+  </footer>
+
+  <script src="/toast.js"></script>
+  <script src="/auth-ui.js"></script>
+  <script>if('serviceWorker' in navigator){navigator.serviceWorker.register('/sw.js')}</script>
+  <script>
+    // Scroll reveal
+    const reveals = document.querySelectorAll('.reveal');
+    const observer = new IntersectionObserver((entries) => {
+      entries.forEach(e => {
+        if (e.isIntersecting) {
+          e.target.classList.add('revealed');
+          observer.unobserve(e.target);
+        }
+      });
+    }, { threshold: 0.12, rootMargin: '0px 0px -60px 0px' });
+    reveals.forEach(el => observer.observe(el));
+
+    // Auto-cycle active model chip
+    const chips = document.querySelectorAll('.fv-model-chip');
+    if (chips.length) {
+      let active = 0;
+      setInterval(() => {
+        chips.forEach(c => c.classList.remove('fv-model-chip--active'));
+        active = (active + 1) % chips.length;
+        chips[active].classList.add('fv-model-chip--active');
+      }, 2000);
+    }
+
+    // Modal content database
+    const modalData = {
+      flow: {
+        title: 'Visual Flow Runtime',
+        agenda: 'Wire agents visually with a node-based editor',
+        body: `<p>The flow editor gives you a canvas where every step of your agent's logic is a draggable node. Choose from 20+ node types — LLM calls, conditionals, loops, HTTP requests, data transforms, memory reads, tool calls, and more.</p>
+<p>Edges connect nodes into a directed graph. Execution flows through the graph in real-time, and each node shows its current status: pending, running, completed, or failed. Click any node mid-run to inspect its input, output, and internal state.</p>
+<p>Branching logic lets you route execution based on conditions, model outputs, or custom JavaScript expressions. Loops can iterate over arrays or repeat until a condition is met. The runtime handles parallelism, retries, and error propagation automatically.</p>
+<p>Every flow is stored as a portable JSON file — version-control it, share it, or load it into a different instance.</p>`
+      },
+      eval: {
+        title: 'Built-in Eval',
+        agenda: 'Catch regressions before they ship',
+        body: `<p>Define test cases with expected outputs and assertion rules. Each test specifies an input, runs it through your agent, and checks the output against your criteria — schema validation, keyword matching, semantic similarity, latency budgets, or custom JavaScript assertions.</p>
+<p>Run evaluation suites in batch and see results instantly: pass/fail per test, execution time, and a diff of expected vs. actual output. Failed tests show exactly where the agent diverged from expectations.</p>
+<p>Track pass rates over time to measure whether your agents are improving or regressing. Every eval run is logged with timestamps, making it easy to correlate changes in your flow with changes in quality.</p>
+<p>Agents improve continuously through structured feedback loops rather than guesswork. When a test fails, you can trace back to the exact node that produced the unexpected output and fix it in the editor.</p>`
+      },
+      deploy: {
+        title: 'One-Click Deploy',
+        agenda: 'From local to 300+ edge locations in seconds',
+        body: `<p>When your agent is ready, click deploy and Voyager generates a complete Cloudflare Worker project — fully configured, zero boilerplate. The output includes the Bun runtime, a Wrangler configuration, and an Elysia REST server with your agent's flow baked in.</p>
+<p>The generated project is a standard Cloudflare Worker that can be deployed with a single <code>wrangler deploy</code> command. It runs on Cloudflare's global edge network — 300+ data centers worldwide — with automatic scaling, zero cold starts, and built-in DDoS protection.</p>
+<p>Environment variables, secrets, and API keys are handled through Wrangler's native secrets management. Your agent's flow is compiled into an optimized bundle (typically under 50 KB) that loads instantly at the edge.</p>
+<p>The REST API exposes your agent as a simple HTTP endpoint. Send a POST request with your input, get the agent's output back. Compatible with any client, any language, any platform.</p>`
+      },
+      models: {
+        title: 'Bring Your Own Model',
+        agenda: 'Never locked to one provider',
+        body: `<p>Every LLM node in the flow editor accepts any API-compatible endpoint. OpenAI is included out of the box, yet any inference provider with OpenAI chat completions format is supported, which means, bring your own, and it would work as expected.</p>
+<p>Mix and match models within a single flow. Use a fast, cheap model for classification and routing, a powerful model for complex reasoning, and a specialized model for code generation — all in the same pipeline.</p>
+<p>Compare outputs side-by-side by duplicating a flow and swapping the model on one branch. The eval system makes it easy to measure which model performs better on your specific use case.</p>
+<p>For custom or self-hosted models, just provide the base URL and API key. The node handles authentication, rate limiting, retries, and streaming automatically. If it speaks OpenAI's format, it works.</p>`
+      },
+      oss: {
+        title: 'Open Source',
+        agenda: 'MIT licensed, zero strings attached',
+        body: `<p>Contrary to an alternative, operated by a private for-profit coporation, which claims to be an 'open' AI company, Voyager, as a nonprofit OSS project, is offering everything for free.</p>
+<p>Voyager is fully open source under the MIT license. Every line of code that touches your data is available for inspection, audit, and modification. There are no proprietary components, no phone-home telemetry, and no usage tracking.</p>
+<p>The architecture is designed for extensibility. Add custom node types, legacy API's, inputs, outputs, and an execute function by simple function. The runtime handles the rest: scheduling, state management, error propagation, and status reporting.</p>
+<p>Swap out the executor if you need a different runtime model. Embed the flow runtime in your own product as a library. Fork the editor UI and restyle it to match your brand. The MIT license means you can do whatever you want with it.</p>
+<p>No vendor lock-in, no usage caps, no surprise pricing changes. Your agents, your data, your infrastructure, your rules.</p>`
+      }
+    };
+
+    // Inline card expansion — tap upper part to toggle
+    var expandedCard = null;
+
+    function expandCard(key, cardEl) {
+      if (cardEl.classList.contains('expanded')) return;
+
+      // Collapse any other open card — let it animate out (don't snap)
+      if (expandedCard && expandedCard !== cardEl) {
+        collapseCard(expandedCard);
+      }
+
+      var data = modalData[key];
+      if (!data) return;
+
+      // Inject detail wrapper if not already present
+      if (!cardEl.querySelector('.feature-card-detail-wrap')) {
+        var wrap = document.createElement('div');
+        wrap.className = 'feature-card-detail-wrap';
+        wrap.innerHTML = '<div class="feature-card-detail"><div class="feature-card-detail-inner">' +
+          '<div class="detail-divider"></div>' +
+          '<div class="detail-body">' + data.body + '</div>' +
+          '</div></div>';
+        cardEl.appendChild(wrap);
+      }
+
+      requestAnimationFrame(function () {
+        cardEl.classList.add('expanded');
+        setTimeout(function () {
+          cardEl.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+        }, 100);
+      });
+
+      expandedCard = cardEl;
+    }
+
+    function collapseCard(cardEl) {
+      cardEl.classList.remove('expanded');
+
+      // Remove DOM after CSS transition finishes (500ms grid-template-rows)
+      setTimeout(function () {
+        var wrap = cardEl.querySelector('.feature-card-detail-wrap');
+        if (wrap && !cardEl.classList.contains('expanded')) wrap.remove();
+      }, 520);
+
+      if (expandedCard === cardEl) expandedCard = null;
+    }
+
+    document.querySelectorAll('.feature-card[data-modal]').forEach(function (card) {
+      card.addEventListener('click', function (e) {
+        if (card.classList.contains('expanded')) {
+          var detail = card.querySelector('.feature-card-detail-wrap');
+          if (detail && detail.contains(e.target)) return;
+          collapseCard(card);
+        } else {
+          expandCard(card.dataset.modal, card);
+        }
+      });
+    });
+
+
+    // Hero canvas — flowing color fields
+    (function () {
+      const canvas = document.getElementById('heroCanvas');
+      const ctx = canvas.getContext('2d');
+      let w, h, time = 0;
+
+      const shapes = [
+        { cx: 0.50, cy: 0.40, r: 0.46, color: '#2d2b70', dx: 0.020, dy: 0.015, px: 0, py: 0.5, sp: 0.08 },
+        { cx: 0.80, cy: 0.18, r: 0.40, color: '#1a3a60', dx: 0.028, dy: 0.020, px: 1.5, py: 2.0, sp: 0.06 },
+        { cx: 0.25, cy: 0.35, r: 0.38, color: '#252368', dx: 0.022, dy: 0.030, px: 3.0, py: 1.0, sp: 0.07 },
+        { cx: 0.60, cy: 0.28, r: 0.34, color: '#1a3550', dx: 0.018, dy: 0.024, px: 4.5, py: 3.0, sp: 0.05 },
+        { cx: 0.02, cy: 0.02, r: 0.36, color: '#1e1b5e', dx: 0.012, dy: 0.010, px: 2.0, py: 4.0, sp: 0.04 },
+        { cx: 0.48, cy: 0.85, r: 0.40, color: '#1a2d55', dx: 0.020, dy: 0.012, px: 5.5, py: 1.5, sp: 0.06 },
+        { cx: 0.15, cy: 0.65, r: 0.32, color: '#22205e', dx: 0.015, dy: 0.020, px: 1.0, py: 5.0, sp: 0.05 },
+      ];
+
+      function resize() {
+        w = canvas.offsetWidth;
+        h = canvas.offsetHeight;
+        canvas.width = w;
+        canvas.height = h;
+      }
+
+      function draw() {
+        time += 0.0004;
+
+        var isDark = document.documentElement.getAttribute('data-theme') === 'dark';
+        ctx.fillStyle = isDark ? '#0c0b1e' : '#110f2e';
+        ctx.fillRect(0, 0, w, h);
+
+        var dim = Math.max(w, h);
+        for (var i = 0; i < shapes.length; i++) {
+          var s = shapes[i];
+          var x = (s.cx + Math.sin(time * s.sp + s.px) * s.dx) * w;
+          var y = (s.cy + Math.cos(time * s.sp + s.py) * s.dy) * h;
+          ctx.fillStyle = s.color;
+          ctx.beginPath();
+          ctx.arc(x, y, s.r * dim, 0, Math.PI * 2);
+          ctx.fill();
+        }
+
+        requestAnimationFrame(draw);
+      }
+
+      resize();
+      requestAnimationFrame(draw);
+      window.addEventListener('resize', resize);
+    })();
+
+    // Hero particles — subtle floating dots
+    (function () {
+      const cv = document.getElementById('heroParticles');
+      const ctx = cv.getContext('2d');
+      let w, h;
+      const count = 60;
+      const particles = [];
+
+      function init() {
+        w = cv.offsetWidth;
+        h = cv.offsetHeight;
+        cv.width = w;
+        cv.height = h;
+        particles.length = 0;
+        for (var i = 0; i < count; i++) {
+          particles.push({
+            x: Math.random() * w,
+            y: Math.random() * h,
+            r: Math.random() * 1.8 + 0.6,
+            vx: (Math.random() - 0.5) * 0.3,
+            vy: (Math.random() - 0.5) * 0.3 - 0.1,
+            a: Math.random() * 0.5 + 0.15
+          });
+        }
+      }
+
+      function draw() {
+        ctx.clearRect(0, 0, w, h);
+        for (var i = 0; i < particles.length; i++) {
+          var p = particles[i];
+          p.x += p.vx;
+          p.y += p.vy;
+          if (p.x < -10) p.x = w + 10;
+          if (p.x > w + 10) p.x = -10;
+          if (p.y < -10) p.y = h + 10;
+          if (p.y > h + 10) p.y = -10;
+          ctx.beginPath();
+          ctx.arc(p.x, p.y, p.r, 0, Math.PI * 2);
+          ctx.fillStyle = 'rgba(165, 180, 252, ' + p.a * 0.6 + ')';
+          ctx.fill();
+        }
+        requestAnimationFrame(draw);
+      }
+
+      init();
+      requestAnimationFrame(draw);
+      window.addEventListener('resize', init);
+    })();
+
+    // Theme toggle — smooth transition
+    document.getElementById('themeToggle').addEventListener('click', function () {
+      var root = document.documentElement;
+      root.classList.add('theme-transition');
+      var next = root.getAttribute('data-theme') === 'dark' ? 'light' : 'dark';
+      root.setAttribute('data-theme', next);
+      localStorage.setItem('voyager-theme', next);
+      setTimeout(function () { root.classList.remove('theme-transition'); }, 400);
+    });
+  </script>
+</body>
+
+</html>

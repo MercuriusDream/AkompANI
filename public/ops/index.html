@@ -1,0 +1,144 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Ops Console - Voyager</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
+    <link rel="stylesheet" href="/design-system.css" />
+    <link rel="stylesheet" href="/ops/ops.css" />
+    <link rel="manifest" href="/manifest.json" />
+    <script>(function(){var t=localStorage.getItem('voyager-theme');if(!t)t=matchMedia('(prefers-color-scheme:dark)').matches?'dark':'light';document.documentElement.setAttribute('data-theme',t)})()</script>
+  </head>
+  <body>
+    <!-- Navigation -->
+    <nav class="top-nav">
+      <div class="top-nav-inner">
+        <a href="/" class="nav-brand">
+          <div class="nav-brand-icon">
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2L2 7l10 5 10-5-10-5z"/><path d="M2 17l10 5 10-5"/><path d="M2 12l10 5 10-5"/></svg>
+          </div>
+          <span class="nav-brand-text">Voyager</span>
+        </a>
+        
+        <div class="nav-links">
+          <a href="/editor" class="nav-link">Flow Editor</a>
+          <a href="/chat" class="nav-link">Chat</a>
+          <a href="/ops" class="nav-link active">Ops</a>
+        </div>
+        <div class="nav-actions">
+          <button id="themeToggle" class="btn btn-ghost btn-icon btn-sm" title="Toggle theme">
+            <svg class="theme-icon-light" xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/></svg>
+            <svg class="theme-icon-dark" xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>
+          </button>
+        </div>
+      </div>
+    </nav>
+
+    <!-- Main Content -->
+    <main class="ops-layout">
+      <!-- Context Grid -->
+      <div class="context-grid">
+        <!-- Context Panel -->
+        <div class="ops-panel">
+          <h2>Context</h2>
+          
+          <div class="ops-field">
+            <label>Agent</label>
+            <select id="agentSelect">
+              <option value="">Select an agent...</option>
+            </select>
+          </div>
+          
+          <div class="ops-field">
+            <label>Flow</label>
+            <select id="flowSelect">
+              <option value="">Select a flow...</option>
+            </select>
+          </div>
+          
+          <div class="ops-field">
+            <label>Origin URL</label>
+            <input id="originInput" type="text" placeholder="http://localhost:3000" value="http://localhost:3000" />
+          </div>
+        </div>
+
+        <!-- Result Panel -->
+        <div class="ops-panel">
+          <h2>Result</h2>
+          <pre id="resultPane">{ "status": "ready" }</pre>
+        </div>
+      </div>
+
+      <!-- Prompt Grid -->
+      <h3 style="font-size: var(--text-sm); font-weight: var(--font-semibold); text-transform: uppercase; letter-spacing: 0.05em; color: var(--text-secondary); margin: 0 0 12px;">Quick Actions</h3>
+      
+      <div id="promptGrid" class="prompt-grid">
+        <!-- Agent Run -->
+        <div class="prompt-card hover-lift" data-prompt="agent_run_wait">
+          <div>
+            <h3 class="prompt-title">Run Agent</h3>
+            <p class="prompt-desc">Execute agent with wait-for-completion semantics</p>
+          </div>
+          <div class="prompt-actions">
+            <span class="badge badge-info">Agent</span>
+            <button class="btn btn-primary btn-sm">Execute</button>
+          </div>
+        </div>
+
+        <!-- Quick Eval -->
+        <div class="prompt-card hover-lift" data-prompt="agent_eval_quick">
+          <div>
+            <h3 class="prompt-title">Quick Eval</h3>
+            <p class="prompt-desc">Run evaluation suite against agent</p>
+          </div>
+          <div class="prompt-actions">
+            <span class="badge badge-warning">Eval</span>
+            <button class="btn btn-primary btn-sm">Execute</button>
+          </div>
+        </div>
+
+        <!-- Deploy CF -->
+        <div class="prompt-card hover-lift" data-prompt="deploy_cf_elysia">
+          <div>
+            <h3 class="prompt-title">Deploy to Cloudflare</h3>
+            <p class="prompt-desc">Bun + Wrangler + Elysia deployment</p>
+          </div>
+          <div class="prompt-actions">
+            <span class="badge badge-info">Deploy</span>
+            <button class="btn btn-primary btn-sm">Execute</button>
+          </div>
+        </div>
+
+        <!-- Finalize Agent -->
+        <div class="prompt-card hover-lift" data-prompt="finalize_agent">
+          <div>
+            <h3 class="prompt-title">Finalize Agent</h3>
+            <p class="prompt-desc">Eval + artifact generation + release</p>
+          </div>
+          <div class="prompt-actions">
+            <span class="badge badge-success">Release</span>
+            <button class="btn btn-primary btn-sm">Execute</button>
+          </div>
+        </div>
+      </div>
+    </main>
+
+    <script src="/toast.js"></script>
+    <script src="/auth-ui.js"></script>
+    <script>if('serviceWorker' in navigator){navigator.serviceWorker.register('/sw.js')}</script>
+    <script src="/ops-console.js"></script>
+    <script>
+      document.getElementById('themeToggle').addEventListener('click', function() {
+        var root = document.documentElement;
+        root.classList.add('theme-transition');
+        var next = root.getAttribute('data-theme') === 'dark' ? 'light' : 'dark';
+        root.setAttribute('data-theme', next);
+        localStorage.setItem('voyager-theme', next);
+        setTimeout(function() { root.classList.remove('theme-transition'); }, 400);
+      });
+    </script>
+  </body>
+</html>

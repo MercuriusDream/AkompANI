@@ -1,0 +1,219 @@
+/* Settings Page */
+
+.settings-main {
+  flex: 1;
+  padding: var(--space-8) var(--space-6);
+}
+
+.settings-container {
+  max-width: 640px;
+  margin: 0 auto;
+}
+
+.settings-header {
+  margin-bottom: var(--space-10);
+}
+
+.settings-header h1 {
+  font-size: var(--text-3xl);
+  font-weight: 600;
+  letter-spacing: -0.02em;
+  margin-bottom: var(--space-2);
+}
+
+.settings-section {
+  margin-bottom: var(--space-10);
+}
+
+.settings-section-header {
+  margin-bottom: var(--space-4);
+}
+
+.settings-section-header h2 {
+  font-size: var(--text-lg);
+  font-weight: 600;
+  margin-bottom: var(--space-1);
+}
+
+.settings-card {
+  background: var(--bg-secondary);
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+  margin-bottom: var(--space-3);
+}
+
+.settings-card-header {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  padding: var(--space-4) var(--space-5);
+  border-bottom: 1px solid var(--bg-tertiary);
+}
+
+.settings-card-icon {
+  width: 36px;
+  height: 36px;
+  border-radius: var(--radius-md);
+  background: var(--bg-tertiary);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--text);
+  flex-shrink: 0;
+}
+
+.settings-card-icon--cf { color: #f38020; }
+[data-theme="dark"] .settings-card-icon--cf { color: #ff9a4d; }
+
+.settings-card-info {
+  flex: 1;
+  min-width: 0;
+}
+
+.settings-card-info h3 {
+  font-size: var(--text-sm);
+  font-weight: var(--font-semibold);
+}
+
+.settings-card-info p {
+  font-size: var(--text-xs);
+}
+
+.settings-card-status {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  font-size: var(--text-xs);
+  color: var(--text-muted);
+  flex-shrink: 0;
+}
+
+.settings-card-status.connected { color: var(--success); }
+.settings-card-status.connected .connection-dot { background: var(--success); }
+
+.settings-card-body {
+  padding: var(--space-4) var(--space-5);
+}
+
+.settings-field {
+  margin-bottom: var(--space-4);
+}
+
+.settings-field:last-child {
+  margin-bottom: 0;
+}
+
+.settings-field label {
+  display: block;
+  font-size: var(--text-sm);
+  font-weight: var(--font-medium);
+  color: var(--text-secondary);
+  margin-bottom: var(--space-2);
+}
+
+.field-hint {
+  display: block;
+  font-size: var(--text-xs);
+  color: var(--text-muted);
+  margin-top: var(--space-1);
+}
+
+.field-hint a {
+  color: var(--brand);
+  text-decoration: none;
+}
+
+.field-hint a:hover {
+  text-decoration: underline;
+}
+
+.field-hint code {
+  font-family: var(--font-mono);
+  font-size: 0.9em;
+  background: var(--bg-tertiary);
+  padding: 1px 4px;
+  border-radius: 3px;
+}
+
+.input-reveal {
+  position: relative;
+}
+
+.input-reveal .form-input {
+  padding-right: 40px;
+}
+
+.reveal-btn {
+  position: absolute;
+  right: 8px;
+  top: 50%;
+  transform: translateY(-50%);
+  background: none;
+  border: none;
+  color: var(--text-muted);
+  cursor: pointer;
+  padding: 4px;
+  display: flex;
+  align-items: center;
+  transition: color 150ms ease;
+}
+
+.reveal-btn:hover {
+  color: var(--text);
+}
+
+.theme-picker {
+  display: flex;
+  gap: var(--space-2);
+}
+
+.theme-option {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-3) var(--space-4);
+  background: var(--bg-tertiary);
+  border: 2px solid transparent;
+  border-radius: var(--radius-md);
+  color: var(--text-secondary);
+  cursor: pointer;
+  font-family: var(--font-sans);
+  font-size: var(--text-sm);
+  font-weight: var(--font-medium);
+  transition: all 200ms ease;
+}
+
+.theme-option:hover {
+  background: var(--bg-hover);
+  color: var(--text);
+}
+
+.theme-option.active {
+  border-color: var(--brand);
+  color: var(--brand);
+  background: var(--brand-soft);
+}
+
+/* Entrance animations */
+.anim-in {
+  opacity: 0;
+  transform: translateY(16px);
+  animation: settingsFadeIn 0.5s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+}
+
+.anim-d1 { animation-delay: 0.08s; }
+.anim-d2 { animation-delay: 0.16s; }
+.anim-d3 { animation-delay: 0.24s; }
+.anim-d4 { animation-delay: 0.32s; }
+
+@keyframes settingsFadeIn {
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@media (max-width: 640px) {
+  .settings-main { padding: var(--space-4); }
+  .settings-card-header { flex-wrap: wrap; }
+  .theme-picker { flex-direction: column; }
+}
