@@ -576,13 +576,33 @@
       const heroPalette = {
         light: {
           bg: '#eaf6f5',
-          colors: ['#c5bcd8', '#a4b8cd', '#fddcee', '#fbc8c8', '#d8dbe2', '#c5bcd8', '#ffffff'],
+          colors: ['#fbc8c8', '#63dff6', '#eaf6f5', '#c5bcd8', '#fddcee', '#63dff6', '#c5bcd8'],
+          coreAlpha: 0.34,
+          midAlpha: 0.16,
         },
         dark: {
           bg: '#33353b',
-          colors: ['#f7f5f2', '#33353b', '#ffffff', '#d8dbe2', '#1f2126', '#2f2a3a', '#a4b8cd'],
+          colors: ['#2f2a3a', '#3a3c45', '#4a4e58', '#a4b8cd', '#d8dbe2', '#ffffff', '#1f2126'],
+          coreAlpha: 0.22,
+          midAlpha: 0.1,
         },
       };
+
+      function hexToRgb(hex) {
+        var value = hex.replace('#', '');
+        if (value.length === 3) value = value.split('').map(function (c) { return c + c; }).join('');
+        var int = parseInt(value, 16);
+        return {
+          r: (int >> 16) & 255,
+          g: (int >> 8) & 255,
+          b: int & 255,
+        };
+      }
+
+      function colorWithAlpha(hex, alpha) {
+        var rgb = hexToRgb(hex);
+        return 'rgba(' + rgb.r + ', ' + rgb.g + ', ' + rgb.b + ', ' + alpha + ')';
+      }
 
       function resize() {
         w = canvas.offsetWidth;
@@ -604,7 +624,12 @@
           var s = shapeMotion[i];
           var x = (s.cx + Math.sin(time * s.sp + s.px) * s.dx) * w;
           var y = (s.cy + Math.cos(time * s.sp + s.py) * s.dy) * h;
-          ctx.fillStyle = palette.colors[i % palette.colors.length];
+          var color = palette.colors[i % palette.colors.length];
+          var gradient = ctx.createRadialGradient(x, y, 0, x, y, s.r * dim);
+          gradient.addColorStop(0, colorWithAlpha(color, palette.coreAlpha));
+          gradient.addColorStop(0.56, colorWithAlpha(color, palette.midAlpha));
+          gradient.addColorStop(1, colorWithAlpha(color, 0));
+          ctx.fillStyle = gradient;
           ctx.beginPath();
           ctx.arc(x, y, s.r * dim, 0, Math.PI * 2);
           ctx.fill();
@@ -659,7 +684,7 @@
           var isDark = document.documentElement.getAttribute('data-theme') === 'dark';
           ctx.fillStyle = isDark
             ? 'rgba(247, 245, 242, ' + p.a * 0.24 + ')'
-            : 'rgba(51, 53, 59, ' + p.a * 0.18 + ')';
+            : 'rgba(99, 223, 246, ' + p.a * 0.2 + ')';
           ctx.fill();
         }
         requestAnimationFrame(draw);
