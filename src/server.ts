@@ -77,5 +77,5 @@ app.use((_req, res) => {
 });
 
 app.listen(PORT, () => {
-  console.log(`[voyager] static-first server listening on http://localhost:${PORT}`);
+  console.log(`[canaria] static-first server listening on http://localhost:${PORT}`);
 });

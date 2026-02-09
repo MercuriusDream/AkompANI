@@ -1,6 +1,6 @@
 {
-  "name": "Voyager IDE",
-  "short_name": "Voyager",
+  "name": "CANARIA IDE",
+  "short_name": "CANARIA",
   "description": "Visual agent builder — build, run, deploy agentic workflows",
   "start_url": "/editor",
   "display": "standalone",

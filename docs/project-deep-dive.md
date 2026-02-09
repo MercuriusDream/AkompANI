@@ -1,10 +1,10 @@
-# Voyager Project Deep Dive
+# CANARIA Project Deep Dive
 
 This document explains the full project as implemented in this repository: architecture, runtime behavior, APIs, UI surfaces, deployment pipeline, data model, and operational controls.
 
 ## 1. Project Summary
 
-Voyager is an open-source "agent operations" platform for:
+CANARIA is an open-source "agent operations" platform for:
 
 - Building agent workflows visually (Drawflow-based canvas).
 - Running workflows and agents with event streaming.
@@ -163,7 +163,7 @@ Generated artifact includes:
 Generated workers:
 
 - expose `/invoke` and `/health`.
-- forward to Voyager webhook endpoint `/api/webhooks/:flowId`.
+- forward to CANARIA webhook endpoint `/api/webhooks/:flowId`.
 - sanitize forwarded headers.
 - optionally enforce `x-worker-token` auth.
 

@@ -1,8 +1,8 @@
 {
-  "name": "voyager",
+  "name": "canaria",
   "version": "0.1.0",
   "private": false,
-  "description": "Voyager — visual agent builder with flow execution, structured outputs, webhooks, and websockets.",
+  "description": "CANARIA — visual agent builder with flow execution, structured outputs, webhooks, and websockets.",
   "scripts": {
     "dev": "bun --watch src/server.ts",
     "build": "./scripts/bunx_safe.sh tsc -p tsconfig.json",

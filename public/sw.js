@@ -1,4 +1,4 @@
-const CACHE_NAME = 'voyager-v2';
+const CACHE_NAME = 'canaria-v2';
 const STATIC_ASSETS = [
   '/',
   '/editor',

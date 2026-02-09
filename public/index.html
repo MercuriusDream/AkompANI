@@ -4,7 +4,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Voyager</title>
+  <title>CANARIA</title>
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
@@ -80,7 +80,7 @@
               Console</span></a><span class="hero-punct">,</span>
           <a href="/ops" class="hero-word"><span class="hero-word-text">deploy</span><span class="hero-word-label">Ops
               Console</span></a><span class="hero-punct">.</span>
-          <br />Voyage the Frontier.
+          <br />Build the Frontier.
         </h1>
         <div class="hero-actions">
           <a href="/editor" class="btn btn-primary btn-lg press-feedback">Get Started</a>
@@ -362,9 +362,9 @@
     <div class="container">
       <div class="quickstart reveal">
         <div class="code-block">
-          <code>git clone https://github.com/your-org/voyager.git && cd voyager && bun install && bun run dev</code>
+          <code>git clone https://github.com/your-org/canaria.git && cd canaria && bun install && bun run dev</code>
           <button class="code-copy"
-            onclick="navigator.clipboard.writeText('git clone https://github.com/your-org/voyager.git && cd voyager && bun install && bun run dev')">
+            onclick="navigator.clipboard.writeText('git clone https://github.com/your-org/canaria.git && cd canaria && bun install && bun run dev')">
             <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none"
               stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
               <rect x="9" y="9" width="13" height="13" rx="2" ry="2" />
@@ -413,7 +413,7 @@
   <footer class="footer">
     <div class="container">
       <div class="footer-inner">
-        <p class="footer-copy">Voyager</p>
+        <p class="footer-copy">CANARIA</p>
         <div class="footer-links">
           <a href="/editor">Editor</a>
           <a href="/chat">Chat</a>
@@ -473,7 +473,7 @@
       deploy: {
         title: 'One-Click Deploy',
         agenda: 'From local to 300+ edge locations in seconds',
-        body: `<p>When your agent is ready, click deploy and Voyager generates a complete Cloudflare Worker project — fully configured, zero boilerplate. The output includes the Bun runtime, a Wrangler configuration, and an Elysia REST server with your agent's flow baked in.</p>
+        body: `<p>When your agent is ready, click deploy and CANARIA generates a complete Cloudflare Worker project — fully configured, zero boilerplate. The output includes the Bun runtime, a Wrangler configuration, and an Elysia REST server with your agent's flow baked in.</p>
 <p>The generated project is a standard Cloudflare Worker that can be deployed with a single <code>wrangler deploy</code> command. It runs on Cloudflare's global edge network — 300+ data centers worldwide — with automatic scaling, zero cold starts, and built-in DDoS protection.</p>
 <p>Environment variables, secrets, and API keys are handled through Wrangler's native secrets management. Your agent's flow is compiled into an optimized bundle (typically under 50 KB) that loads instantly at the edge.</p>
 <p>The REST API exposes your agent as a simple HTTP endpoint. Send a POST request with your input, get the agent's output back. Compatible with any client, any language, any platform.</p>`
@@ -489,8 +489,8 @@
       oss: {
         title: 'Open Source',
         agenda: 'MIT licensed, zero strings attached',
-        body: `<p>Contrary to an alternative, operated by a private for-profit coporation, which claims to be an 'open' AI company, Voyager, as a nonprofit OSS project, is offering everything for free.</p>
-<p>Voyager is fully open source under the MIT license. Every line of code that touches your data is available for inspection, audit, and modification. There are no proprietary components, no phone-home telemetry, and no usage tracking.</p>
+        body: `<p>Contrary to an alternative, operated by a private for-profit coporation, which claims to be an 'open' AI company, CANARIA, as a nonprofit OSS project, is offering everything for free.</p>
+<p>CANARIA is fully open source under the MIT license. Every line of code that touches your data is available for inspection, audit, and modification. There are no proprietary components, no phone-home telemetry, and no usage tracking.</p>
 <p>The architecture is designed for extensibility. Add custom node types, legacy API's, inputs, outputs, and an execute function by simple function. The runtime handles the rest: scheduling, state management, error propagation, and status reporting.</p>
 <p>Swap out the executor if you need a different runtime model. Embed the flow runtime in your own product as a library. Fork the editor UI and restyle it to match your brand. The MIT license means you can do whatever you want with it.</p>
 <p>No vendor lock-in, no usage caps, no surprise pricing changes. Your agents, your data, your infrastructure, your rules.</p>`
@@ -563,15 +563,26 @@
       const ctx = canvas.getContext('2d');
       let w, h, time = 0;
 
-      const shapes = [
-        { cx: 0.50, cy: 0.40, r: 0.46, color: '#2d2b70', dx: 0.020, dy: 0.015, px: 0, py: 0.5, sp: 0.08 },
-        { cx: 0.80, cy: 0.18, r: 0.40, color: '#1a3a60', dx: 0.028, dy: 0.020, px: 1.5, py: 2.0, sp: 0.06 },
-        { cx: 0.25, cy: 0.35, r: 0.38, color: '#252368', dx: 0.022, dy: 0.030, px: 3.0, py: 1.0, sp: 0.07 },
-        { cx: 0.60, cy: 0.28, r: 0.34, color: '#1a3550', dx: 0.018, dy: 0.024, px: 4.5, py: 3.0, sp: 0.05 },
-        { cx: 0.02, cy: 0.02, r: 0.36, color: '#1e1b5e', dx: 0.012, dy: 0.010, px: 2.0, py: 4.0, sp: 0.04 },
-        { cx: 0.48, cy: 0.85, r: 0.40, color: '#1a2d55', dx: 0.020, dy: 0.012, px: 5.5, py: 1.5, sp: 0.06 },
-        { cx: 0.15, cy: 0.65, r: 0.32, color: '#22205e', dx: 0.015, dy: 0.020, px: 1.0, py: 5.0, sp: 0.05 },
+      const shapeMotion = [
+        { cx: 0.50, cy: 0.40, r: 0.46, dx: 0.020, dy: 0.015, px: 0, py: 0.5, sp: 0.08 },
+        { cx: 0.80, cy: 0.18, r: 0.40, dx: 0.028, dy: 0.020, px: 1.5, py: 2.0, sp: 0.06 },
+        { cx: 0.25, cy: 0.35, r: 0.38, dx: 0.022, dy: 0.030, px: 3.0, py: 1.0, sp: 0.07 },
+        { cx: 0.60, cy: 0.28, r: 0.34, dx: 0.018, dy: 0.024, px: 4.5, py: 3.0, sp: 0.05 },
+        { cx: 0.02, cy: 0.02, r: 0.36, dx: 0.012, dy: 0.010, px: 2.0, py: 4.0, sp: 0.04 },
+        { cx: 0.48, cy: 0.85, r: 0.40, dx: 0.020, dy: 0.012, px: 5.5, py: 1.5, sp: 0.06 },
+        { cx: 0.15, cy: 0.65, r: 0.32, dx: 0.015, dy: 0.020, px: 1.0, py: 5.0, sp: 0.05 },
       ];
+
+      const heroPalette = {
+        light: {
+          bg: '#eaf6f5',
+          colors: ['#c5bcd8', '#a4b8cd', '#fddcee', '#fbc8c8', '#d8dbe2', '#c5bcd8', '#a4b8cd'],
+        },
+        dark: {
+          bg: '#33353b',
+          colors: ['#63dff6', '#c5bcd8', '#fbc8c8', '#a4b8cd', '#63dff6', '#fddcee', '#c5bcd8'],
+        },
+      };
 
       function resize() {
         w = canvas.offsetWidth;
@@ -583,16 +594,17 @@
       function draw() {
         time += 0.0004;
 
-        var isDark = document.documentElement.getAttribute('data-theme') === 'dark';
-        ctx.fillStyle = isDark ? '#0c0b1e' : '#110f2e';
+        var mode = document.documentElement.getAttribute('data-theme') === 'dark' ? 'dark' : 'light';
+        var palette = heroPalette[mode];
+        ctx.fillStyle = palette.bg;
         ctx.fillRect(0, 0, w, h);
 
         var dim = Math.max(w, h);
-        for (var i = 0; i < shapes.length; i++) {
-          var s = shapes[i];
+        for (var i = 0; i < shapeMotion.length; i++) {
+          var s = shapeMotion[i];
           var x = (s.cx + Math.sin(time * s.sp + s.px) * s.dx) * w;
           var y = (s.cy + Math.cos(time * s.sp + s.py) * s.dy) * h;
-          ctx.fillStyle = s.color;
+          ctx.fillStyle = palette.colors[i % palette.colors.length];
           ctx.beginPath();
           ctx.arc(x, y, s.r * dim, 0, Math.PI * 2);
           ctx.fill();
@@ -644,7 +656,10 @@
           if (p.y > h + 10) p.y = -10;
           ctx.beginPath();
           ctx.arc(p.x, p.y, p.r, 0, Math.PI * 2);
-          ctx.fillStyle = 'rgba(165, 180, 252, ' + p.a * 0.6 + ')';
+          var isDark = document.documentElement.getAttribute('data-theme') === 'dark';
+          ctx.fillStyle = isDark
+            ? 'rgba(99, 223, 246, ' + p.a * 0.42 + ')'
+            : 'rgba(51, 53, 59, ' + p.a * 0.18 + ')';
           ctx.fill();
         }
         requestAnimationFrame(draw);

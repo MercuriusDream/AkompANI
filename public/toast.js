@@ -1,10 +1,10 @@
 /**
- * Voyager Toast Notification System
- * Usage: VoyagerToast.show({ title, message, type, duration })
- *   or:  VoyagerToast.success('Title', 'Message')
- *   or:  VoyagerToast.success({ title: 'Title', message: 'Message' })
+ * CANARIA Toast Notification System
+ * Usage: CANARIAToast.show({ title, message, type, duration })
+ *   or:  CANARIAToast.success('Title', 'Message')
+ *   or:  CANARIAToast.success({ title: 'Title', message: 'Message' })
  */
-const VoyagerToast = (() => {
+const CANARIAToast = (() => {
   let container = null;
 
   function ensureContainer() {

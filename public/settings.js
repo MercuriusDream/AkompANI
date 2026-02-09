@@ -1,5 +1,5 @@
 /**
- * Voyager Settings — localStorage-based settings management
+ * CANARIA Settings — localStorage-based settings management
  */
 (function () {
   // localStorage key map
@@ -186,7 +186,7 @@
     els.testGithub.addEventListener('click', function () {
       var pat = (els.githubPat && els.githubPat.value.trim()) || '';
       if (!pat) {
-        VoyagerToast.warning({ title: 'Missing token', message: 'Enter a GitHub Personal Access Token first.' });
+        CANARIAToast.warning({ title: 'Missing token', message: 'Enter a GitHub Personal Access Token first.' });
         return;
       }
       els.testGithub.disabled = true;
@@ -201,15 +201,15 @@
         .then(function (r) { return r.json().then(function (d) { return { ok: r.ok, data: d }; }); })
         .then(function (res) {
           if (res.ok && res.data.login) {
-            VoyagerToast.success({ title: 'GitHub connected', message: 'Authenticated as ' + res.data.login });
+            CANARIAToast.success({ title: 'GitHub connected', message: 'Authenticated as ' + res.data.login });
             writeValue('githubPat', pat);
             updateStatuses();
           } else {
-            VoyagerToast.error({ title: 'GitHub failed', message: res.data.message || 'Invalid token' });
+            CANARIAToast.error({ title: 'GitHub failed', message: res.data.message || 'Invalid token' });
           }
         })
         .catch(function () {
-          VoyagerToast.error({ title: 'Network error', message: 'Could not reach GitHub API.' });
+          CANARIAToast.error({ title: 'Network error', message: 'Could not reach GitHub API.' });
         })
         .finally(function () {
           els.testGithub.disabled = false;
@@ -224,7 +224,7 @@
       var token = (els.cfApiToken && els.cfApiToken.value.trim()) || '';
       var accountId = (els.cfAccountId && els.cfAccountId.value.trim()) || '';
       if (!token) {
-        VoyagerToast.warning({ title: 'Missing token', message: 'Enter a Cloudflare API Token first.' });
+        CANARIAToast.warning({ title: 'Missing token', message: 'Enter a Cloudflare API Token first.' });
         return;
       }
       els.testCf.disabled = true;
@@ -241,18 +241,18 @@
             writeValue('cfApiToken', token);
             if (accountId) {
               writeValue('cfAccountId', accountId);
-              VoyagerToast.success({ title: 'Cloudflare connected', message: 'API token is valid.' });
+              CANARIAToast.success({ title: 'Cloudflare connected', message: 'API token is valid.' });
             } else {
-              VoyagerToast.warning({ title: 'Token valid', message: 'Add your Account ID to enable deployments.' });
+              CANARIAToast.warning({ title: 'Token valid', message: 'Add your Account ID to enable deployments.' });
             }
             updateStatuses();
           } else {
             var firstError = res.data && Array.isArray(res.data.errors) && res.data.errors[0] ? res.data.errors[0].message : '';
-            VoyagerToast.error({ title: 'Cloudflare failed', message: firstError || 'Invalid token' });
+            CANARIAToast.error({ title: 'Cloudflare failed', message: firstError || 'Invalid token' });
           }
         })
         .catch(function () {
-          VoyagerToast.error({ title: 'Network error', message: 'Could not reach Cloudflare API.' });
+          CANARIAToast.error({ title: 'Network error', message: 'Could not reach Cloudflare API.' });
         })
         .finally(function () {
           els.testCf.disabled = false;
@@ -296,7 +296,7 @@
   // ─── Clear all settings ──────────────────────────
   if (els.clearSettings) {
     els.clearSettings.addEventListener('click', function () {
-      if (!confirm('Clear all Voyager settings? This removes stored API keys and preferences.')) return;
+      if (!confirm('Clear all CANARIA settings? This removes stored API keys and preferences.')) return;
       Object.values(KEYS).forEach(function (k) {
         localStorage.removeItem(k);
         sessionStorage.removeItem(k);
@@ -316,7 +316,7 @@
       document.documentElement.setAttribute('data-theme', sys);
       updateThemePicker();
 
-      VoyagerToast.info({ title: 'Cleared', message: 'All settings have been removed.' });
+      CANARIAToast.info({ title: 'Cleared', message: 'All settings have been removed.' });
     });
   }
 

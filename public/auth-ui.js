@@ -1,5 +1,5 @@
 /**
- * Voyager Auth UI — injects auth indicators into nav.
+ * CANARIA Auth UI — injects auth indicators into nav.
  * Include on every page: <script src="/auth-ui.js"></script>
  */
 (function () {
