@@ -9,6 +9,8 @@
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
     <link rel="stylesheet" href="/design-system.css" />
     <link rel="stylesheet" href="/ops/ops.css" />
+    <link rel="manifest" href="/manifest.json" />
+    <script>(function(){var t=localStorage.getItem('voyager-theme');if(!t)t=matchMedia('(prefers-color-scheme:dark)').matches?'dark':'light';document.documentElement.setAttribute('data-theme',t)})()</script>
   </head>
   <body>
     <!-- Navigation -->
@@ -127,6 +129,22 @@
       </div>
     </main>
 
+    <script src="/toast.js"></script>
+    <script src="/auth-ui.js"></script>
+    <script>if('serviceWorker' in navigator){navigator.serviceWorker.register('/sw.js')}</script>
     <script src="/ops-console.js"></script>
+    <script>
+      var toggle = document.getElementById('themeToggle');
+      if (toggle) {
+        toggle.addEventListener('click', function() {
+          var root = document.documentElement;
+          root.classList.add('theme-transition');
+          var next = root.getAttribute('data-theme') === 'dark' ? 'light' : 'dark';
+          root.setAttribute('data-theme', next);
+          localStorage.setItem('voyager-theme', next);
+          setTimeout(function() { root.classList.remove('theme-transition'); }, 400);
+        });
+      }
+    </script>
   </body>
 </html>

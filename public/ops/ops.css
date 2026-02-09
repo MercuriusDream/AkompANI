@@ -141,6 +141,26 @@
   min-height: 40px;
 }
 
+.prompt-card textarea {
+  width: 100%;
+  min-height: 132px;
+  padding: 10px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  background: var(--bg);
+  color: var(--text);
+  font-family: var(--font-mono);
+  font-size: 12px;
+  line-height: 1.45;
+  resize: vertical;
+}
+
+.prompt-card textarea:focus {
+  outline: none;
+  border-color: var(--brand);
+  box-shadow: 0 0 0 2px rgba(99, 102, 241, 0.1);
+}
+
 .prompt-actions {
   display: flex;
   justify-content: space-between;
@@ -152,6 +172,10 @@
 [data-theme="dark"] .ops-field input:focus,
 [data-theme="dark"] .ops-field select:focus,
 [data-theme="dark"] .ops-field textarea:focus {
+  box-shadow: 0 0 0 2px rgba(129, 140, 248, 0.15);
+}
+
+[data-theme="dark"] .prompt-card textarea:focus {
   box-shadow: 0 0 0 2px rgba(129, 140, 248, 0.15);
 }
 

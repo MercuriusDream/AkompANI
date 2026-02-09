@@ -1,8 +1,9 @@
-const CACHE_NAME = 'voyager-v1';
+const CACHE_NAME = 'voyager-v2';
 const STATIC_ASSETS = [
   '/',
   '/editor',
   '/chat',
+  '/chat-agents',
   '/ops',
   '/settings',
   '/design-system.css',

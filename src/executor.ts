@@ -184,6 +184,47 @@ async function ensureSafeHttpNodeUrl(url: string, nodeId: string): Promise<void>
   }
 }
 
+async function fetchWithRedirects(
+  url: string,
+  init: RequestInit,
+  nodeId: string,
+  maxRedirects = 5,
+): Promise<Response> {
+  let currentUrl = url;
+  let method = String(init.method || "GET").toUpperCase();
+  let body = init.body;
+
+  for (let hop = 0; hop <= maxRedirects; hop += 1) {
+    const response = await fetch(currentUrl, { ...init, method, body, redirect: "manual" });
+    const status = response.status;
+
+    if (![301, 302, 303, 307, 308].includes(status)) {
+      return response;
+    }
+
+    const location = response.headers.get("location");
+    if (!location) {
+      return response;
+    }
+
+    if (hop === maxRedirects) {
+      throw new Error(`HTTP node ${nodeId} exceeded ${maxRedirects} redirects.`);
+    }
+
+    const nextUrl = new URL(location, currentUrl).toString();
+    await ensureSafeHttpNodeUrl(nextUrl, nodeId);
+
+    if (status === 303 || ((status === 301 || status === 302) && method !== "GET" && method !== "HEAD")) {
+      method = "GET";
+      body = undefined;
+    }
+
+    currentUrl = nextUrl;
+  }
+
+  return fetch(currentUrl, { ...init, method, body, redirect: "manual" });
+}
+
 function getOpenAIClient(): OpenAI {
   if (openaiClient) return openaiClient;
 
@@ -535,7 +576,7 @@ async function executeNode(
 
     let response: Response;
     try {
-      response = await fetch(url, init);
+      response = await fetchWithRedirects(url, init, node.id);
     } catch (error) {
       if (timeoutId) {
         clearTimeout(timeoutId);

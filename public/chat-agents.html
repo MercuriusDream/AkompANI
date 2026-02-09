@@ -9,6 +9,8 @@
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
     <link rel="stylesheet" href="/design-system.css" />
     <link rel="stylesheet" href="/chat/chat.css" />
+    <link rel="manifest" href="/manifest.json" />
+    <script>(function(){var t=localStorage.getItem('voyager-theme');if(!t)t=matchMedia('(prefers-color-scheme:dark)').matches?'dark':'light';document.documentElement.setAttribute('data-theme',t)})()</script>
   </head>
   <body>
     <!-- Navigation -->
@@ -26,7 +28,7 @@
             <svg class="nav-link-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 19l7-7 3 3-7 7-3-3z"/><path d="M18 13l-1.5-7.5L2 2l3.5 14.5L13 18l5-5z"/><path d="M2 2l7.586 7.586"/><circle cx="11" cy="11" r="2"/></svg>
             Flow Editor
           </a>
-          <a href="/chat" class="nav-link active">
+          <a href="/chat-agents" class="nav-link active">
             <svg class="nav-link-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
             Chat Console
           </a>
@@ -40,6 +42,10 @@
           <button id="refreshBtn" class="btn btn-ghost btn-sm">
             <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg>
             Refresh
+          </button>
+          <button id="themeToggle" class="btn btn-ghost btn-icon btn-sm" title="Toggle theme">
+            <svg class="theme-icon-light" xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/></svg>
+            <svg class="theme-icon-dark" xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>
           </button>
         </div>
       </div>
@@ -105,10 +111,18 @@
             <h2 id="chatTitle" class="chat-title">Chat Console</h2>
             <p id="threadBadge" class="thread-badge">No thread selected</p>
           </div>
-          <button id="finalizeBtn" class="btn btn-primary">
-            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
-            Finalize + Deploy
-          </button>
+          <div class="chat-header-actions">
+            <label for="chatModeSelect" class="chat-mode-label">Runtime</label>
+            <select id="chatModeSelect" class="form-select chat-mode-select">
+              <option value="auto">Auto</option>
+              <option value="cloudflare">Cloudflare Worker</option>
+              <option value="local">Local BYOK Test</option>
+            </select>
+            <button id="finalizeBtn" class="btn btn-primary">
+              <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
+              Finalize + Deploy
+            </button>
+          </div>
         </header>
 
         <div id="messages" class="messages">
@@ -150,15 +164,15 @@
           <h4 class="details-title">Quick Stats</h4>
           <div class="stats-grid">
             <div class="stat-item">
-              <span class="stat-value">-</span>
+              <span id="statEval" class="stat-value">-</span>
               <span class="stat-label">Eval Pass Rate</span>
             </div>
             <div class="stat-item">
-              <span class="stat-value">-</span>
+              <span id="statDeployments" class="stat-value">-</span>
               <span class="stat-label">Deployments</span>
             </div>
             <div class="stat-item">
-              <span class="stat-value">-</span>
+              <span id="statThreads" class="stat-value">-</span>
               <span class="stat-label">Threads</span>
             </div>
           </div>
@@ -166,6 +180,22 @@
       </aside>
     </main>
 
+    <script src="/toast.js"></script>
+    <script src="/auth-ui.js"></script>
+    <script>if('serviceWorker' in navigator){navigator.serviceWorker.register('/sw.js')}</script>
     <script src="/chat-agents.js"></script>
+    <script>
+      var toggle = document.getElementById('themeToggle');
+      if (toggle) {
+        toggle.addEventListener('click', function() {
+          var root = document.documentElement;
+          root.classList.add('theme-transition');
+          var next = root.getAttribute('data-theme') === 'dark' ? 'light' : 'dark';
+          root.setAttribute('data-theme', next);
+          localStorage.setItem('voyager-theme', next);
+          setTimeout(function() { root.classList.remove('theme-transition'); }, 400);
+        });
+      }
+    </script>
   </body>
 </html>

@@ -4,11 +4,16 @@
 (function () {
   // localStorage key map
   const KEYS = {
+    githubPat: 'voyager_oauth_github_token',
+    cfApiToken: 'voyager_oauth_cloudflare_token',
+    cfAccountId: 'voyager_cf_account_id',
+    openaiKey: 'voyager_llm_api_key',
+    serverApiKey: 'voyager_server_api_key',
+  };
+  const LEGACY_KEYS = {
     githubPat: 'voyager_github_pat',
     cfApiToken: 'voyager_cf_api_token',
-    cfAccountId: 'voyager_cf_account_id',
     openaiKey: 'voyager_openai_key',
-    serverApiKey: 'voyager_server_api_key',
   };
   const SESSION_SECRET_KEYS = new Set([
     'githubPat',
@@ -49,6 +54,33 @@
     } catch {
       // Ignore storage failures.
     }
+  }
+
+  function migrateLegacyValues() {
+    Object.keys(LEGACY_KEYS).forEach(function (id) {
+      var nextKey = KEYS[id];
+      var legacyKey = LEGACY_KEYS[id];
+      if (!nextKey || !legacyKey) return;
+
+      var current = readValue(id);
+      if (current) return;
+
+      var legacy = '';
+      try {
+        legacy = String(sessionStorage.getItem(legacyKey) || localStorage.getItem(legacyKey) || '').trim();
+      } catch {
+        legacy = '';
+      }
+      if (!legacy) return;
+
+      writeValue(id, legacy);
+      try {
+        sessionStorage.removeItem(legacyKey);
+        localStorage.removeItem(legacyKey);
+      } catch {
+        // Ignore cleanup errors.
+      }
+    });
   }
 
   // DOM refs
@@ -289,5 +321,6 @@
   }
 
   // ─── Init ────────────────────────────────────────
+  migrateLegacyValues();
   load();
 })();

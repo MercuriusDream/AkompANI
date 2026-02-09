@@ -3272,18 +3272,15 @@
     const select = document.getElementById("editorAgentSelect");
     if (!select) return;
 
-    try {
-      const data = await requestJson("/api/agents");
-      const agents = data.agents || [];
-      select.innerHTML = '<option value="">Select agent...</option>';
-      for (const agent of agents) {
-        const opt = document.createElement("option");
-        opt.value = agent.id;
-        opt.textContent = agent.name;
-        select.appendChild(opt);
-      }
-    } catch {
-      // ignore
+    const agents = readJsonArrayFromLocalStorage(STORAGE_KEYS.localAgents).sort((a, b) =>
+      String(b.updatedAt || "").localeCompare(String(a.updatedAt || "")),
+    );
+    select.innerHTML = '<option value="">Select agent...</option>';
+    for (const agent of agents) {
+      const opt = document.createElement("option");
+      opt.value = agent.id;
+      opt.textContent = agent.name || agent.id;
+      select.appendChild(opt);
     }
   }
 
@@ -3314,13 +3311,77 @@
     input.value = "";
 
     try {
-      const data = await requestJson(`/api/agents/${agentId}/chat`, {
+      const agent = readJsonArrayFromLocalStorage(STORAGE_KEYS.localAgents).find((item) => item.id === agentId);
+      const cfg = getLlmConfig();
+
+      if (!cfg.endpoint || !cfg.apiKey || !cfg.model) {
+        throw new Error("LLM endpoint/model/key is required in Deploy settings.");
+      }
+
+      const endpoint = cfg.endpoint.trim();
+      const isHttps = endpoint.startsWith("https://");
+      const isLocalHttp = endpoint.startsWith("http://localhost") || endpoint.startsWith("http://127.0.0.1");
+      if (!isHttps && !isLocalHttp) {
+        throw new Error("LLM endpoint must use HTTPS (or localhost for development).");
+      }
+
+      const response = await fetch(endpoint, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ message: text }),
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${cfg.apiKey}`,
+        },
+        body: JSON.stringify({
+          model: cfg.model,
+          temperature: 0.2,
+          messages: [
+            {
+              role: "system",
+              content:
+                "You are a concise assistant helping users validate and troubleshoot their deployed browser-generated agent workers.",
+            },
+            {
+              role: "user",
+              content: JSON.stringify(
+                {
+                  agent: agent
+                    ? {
+                        id: agent.id,
+                        name: agent.name || "",
+                        description: agent.description || "",
+                      }
+                    : { id: agentId },
+                  prompt: text,
+                },
+                null,
+                2,
+              ),
+            },
+          ],
+        }),
       });
 
-      const reply = data.reply || data.response || data.content || JSON.stringify(data);
+      const data = await response.json().catch(() => null);
+      if (!response.ok) {
+        const detail = data?.error?.message || data?.error || `LLM request failed (${response.status})`;
+        throw new Error(String(detail));
+      }
+
+      let reply = data?.choices?.[0]?.message?.content;
+      if (Array.isArray(reply)) {
+        reply = reply
+          .map((chunk) => {
+            if (typeof chunk === "string") return chunk;
+            if (chunk && typeof chunk.text === "string") return chunk.text;
+            if (chunk && typeof chunk.content === "string") return chunk.content;
+            return "";
+          })
+          .join("\n")
+          .trim();
+      }
+      if (!reply) {
+        reply = JSON.stringify(data);
+      }
       appendEditorChatMessage("assistant", typeof reply === "string" ? reply : JSON.stringify(reply));
     } catch (error) {
       appendEditorChatMessage("assistant", `Error: ${error.message}`);

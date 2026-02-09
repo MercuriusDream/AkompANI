@@ -74,7 +74,7 @@
                   <svg class="eye-closed" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:none"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"/><line x1="1" y1="1" x2="23" y2="23"/></svg>
                 </button>
               </div>
-              <span class="field-hint">Needs <code>repo</code> scope. <a href="https://github.com/settings/tokens/new?scopes=repo&description=Voyager+IDE" target="_blank">Create token</a></span>
+              <span class="field-hint">Needs <code>repo</code> scope. <a href="https://github.com/settings/tokens/new?scopes=repo&description=Voyager+IDE" target="_blank" rel="noopener noreferrer">Create token</a></span>
             </div>
             <button id="testGithub" class="btn btn-secondary btn-sm press-feedback">Test Connection</button>
           </div>
@@ -105,7 +105,7 @@
                   <svg class="eye-closed" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:none"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"/><line x1="1" y1="1" x2="23" y2="23"/></svg>
                 </button>
               </div>
-              <span class="field-hint"><a href="https://dash.cloudflare.com/profile/api-tokens" target="_blank">Create API token</a> with Workers Scripts edit permission</span>
+              <span class="field-hint"><a href="https://dash.cloudflare.com/profile/api-tokens" target="_blank" rel="noopener noreferrer">Create API token</a> with Workers Scripts edit permission</span>
             </div>
             <div class="settings-field">
               <label for="cfAccountId">Account ID</label>
@@ -121,12 +121,12 @@
       <section class="settings-section anim-in anim-d2">
         <div class="settings-section-header">
           <h2>API Keys</h2>
-          <p class="text-muted">Keys used by the flow runtime for LLM and tool calls.</p>
+          <p class="text-muted">Session-scoped keys used by static generation/chat/deploy tools.</p>
         </div>
         <div class="settings-card">
           <div class="settings-card-body">
             <div class="settings-field">
-              <label for="openaiKey">OpenAI API Key</label>
+              <label for="openaiKey">LLM API Key</label>
               <div class="input-reveal">
                 <input id="openaiKey" type="password" class="form-input" placeholder="sk-..." autocomplete="off" />
                 <button class="reveal-btn" data-target="openaiKey" title="Show/hide">
@@ -144,7 +144,7 @@
                   <svg class="eye-closed" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:none"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"/><line x1="1" y1="1" x2="23" y2="23"/></svg>
                 </button>
               </div>
-              <span class="field-hint">Applied to UI calls to <code>/api/*</code> as both <code>Authorization: Bearer ...</code> and <code>x-api-key</code>.</span>
+              <span class="field-hint">Optional legacy backend compatibility only. Static mode does not require this key.</span>
             </div>
           </div>
         </div>
