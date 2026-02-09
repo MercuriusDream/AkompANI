@@ -82,15 +82,15 @@ html {
 }
 
 [data-theme="dark"] .hero {
-  --hero-bg-base: #33353b;
-  --hero-text: #ffffff;
-  --hero-text-soft: rgba(255, 255, 255, 0.86);
-  --hero-line: rgba(255, 255, 255, 0.34);
-  --hero-btn-primary-bg: #ffffff;
+  --hero-bg-base: #2f2a3a;
+  --hero-text: #eaf6f5;
+  --hero-text-soft: rgba(234, 246, 245, 0.86);
+  --hero-line: rgba(234, 246, 245, 0.34);
+  --hero-btn-primary-bg: #eaf6f5;
   --hero-btn-primary-fg: #2f2a3a;
-  --hero-btn-primary-hover-bg: rgba(255, 255, 255, 0.88);
-  --hero-btn-secondary-border: rgba(255, 255, 255, 0.36);
-  --hero-btn-secondary-hover-bg: rgba(255, 255, 255, 0.1);
+  --hero-btn-primary-hover-bg: rgba(234, 246, 245, 0.88);
+  --hero-btn-secondary-border: rgba(234, 246, 245, 0.36);
+  --hero-btn-secondary-hover-bg: rgba(234, 246, 245, 0.1);
 }
 
 /* Fade canvas into solid hero bg at bottom */
@@ -277,7 +277,7 @@ html {
 }
 
 [data-theme="dark"] .features {
-  background: linear-gradient(to bottom, #33353b 0%, var(--bg) 240px);
+  background: linear-gradient(to bottom, #2f2a3a 0%, var(--bg) 240px);
 }
 
 .features-grid {
