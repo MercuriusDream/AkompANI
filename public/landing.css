@@ -74,6 +74,8 @@ body {
   --hero-text: #2f2a3a;
   --hero-text-soft: rgba(47, 42, 58, 0.82);
   --hero-line: rgba(47, 42, 58, 0.35);
+  --hero-title-color: #2f2a3a;
+  --hero-title-shadow: 1px 2px 0 rgba(47, 42, 58, 0.2);
   --hero-btn-primary-bg: #2f2a3a;
   --hero-btn-primary-fg: #ffffff;
   --hero-btn-primary-hover-bg: #33353b;
@@ -95,6 +97,8 @@ body {
   --hero-text: #ffffff;
   --hero-text-soft: rgba(255, 255, 255, 0.82);
   --hero-line: rgba(255, 255, 255, 0.42);
+  --hero-title-color: #dfd9ed;
+  --hero-title-shadow: 1px 2px 0 rgba(18, 20, 28, 0.62);
   --hero-btn-primary-bg: #f7f5f2;
   --hero-btn-primary-fg: #2f2a3a;
   --hero-btn-primary-hover-bg: #ffffff;
@@ -161,21 +165,21 @@ body {
   line-height: 1.08;
   letter-spacing: -0.035em;
   margin-bottom: var(--space-10);
-  color: #dfd9ed;
+  color: var(--hero-title-color);
 }
 
 .hero-punct {
-  color: #dfd9ed;
+  color: var(--hero-title-color);
 }
 
 .hero-and {
-  color: #dfd9ed;
+  color: var(--hero-title-color);
 }
 
 /* Interactive hero words */
 .hero-word {
   text-decoration: none;
-  color: #dfd9ed;
+  color: var(--hero-title-color);
   position: relative;
   display: inline-block;
 }
@@ -183,8 +187,8 @@ body {
 .hero-word-text {
   position: relative;
   font-size: 1.08em;
-  color: #dfd9ed;
-  text-shadow: 1px 2px 0 rgba(18, 20, 28, 0.62);
+  color: var(--hero-title-color);
+  text-shadow: var(--hero-title-shadow);
   text-decoration: underline;
   text-decoration-color: var(--hero-line);
   text-underline-offset: 4px;
@@ -207,7 +211,7 @@ body {
 }
 
 .hero-word:hover .hero-word-text {
-  text-decoration-color: #dfd9ed;
+  text-decoration-color: var(--hero-title-color);
 }
 
 .hero-word:hover .hero-word-label {
