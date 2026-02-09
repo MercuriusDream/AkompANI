@@ -11,3 +11,5 @@ deployments/
 skills
 data-smoke
 deployments-smoke
+.tmp/
+.bun-tmp/

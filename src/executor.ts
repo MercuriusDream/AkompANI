@@ -14,6 +14,7 @@ import {
   nowIso,
   parseUnknownJson,
   renderTemplateValue,
+  safeJsonStringify,
 } from "./utils";
 
 interface ExecuteRunOptions {
@@ -59,8 +60,49 @@ httpNodePrivateAddressRanges.addSubnet("fe80::", 10, "ipv6");
 
 function normalizeHostName(hostname: string): string {
   const trimmed = hostname.trim().toLowerCase();
-  const unwrapped = trimmed.startsWith("[") && trimmed.endsWith("]") ? trimmed.slice(1, -1) : trimmed;
+  if (!trimmed) return "";
+
+  let unwrapped = trimmed;
+  if (unwrapped.startsWith("[")) {
+    const endBracket = unwrapped.indexOf("]");
+    if (endBracket > 0) {
+      unwrapped = unwrapped.slice(1, endBracket);
+    }
+  } else {
+    const colonCount = (unwrapped.match(/:/g) ?? []).length;
+    if (colonCount === 1) {
+      unwrapped = unwrapped.split(":")[0];
+    }
+  }
+
   return unwrapped.replace(/\.+$/, "");
+}
+
+function normalizeAllowedHost(entry: string): string {
+  const trimmed = entry.trim();
+  if (!trimmed) return "";
+
+  try {
+    if (/^[a-z][a-z0-9+.-]*:\/\//i.test(trimmed)) {
+      return normalizeHostName(new URL(trimmed).hostname);
+    }
+  } catch {
+    // Fall through to manual parsing.
+  }
+
+  if (trimmed.startsWith("[") && trimmed.includes("]")) {
+    const end = trimmed.indexOf("]");
+    if (end > 0) {
+      return normalizeHostName(trimmed.slice(1, end));
+    }
+  }
+
+  const colonCount = (trimmed.match(/:/g) || []).length;
+  if (colonCount === 1) {
+    return normalizeHostName(trimmed.split(":")[0]);
+  }
+
+  return normalizeHostName(trimmed);
 }
 
 function stripIpv6ZoneId(hostname: string): string {
@@ -98,10 +140,79 @@ function parseAllowedHttpHosts(envValue: string | undefined): string[] {
 
   const parsed: string[] = [];
   for (const rawEntry of envValue.split(",")) {
-    const entry = normalizeHostName(rawEntry);
+<<<<<<< ours
+    const entry = normalizeAllowlistEntry(rawEntry);
+=======
+    const entry = normalizeAllowedHost(rawEntry);
+>>>>>>> theirs
     if (entry) parsed.push(entry);
   }
   return parsed;
+}
+
+<<<<<<< ours
+function normalizeAllowlistEntry(rawEntry: string): string {
+  const trimmed = rawEntry.trim();
+  if (!trimmed) return "";
+
+  if (trimmed.startsWith("*.")) {
+    const normalized = normalizeAllowlistHost(trimmed.slice(2));
+    return normalized ? `*.${normalized}` : "";
+  }
+
+  return normalizeAllowlistHost(trimmed);
+}
+
+function normalizeAllowlistHost(value: string): string {
+  if (!value) return "";
+
+  const maybeUrl = value.includes("://");
+  if (maybeUrl) {
+    try {
+      return normalizeHostName(new URL(value).hostname);
+    } catch {
+      return "";
+    }
+  }
+
+  const hasPath = /[/?#]/.test(value);
+  if (hasPath) {
+    try {
+      return normalizeHostName(new URL(`http://${value}`).hostname);
+    } catch {
+      return normalizeHostName(value);
+    }
+  }
+
+  try {
+    return normalizeHostName(new URL(`http://${value}`).hostname);
+  } catch {
+    return normalizeHostName(value);
+  }
+=======
+function normalizeAllowlistEntry(rawEntry: string): string | undefined {
+  const trimmed = rawEntry.trim();
+  if (!trimmed) return undefined;
+
+  if (trimmed.startsWith("*.")) {
+    const rawWildcard = trimmed.slice(2);
+    const wildcardHost = normalizeAllowlistEntry(rawWildcard);
+    return wildcardHost ? `*.${wildcardHost}` : undefined;
+  }
+
+  let candidate = trimmed;
+  const shouldParseAsUrl = trimmed.includes("://") || trimmed.includes("/") || trimmed.includes(":");
+  if (shouldParseAsUrl) {
+    try {
+      candidate = new URL(trimmed.includes("://") ? trimmed : `http://${trimmed}`).hostname;
+    } catch {
+      candidate = trimmed;
+    }
+  }
+
+  const normalized = normalizeHostName(candidate);
+  return normalized || undefined;
+>>>>>>> theirs
 }
 
 function isHttpHostAllowlisted(hostname: string, allowlist: string[]): boolean {
@@ -279,14 +390,64 @@ function toBoolean(value: unknown): boolean {
   return Boolean(value);
 }
 
-function safeJsonStringify(value: unknown): string {
+<<<<<<< ours
+<<<<<<< ours
+function safeJsonStringify(value: unknown, indent = 0): string {
   try {
-    return JSON.stringify(value);
+    const seen = new WeakSet<object>();
+    return JSON.stringify(
+      value,
+      (_key, val) => {
+        if (typeof val === "bigint") {
+          return val.toString();
+        }
+        if (typeof val === "object" && val !== null) {
+          if (seen.has(val)) return "[Circular]";
+          seen.add(val);
+        }
+        return val;
+      },
+      indent,
+    );
   } catch {
-    return "";
+    try {
+      return JSON.stringify(String(value));
+    } catch {
+      return "null";
+    }
   }
 }
 
+function safeJsonStringifyWithIndent(value: unknown, indent: number): string {
+  try {
+    const seen = new WeakSet<object>();
+    return JSON.stringify(
+      value,
+      (_key, val) => {
+        if (typeof val === "bigint") {
+          return val.toString();
+        }
+        if (typeof val === "object" && val !== null) {
+          if (seen.has(val)) return "[Circular]";
+          seen.add(val);
+        }
+        return val;
+      },
+      indent,
+    );
+  } catch {
+    try {
+      return JSON.stringify(String(value), null, indent);
+    } catch {
+      return "null";
+    }
+  }
+}
+
+=======
+>>>>>>> theirs
+=======
+>>>>>>> theirs
 function hasValue(arr: unknown[], value: unknown): boolean {
   if (arr.includes(value)) return true;
   const target = safeJsonStringify(value);
@@ -487,7 +648,35 @@ async function executeNode(
     const indentRaw = cfg.indent;
     const indent = indentRaw === "" ? 0 : Math.max(0, asNumber(indentRaw, 2));
 
-    const text = JSON.stringify(source, null, indent);
+<<<<<<< ours
+<<<<<<< ours
+<<<<<<< ours
+<<<<<<< ours
+<<<<<<< ours
+<<<<<<< ours
+<<<<<<< ours
+    const text = safeJsonStringifyWithIndent(source, indent);
+=======
+    const text = safeJsonStringify(source, indent);
+>>>>>>> theirs
+=======
+    const text = safeJsonStringify(source, indent);
+>>>>>>> theirs
+=======
+    const text = safeJsonStringify(source, indent);
+>>>>>>> theirs
+=======
+    const text = safeJsonStringify(source, indent);
+>>>>>>> theirs
+=======
+    const text = safeJsonStringify(source, indent);
+>>>>>>> theirs
+=======
+    const text = safeJsonStringify(source, indent);
+>>>>>>> theirs
+=======
+    const text = safeJsonStringify(source, indent);
+>>>>>>> theirs
     const storeAs = asString(cfg.storeAs, "").trim();
     if (storeAs) {
       context.vars[storeAs] = text;
@@ -833,6 +1022,21 @@ export async function executeFlowRun(options: ExecuteRunOptions): Promise<unknow
     forEach: {},
   };
 
+<<<<<<< ours
+  let step = 0;
+  let currentId: string | undefined = compiled.entryNodeId;
+  let lastNode: { id: string; type: string } | undefined;
+
+  try {
+    await options.onEvent({
+      type: "run_started",
+      detail: {
+        flowId: compiled.id,
+        flowName: compiled.name,
+        at: nowIso(),
+      },
+    });
+=======
   await options.onEvent({
     type: "run_started",
     detail: {
@@ -842,88 +1046,181 @@ export async function executeFlowRun(options: ExecuteRunOptions): Promise<unknow
     },
   });
 
-  let step = 0;
-  let currentId: string | undefined = compiled.entryNodeId;
+  try {
+    let step = 0;
+    let currentId: string | undefined = compiled.entryNodeId;
+>>>>>>> theirs
 
-  while (currentId) {
-    step += 1;
-    if (step > maxSteps) {
-      throw new Error(`Execution exceeded maxSteps=${maxSteps}.`);
-    }
+    while (currentId) {
+      step += 1;
+      if (step > maxSteps) {
+        throw new Error(`Execution exceeded maxSteps=${maxSteps}.`);
+      }
 
-    const node = compiled.nodes[currentId];
-    if (!node) {
-      throw new Error(`Node ${currentId} not found in compiled flow.`);
-    }
+      const node = compiled.nodes[currentId];
+      if (!node) {
+        throw new Error(`Node ${currentId} not found in compiled flow.`);
+      }
+<<<<<<< ours
+      lastNode = { id: node.id, type: node.type };
+=======
+>>>>>>> theirs
 
-    await options.onEvent({
-      type: "node_started",
-      nodeId: node.id,
-      nodeType: node.type,
-      detail: {
-        step,
-        vars: truncateValue(context.vars),
-      },
-    });
-
-    const result = await executeNode(node, context, state, options.onEvent);
-    const chosenPort = result.port || "next";
-
-    await options.onEvent({
-      type: "node_completed",
-      nodeId: node.id,
-      nodeType: node.type,
-      detail: {
-        step,
-        port: chosenPort,
-        last: truncateValue(context.last),
-      },
-    });
-
-    if (result.stop) {
-      const out = result.output ?? context.output ?? context.last;
       await options.onEvent({
-        type: "run_completed",
-        detail: {
-          output: truncateValue(out),
-        },
-      });
-      return out;
-    }
-
-    const { nextId, fanout } = pickNextTarget(edgeLookup, node.id, chosenPort);
-    if (!nextId) {
-      const out = context.output ?? context.last;
-      await options.onEvent({
-        type: "run_completed",
-        detail: {
-          output: truncateValue(out),
-          reason: "no_next_edge",
-        },
-      });
-      return out;
-    }
-
-    if (fanout > 1) {
-      await options.onEvent({
-        type: "node_log",
+        type: "node_started",
         nodeId: node.id,
         nodeType: node.type,
         detail: {
-          message: `Port fanout is ${fanout}; selecting first target ${nextId}.`,
+          step,
+          vars: truncateValue(context.vars),
         },
       });
+
+      const result = await executeNode(node, context, state, options.onEvent);
+      const chosenPort = result.port || "next";
+<<<<<<< ours
+
+      await options.onEvent({
+        type: "node_completed",
+        nodeId: node.id,
+        nodeType: node.type,
+        detail: {
+          step,
+          port: chosenPort,
+          last: truncateValue(context.last),
+        },
+      });
+
+      if (result.stop) {
+        const out = result.output ?? context.output ?? context.last;
+        await options.onEvent({
+          type: "run_completed",
+          detail: {
+            output: truncateValue(out),
+          },
+        });
+        return out;
+      }
+
+      const { nextId, fanout } = pickNextTarget(edgeLookup, node.id, chosenPort);
+      if (!nextId) {
+        const out = context.output ?? context.last;
+        await options.onEvent({
+          type: "run_completed",
+          detail: {
+            output: truncateValue(out),
+            reason: "no_next_edge",
+          },
+        });
+        return out;
+      }
+
+      if (fanout > 1) {
+        await options.onEvent({
+          type: "node_log",
+          nodeId: node.id,
+          nodeType: node.type,
+          detail: {
+            message: `Port fanout is ${fanout}; selecting first target ${nextId}.`,
+          },
+        });
+      }
+
+      currentId = nextId;
     }
 
-    currentId = nextId;
-  }
+    await options.onEvent({
+      type: "run_completed",
+      detail: {
+        output: truncateValue(context.output ?? context.last),
+        reason: "graph_ended",
+      },
+    });
+    return context.output ?? context.last;
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
+    await options.onEvent({
+      type: "run_failed",
+      nodeId: lastNode?.id,
+      nodeType: lastNode?.type,
+      detail: {
+        step,
+        at: nowIso(),
+        error: message,
+      },
+    });
+=======
 
-  await options.onEvent({
-    type: "run_completed",
-    detail: {
-      output: truncateValue(context.output ?? context.last),
-      reason: "graph_ended",
-    },
-  });
-  return context.output ?? context.last;
+      await options.onEvent({
+        type: "node_completed",
+        nodeId: node.id,
+        nodeType: node.type,
+        detail: {
+          step,
+          port: chosenPort,
+          last: truncateValue(context.last),
+        },
+      });
+
+      if (result.stop) {
+        const out = result.output ?? context.output ?? context.last;
+        await options.onEvent({
+          type: "run_completed",
+          detail: {
+            output: truncateValue(out),
+          },
+        });
+        return out;
+      }
+
+      const { nextId, fanout } = pickNextTarget(edgeLookup, node.id, chosenPort);
+      if (!nextId) {
+        const out = context.output ?? context.last;
+        await options.onEvent({
+          type: "run_completed",
+          detail: {
+            output: truncateValue(out),
+            reason: "no_next_edge",
+          },
+        });
+        return out;
+      }
+
+      if (fanout > 1) {
+        await options.onEvent({
+          type: "node_log",
+          nodeId: node.id,
+          nodeType: node.type,
+          detail: {
+            message: `Port fanout is ${fanout}; selecting first target ${nextId}.`,
+          },
+        });
+      }
+
+      currentId = nextId;
+    }
+
+    await options.onEvent({
+      type: "run_completed",
+      detail: {
+        output: truncateValue(context.output ?? context.last),
+        reason: "graph_ended",
+      },
+    });
+    return context.output ?? context.last;
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
+    try {
+      await options.onEvent({
+        type: "run_failed",
+        detail: {
+          error: message,
+        },
+      });
+    } catch {
+      // Swallow event emission failures; preserve the original error.
+    }
+>>>>>>> theirs
+    throw error;
+  }
 }

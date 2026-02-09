@@ -5,9 +5,9 @@
   "description": "Voyager — visual agent builder with flow execution, structured outputs, webhooks, and websockets.",
   "scripts": {
     "dev": "bun --watch src/server.ts",
-    "build": "bunx tsc -p tsconfig.json",
+    "build": "./scripts/bunx_safe.sh tsc -p tsconfig.json",
     "start": "bun dist/server.js",
-    "check": "bunx tsc -p tsconfig.json --noEmit",
+    "check": "./scripts/bunx_safe.sh tsc -p tsconfig.json --noEmit",
     "test": "bun test"
   },
   "dependencies": {
