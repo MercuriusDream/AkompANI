@@ -4,6 +4,14 @@ html {
   scroll-behavior: smooth;
 }
 
+body {
+  background: #eaf6f5;
+}
+
+[data-theme="dark"] body {
+  background: #33353b;
+}
+
 
 /* ========================================
    LANDING NAV
@@ -83,9 +91,14 @@ html {
 
 [data-theme="dark"] .hero {
   --hero-bg-base: #33353b;
+  --hero-text: #ffffff;
+  --hero-text-soft: rgba(255, 255, 255, 0.82);
+  --hero-line: rgba(255, 255, 255, 0.42);
   --hero-btn-primary-bg: #f7f5f2;
   --hero-btn-primary-fg: #2f2a3a;
   --hero-btn-primary-hover-bg: #ffffff;
+  --hero-btn-secondary-border: rgba(255, 255, 255, 0.38);
+  --hero-btn-secondary-hover-bg: rgba(255, 255, 255, 0.1);
 }
 
 /* Fade canvas into solid hero bg at bottom */
@@ -268,11 +281,11 @@ html {
 .features {
   padding: var(--space-20) 0;
   padding-top: 120px;
-  background: linear-gradient(to bottom, #eaf6f5 0%, var(--bg) 240px);
+  background: transparent;
 }
 
 [data-theme="dark"] .features {
-  background: linear-gradient(to bottom, #33353b 0%, var(--bg) 240px);
+  background: transparent;
 }
 
 .features-grid {
