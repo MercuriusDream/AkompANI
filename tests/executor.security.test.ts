@@ -86,19 +86,11 @@ afterEach(() => {
     process.env.HTTP_NODE_ALLOW_PRIVATE_NETWORK = originalAllowPrivateNet;
   }
 
-<<<<<<< ours
   if (originalFetch) {
     globalThis.fetch = originalFetch;
-<<<<<<< ours
-=======
   } else {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    delete (globalThis as any).fetch;
->>>>>>> theirs
+    delete (globalThis as { fetch?: typeof fetch }).fetch;
   }
-=======
-  globalThis.fetch = originalFetch;
->>>>>>> theirs
 });
 
 describe("executor security defaults", () => {
@@ -171,48 +163,81 @@ describe("executor security defaults", () => {
     ).rejects.toThrow("blocked private host");
   });
 
-<<<<<<< ours
-<<<<<<< ours
   test("accepts allowlist entries that include schemes, ports, or paths", async () => {
     process.env.HTTP_NODE_ALLOWED_HOSTS =
       "https://api.example.com/v1,example.org:443,*.example.net/path";
-=======
-  test("allows wildcard allowlist entries without requiring exact host match", async () => {
-    process.env.HTTP_NODE_ALLOWED_HOSTS = "*.example.com";
-    delete process.env.HTTP_NODE_ALLOW_PRIVATE_NETWORK;
->>>>>>> theirs
 
-    globalThis.fetch = async () =>
+    globalThis.fetch = (async () =>
       new Response(JSON.stringify({ ok: true }), {
         status: 200,
         headers: { "content-type": "application/json" },
-      });
+      })) as typeof fetch;
 
     const flow = makeFlow(
-<<<<<<< ours
       "flow_http_allowlist_normalization",
       "HTTP Allowlist Normalization",
       makeLinearDrawflow("http", {
         method: "GET",
         url: "https://api.example.com/v1/status",
-=======
+        storeAs: "httpResult",
+      }),
+    );
+
+    const result = await executeFlowRun({
+      flow,
+      input: {},
+      onEvent: () => undefined,
+    });
+
+    expect(result).toMatchObject({
+      status: 200,
+      ok: true,
+      data: { ok: true },
+    });
+  });
+
+  test("allows wildcard allowlist entries without requiring exact host match", async () => {
+    process.env.HTTP_NODE_ALLOWED_HOSTS = "*.example.com";
+    delete process.env.HTTP_NODE_ALLOW_PRIVATE_NETWORK;
+
+    globalThis.fetch = (async () =>
+      new Response(JSON.stringify({ ok: true }), {
+        status: 200,
+        headers: { "content-type": "application/json" },
+      })) as typeof fetch;
+
+    const flow = makeFlow(
       "flow_http_wildcard_allow",
       "HTTP Wildcard Allow",
       makeLinearDrawflow("http", {
         method: "GET",
         url: "https://api.example.com/health",
->>>>>>> theirs
-=======
+        storeAs: "httpResult",
+      }),
+    );
+
+    const result = await executeFlowRun({
+      flow,
+      input: {},
+      onEvent: () => undefined,
+    });
+
+    expect(result).toMatchObject({
+      status: 200,
+      ok: true,
+      data: { ok: true },
+    });
+  });
+
   test("honors allowlist entries that include ports", async () => {
     delete process.env.HTTP_NODE_ALLOW_PRIVATE_NETWORK;
     process.env.HTTP_NODE_ALLOWED_HOSTS = "127.0.0.1:8080";
 
-    globalThis.fetch = async () => {
-      return new Response("ok", {
+    globalThis.fetch = (async () =>
+      new Response("ok", {
         status: 200,
         headers: { "content-type": "text/plain" },
-      });
-    };
+      })) as typeof fetch;
 
     const flow = makeFlow(
       "flow_http_allowlist_port",
@@ -220,43 +245,32 @@ describe("executor security defaults", () => {
       makeLinearDrawflow("http", {
         method: "GET",
         url: "http://127.0.0.1:8080/health",
->>>>>>> theirs
         storeAs: "httpResult",
       }),
     );
 
-<<<<<<< ours
-<<<<<<< ours
-    await expect(
-      executeFlowRun({
-        flow,
-        input: {},
-        onEvent: () => undefined,
-      }),
-    ).resolves.toBeDefined();
-=======
     const result = await executeFlowRun({
-=======
-    const output = await executeFlowRun({
->>>>>>> theirs
       flow,
       input: {},
       onEvent: () => undefined,
     });
 
-<<<<<<< ours
-    expect(result.output).toEqual({ ok: true });
+    expect(result).toMatchObject({
+      status: 200,
+      ok: true,
+      data: "ok",
+    });
   });
 
   test("allows allowlist entries that include scheme or path", async () => {
     process.env.HTTP_NODE_ALLOWED_HOSTS = "https://api.example.com/path";
     delete process.env.HTTP_NODE_ALLOW_PRIVATE_NETWORK;
 
-    globalThis.fetch = async () =>
+    globalThis.fetch = (async () =>
       new Response(JSON.stringify({ ok: "allowed" }), {
         status: 200,
         headers: { "content-type": "application/json" },
-      });
+      })) as typeof fetch;
 
     const flow = makeFlow(
       "flow_http_allowlist_scheme",
@@ -274,13 +288,10 @@ describe("executor security defaults", () => {
       onEvent: () => undefined,
     });
 
-    expect(result.output).toEqual({ ok: "allowed" });
->>>>>>> theirs
-=======
-    expect(output).toMatchObject({
+    expect(result).toMatchObject({
       status: 200,
       ok: true,
+      data: { ok: "allowed" },
     });
->>>>>>> theirs
   });
 });

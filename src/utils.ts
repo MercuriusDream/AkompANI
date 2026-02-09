@@ -65,20 +65,8 @@ export function interpolateString(template: string, context: ExecutionContext): 
   });
 }
 
-<<<<<<< ours
-<<<<<<< ours
-<<<<<<< ours
-export function safeJsonStringify(value: unknown, indent = 0): string {
-  const safeIndent = Number.isFinite(indent) && indent > 0 ? Math.floor(indent) : 0;
-=======
 export function safeJsonStringify(value: unknown, indent?: number): string {
->>>>>>> theirs
-=======
-export function safeJsonStringify(value: unknown, indent?: number): string {
->>>>>>> theirs
-=======
-export function safeJsonStringify(value: unknown, indent?: number): string {
->>>>>>> theirs
+  const safeIndent = typeof indent === "number" && Number.isFinite(indent) && indent > 0 ? Math.floor(indent) : 0;
   try {
     const seen = new WeakSet<object>();
     const json = JSON.stringify(value, (_key, val) => {
@@ -90,26 +78,11 @@ export function safeJsonStringify(value: unknown, indent?: number): string {
         seen.add(val);
       }
       return val;
-<<<<<<< ours
-<<<<<<< ours
-<<<<<<< ours
     }, safeIndent);
-=======
-    }, indent);
->>>>>>> theirs
-=======
-    }, indent);
->>>>>>> theirs
-  } catch {
-    try {
-      return JSON.stringify(String(value), null, safeIndent);
-=======
-    }, indent);
     return json ?? "null";
   } catch {
     try {
-      return JSON.stringify(String(value), null, indent) ?? "null";
->>>>>>> theirs
+      return JSON.stringify(String(value), null, safeIndent) ?? "null";
     } catch {
       return "null";
     }

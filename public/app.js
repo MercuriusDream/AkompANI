@@ -78,6 +78,12 @@
   const llmModelInput = document.getElementById("llmModel");
   const saveLlmConfigBtn = document.getElementById("saveLlmConfigBtn");
   const llmConfigStatus = document.getElementById("llmConfigStatus");
+  const modeTabs = [modeChatTab, modeCanvasTab, modeDeployTab].filter(Boolean);
+  const modeViews = {
+    chat: chatFullView,
+    canvas: canvasView,
+    deploy: deployView,
+  };
 
   const STORAGE_KEYS = {
     localFlows: "voyager_local_flows",
@@ -2143,24 +2149,43 @@
     }
   }
 
+  function setModeViewActive(viewEl, isActive) {
+    if (!viewEl) return;
+    viewEl.classList.toggle("is-active", isActive);
+    viewEl.setAttribute("aria-hidden", isActive ? "false" : "true");
+  }
+
   function switchMode(mode) {
+    if (!modeViews[mode]) mode = "chat";
     state.editorMode = mode;
+    document.body.setAttribute("data-editor-mode", mode);
 
     // Toggle tab active states
-    if (modeChatTab) modeChatTab.classList.toggle("active", mode === "chat");
-    if (modeCanvasTab) modeCanvasTab.classList.toggle("active", mode === "canvas");
-    if (modeDeployTab) modeDeployTab.classList.toggle("active", mode === "deploy");
+    for (const tab of modeTabs) {
+      const isActive = tab?.dataset?.mode === mode;
+      tab.classList.toggle("active", isActive);
+      tab.setAttribute("aria-selected", isActive ? "true" : "false");
+    }
 
-    // Show/hide views
-    if (chatFullView) chatFullView.style.display = mode === "chat" ? "" : "none";
-    if (canvasView) canvasView.style.display = mode === "canvas" ? "" : "none";
-    if (deployView) deployView.style.display = mode === "deploy" ? "" : "none";
+    // Toggle view active states with CSS transitions
+    for (const [viewMode, viewEl] of Object.entries(modeViews)) {
+      setModeViewActive(viewEl, viewMode === mode);
+    }
 
     // Show/hide canvas-specific nav controls
-    if (navCanvasControls) navCanvasControls.style.display = mode === "canvas" ? "" : "none";
+    if (navCanvasControls) {
+      navCanvasControls.classList.toggle("is-visible", mode === "canvas");
+    }
 
     // Show/hide chat pill (only in canvas mode)
-    if (chatPill) chatPill.style.display = mode === "canvas" ? "" : "none";
+    if (chatPill) {
+      const showPill = mode === "canvas";
+      chatPill.classList.toggle("is-visible", showPill);
+      if (!showPill) {
+        if (chatPillWindow) chatPillWindow.style.display = "none";
+        if (chatPillBtn) chatPillBtn.style.display = "";
+      }
+    }
 
     // Apply inspector collapse state in canvas mode
     if (mode === "canvas") {
@@ -3099,19 +3124,18 @@
   /* ===== Chat Pill ===== */
 
   function bindPillEvents() {
-    let pillExpanded = false;
+    const isPillExpanded = () => Boolean(chatPillWindow && chatPillWindow.style.display !== "none");
 
     if (chatPillBtn) {
       chatPillBtn.addEventListener("click", () => {
-        pillExpanded = !pillExpanded;
-        if (chatPillWindow) chatPillWindow.style.display = pillExpanded ? "" : "none";
-        if (chatPillBtn) chatPillBtn.style.display = pillExpanded ? "none" : "";
+        const nextExpanded = !isPillExpanded();
+        if (chatPillWindow) chatPillWindow.style.display = nextExpanded ? "" : "none";
+        if (chatPillBtn) chatPillBtn.style.display = nextExpanded ? "none" : "";
       });
     }
 
     if (chatPillMinimize) {
       chatPillMinimize.addEventListener("click", () => {
-        pillExpanded = false;
         if (chatPillWindow) chatPillWindow.style.display = "none";
         if (chatPillBtn) chatPillBtn.style.display = "";
       });

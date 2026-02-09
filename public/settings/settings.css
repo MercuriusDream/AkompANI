@@ -1,5 +1,10 @@
 /* Settings Page */
 
+.nav-actions a[aria-current="page"] {
+  color: var(--brand);
+  background: var(--brand-light);
+}
+
 .settings-main {
   flex: 1;
   padding: var(--space-8) var(--space-6);

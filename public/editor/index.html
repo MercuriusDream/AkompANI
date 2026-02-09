@@ -17,24 +17,32 @@
     <!-- Navigation -->
     <nav class="top-nav editor-nav">
       <div class="top-nav-inner">
-        <!-- Mode Switch -->
-        <div class="editor-mode-switch">
-          <button class="mode-tab active" data-mode="chat" id="modeChatTab">
-            <svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
-            <span>Chat</span>
-          </button>
-          <button class="mode-tab" data-mode="canvas" id="modeCanvasTab">
-            <svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>
-            <span>Canvas</span>
-          </button>
-          <button class="mode-tab" data-mode="deploy" id="modeDeployTab">
-            <svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 2L11 13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
-            <span>Deploy</span>
-          </button>
+        <div class="editor-nav-primary">
+          <a href="/" class="nav-brand">
+            <div class="nav-brand-icon">
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2L2 7l10 5 10-5-10-5z"/><path d="M2 17l10 5 10-5"/><path d="M2 12l10 5 10-5"/></svg>
+            </div>
+            <span class="nav-brand-text">Voyager</span>
+          </a>
+
+          <div class="nav-links editor-nav-links" role="tablist" aria-label="Editor modes">
+            <button class="nav-link mode-tab active" data-mode="chat" id="modeChatTab" type="button" aria-controls="chatFullView" aria-selected="true">
+              <svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+              <span>Chat</span>
+            </button>
+            <button class="nav-link mode-tab" data-mode="canvas" id="modeCanvasTab" type="button" aria-controls="canvasView" aria-selected="false">
+              <svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>
+              <span>Canvas</span>
+            </button>
+            <button class="nav-link mode-tab" data-mode="deploy" id="modeDeployTab" type="button" aria-controls="deployView" aria-selected="false">
+              <svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 2L11 13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
+              <span>Deploy</span>
+            </button>
+          </div>
         </div>
 
         <!-- Canvas-mode controls (hidden in chat mode) -->
-        <div class="nav-canvas-controls" id="navCanvasControls" style="display:none">
+        <div class="nav-canvas-controls" id="navCanvasControls">
           <div class="flow-selector">
             <select id="flowSelect" class="form-select form-select-sm">
               <option value="">Select a flow...</option>
@@ -54,6 +62,11 @@
         </div>
 
         <div class="nav-actions">
+          <a href="/settings" class="btn btn-ghost btn-icon btn-sm" title="Open settings" aria-label="Open settings">
+            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <line x1="4" y1="21" x2="4" y2="14" /><line x1="4" y1="10" x2="4" y2="3" /><line x1="12" y1="21" x2="12" y2="12" /><line x1="12" y1="8" x2="12" y2="3" /><line x1="20" y1="21" x2="20" y2="16" /><line x1="20" y1="12" x2="20" y2="3" /><line x1="1" y1="14" x2="7" y2="14" /><line x1="9" y1="8" x2="15" y2="8" /><line x1="17" y1="16" x2="23" y2="16" />
+            </svg>
+          </a>
           <button id="themeToggle" class="btn btn-ghost btn-icon btn-sm" title="Toggle theme">
             <svg class="theme-icon-light" xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/></svg>
             <svg class="theme-icon-dark" xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>
@@ -66,7 +79,7 @@
     <main class="editor-main" id="editorMain">
 
       <!-- ====== FULL-SCREEN CHAT VIEW ====== -->
-      <div id="chatFullView" class="chat-full">
+      <div id="chatFullView" class="chat-full editor-view is-active" aria-hidden="false">
         <div class="chat-full-center">
           <div class="chat-full-scroll" id="chatFullScroll">
             <div id="buildChatMessages" class="chat-full-messages">
@@ -105,7 +118,7 @@
       </div>
 
       <!-- ====== CANVAS VIEW ====== -->
-      <div id="canvasView" class="canvas-layout" style="display:none">
+      <div id="canvasView" class="canvas-layout editor-view" aria-hidden="true">
         <!-- Blocks Palette -->
         <aside class="blocks-panel" id="palettePanel">
           <div class="blocks-panel-header">
@@ -248,7 +261,7 @@
       </div>
 
       <!-- ====== DEPLOY VIEW ====== -->
-      <div id="deployView" class="deploy-view" style="display:none">
+      <div id="deployView" class="deploy-view editor-view" aria-hidden="true">
         <div class="deploy-main">
           <div class="deploy-inner">
             <h1 class="deploy-title anim-in">Deploy Agent</h1>
@@ -413,7 +426,7 @@
       </div>
 
       <!-- ====== FLOATING CHAT PILL ====== -->
-      <div id="chatPill" class="chat-pill" style="display:none">
+      <div id="chatPill" class="chat-pill">
         <button class="chat-pill-btn" id="chatPillBtn">
           <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
           <span class="chat-pill-text">Chat</span>
