@@ -1,5 +1,5 @@
 /**
- * Voyager Auth UI — injects connection indicators into nav.
+ * Voyager Auth UI — injects auth indicators into nav.
  * Include on every page: <script src="/auth-ui.js"></script>
  */
 (function () {
@@ -30,19 +30,9 @@
     ? `<div style="display:flex;gap:3px;align-items:center">${dots.join('')}</div>`
     : '';
 
-  const connectionsLink = document.createElement('a');
-  connectionsLink.href = '/editor#deploy-connections';
-  connectionsLink.className = 'btn btn-ghost btn-sm';
-  connectionsLink.title = 'Connections';
-  connectionsLink.textContent = 'Connections';
-  if (!hasGithub || !hasCf) {
-    connectionsLink.style.color = 'var(--warning)';
-  }
-
   const themeToggle = navActions.querySelector('#themeToggle');
   if (dotsHtml) {
     indicator.innerHTML = dotsHtml;
     navActions.insertBefore(indicator, themeToggle);
   }
-  navActions.insertBefore(connectionsLink, themeToggle);
 })();

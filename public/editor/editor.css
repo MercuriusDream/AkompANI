@@ -3,35 +3,35 @@
 /* ===== Easing ===== */
 :root {
   --ease-out-expo: cubic-bezier(0.16, 1, 0.3, 1);
-  --editor-surface: rgba(248, 244, 255, 0.72);
-  --editor-surface-strong: rgba(255, 255, 255, 0.84);
-  --editor-border: rgba(91, 79, 163, 0.2);
-  --editor-glow-1: rgba(129, 140, 248, 0.28);
-  --editor-glow-2: rgba(59, 130, 246, 0.2);
-  --editor-glow-3: rgba(56, 189, 248, 0.2);
+  --editor-surface: rgba(234, 246, 245, 0.76);
+  --editor-surface-strong: rgba(255, 255, 255, 0.9);
+  --editor-border: rgba(164, 184, 205, 0.38);
+  --editor-glow-1: rgba(99, 223, 246, 0.22);
+  --editor-glow-2: rgba(197, 188, 216, 0.24);
+  --editor-glow-3: rgba(251, 200, 200, 0.2);
 }
 
 [data-theme="dark"] {
-  --editor-surface: rgba(18, 15, 44, 0.72);
-  --editor-surface-strong: rgba(13, 11, 35, 0.82);
-  --editor-border: rgba(129, 140, 248, 0.26);
-  --editor-glow-1: rgba(129, 140, 248, 0.24);
-  --editor-glow-2: rgba(56, 189, 248, 0.16);
-  --editor-glow-3: rgba(99, 102, 241, 0.2);
+  --editor-surface: rgba(47, 42, 58, 0.74);
+  --editor-surface-strong: rgba(51, 53, 59, 0.84);
+  --editor-border: rgba(164, 184, 205, 0.28);
+  --editor-glow-1: rgba(99, 223, 246, 0.2);
+  --editor-glow-2: rgba(197, 188, 216, 0.18);
+  --editor-glow-3: rgba(251, 200, 200, 0.14);
 }
 
 /* ===== Nav Overrides ===== */
 .editor-nav {
-  background: linear-gradient(120deg, rgba(31, 25, 86, 0.88), rgba(63, 46, 136, 0.78));
-  border-bottom: 1px solid rgba(255, 255, 255, 0.2);
-  box-shadow: 0 12px 40px rgba(19, 12, 52, 0.28);
+  background: linear-gradient(120deg, rgba(47, 42, 58, 0.92), rgba(51, 53, 59, 0.84));
+  border-bottom: 1px solid rgba(197, 188, 216, 0.32);
+  box-shadow: 0 12px 40px rgba(47, 42, 58, 0.34);
   backdrop-filter: blur(16px) saturate(130%);
   -webkit-backdrop-filter: blur(16px) saturate(130%);
 }
 
 [data-theme="dark"] .editor-nav {
-  background: linear-gradient(120deg, rgba(11, 10, 30, 0.92), rgba(27, 21, 67, 0.82));
-  border-bottom: 1px solid rgba(129, 140, 248, 0.22);
+  background: linear-gradient(120deg, rgba(34, 31, 43, 0.95), rgba(40, 43, 50, 0.9));
+  border-bottom: 1px solid rgba(164, 184, 205, 0.24);
   box-shadow: 0 14px 36px rgba(0, 0, 0, 0.45);
 }
 
@@ -90,7 +90,7 @@
 
 [data-theme="dark"] .mode-tab.active,
 [data-theme="dark"] .mode-tab[aria-selected="true"] {
-  background: rgba(129, 140, 248, 0.34);
+  background: rgba(99, 223, 246, 0.28);
   box-shadow: 0 10px 24px rgba(0, 0, 0, 0.45);
 }
 
@@ -885,8 +885,8 @@ body.right-collapsed .canvas-layout {
 .editor-canvas {
   position: relative;
   background:
-    radial-gradient(700px 300px at 8% 6%, rgba(129, 140, 248, 0.2), transparent 68%),
-    radial-gradient(680px 280px at 100% 0%, rgba(56, 189, 248, 0.18), transparent 66%),
+    radial-gradient(700px 300px at 8% 6%, rgba(99, 223, 246, 0.2), transparent 68%),
+    radial-gradient(680px 280px at 100% 0%, rgba(197, 188, 216, 0.22), transparent 66%),
     color-mix(in srgb, var(--editor-surface) 78%, transparent);
   overflow: hidden;
 }

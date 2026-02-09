@@ -8,58 +8,71 @@
    ======================================== */
 
 :root {
-  /* Voyager Color Palette - Warm Light (Anthropic-inspired) */
-  --bg: #f5f0eb;
-  --bg-secondary: #ece7e1;
-  --bg-tertiary: #e3ded8;
-  --bg-hover: #dbd5ce;
+  /* User-selected palette */
+  --tone-dark-purple-grey: #2f2a3a;
+  --tone-dark-grey: #33353b;
+  --tone-light-grey: #d8dbe2;
+  --tone-off-white: #f7f5f2;
+  --tone-plain-white: #ffffff;
+  --tone-light-sky: #eaf6f5;
+  --tone-pink: #fbc8c8;
+  --tone-rose: #fddcee;
+  --tone-light-lavender: #c5bcd8;
+  --tone-light-blue: #63dff6;
+  --tone-blue-grey: #a4b8cd;
+
+  /* Core surfaces */
+  --bg: var(--tone-off-white);
+  --bg-secondary: var(--tone-plain-white);
+  --bg-tertiary: var(--tone-light-sky);
+  --bg-hover: var(--tone-light-grey);
 
   /* Surface colors for depth without borders */
-  --surface: #f5f0eb;
-  --surface-subtle: #ece7e1;
-  --surface-elevated: #faf6f2;
+  --surface: var(--tone-off-white);
+  --surface-subtle: var(--tone-light-sky);
+  --surface-elevated: var(--tone-plain-white);
 
   /* Borders */
-  --border: #ddd7d0;
-  --border-strong: #c7c0b8;
+  --border: color-mix(in srgb, var(--tone-blue-grey) 45%, var(--tone-plain-white));
+  --border-strong: color-mix(in srgb, var(--tone-blue-grey) 70%, var(--tone-light-grey));
 
-  /* Text - Warm dark */
-  --text: #1a1714;
-  --text-secondary: #5c554d;
-  --text-muted: #8a8279;
-  --text-placeholder: #a8a099;
-  --text-inverse: #ffffff;
+  /* Text */
+  --text: var(--tone-dark-purple-grey);
+  --text-secondary: var(--tone-dark-grey);
+  --text-muted: var(--tone-blue-grey);
+  --text-placeholder: color-mix(in srgb, var(--tone-blue-grey) 78%, var(--tone-light-grey));
+  --text-inverse: var(--tone-plain-white);
 
-  /* Accent - Voyager Indigo */
-  --brand: #6366f1;
-  --brand-hover: #4f46e5;
-  --brand-soft: rgba(99, 102, 241, 0.08);
-  --brand-medium: rgba(99, 102, 241, 0.15);
-  --brand-light: rgba(99, 102, 241, 0.06);
+  /* Accent */
+  --brand: var(--tone-dark-purple-grey);
+  --brand-hover: var(--tone-dark-grey);
+  --brand-soft: color-mix(in srgb, var(--tone-light-lavender) 24%, transparent);
+  --brand-medium: color-mix(in srgb, var(--tone-light-blue) 22%, transparent);
+  --brand-light: color-mix(in srgb, var(--tone-light-sky) 72%, var(--tone-plain-white));
 
-  /* Semantic colors - subtle */
-  --blue: #3b82f6;
-  --blue-soft: rgba(59, 130, 246, 0.08);
-  --purple: #8b5cf6;
-  --purple-soft: rgba(139, 92, 246, 0.08);
-  --orange: #f59e0b;
-  --orange-soft: rgba(245, 158, 11, 0.08);
-  --red: #ef4444;
-  --red-soft: rgba(239, 68, 68, 0.08);
-  --success: #10b981;
-  --success-soft: rgba(16, 185, 129, 0.08);
-  --accent: #3b82f6;
-  --accent-soft: rgba(59, 130, 246, 0.08);
+  /* Semantic colors */
+  --blue: var(--tone-light-blue);
+  --blue-soft: color-mix(in srgb, var(--tone-light-blue) 18%, transparent);
+  --purple: var(--tone-light-lavender);
+  --purple-soft: color-mix(in srgb, var(--tone-light-lavender) 20%, transparent);
+  --orange: var(--tone-pink);
+  --orange-soft: color-mix(in srgb, var(--tone-pink) 18%, transparent);
+  --red: var(--tone-rose);
+  --red-soft: color-mix(in srgb, var(--tone-rose) 20%, transparent);
+  --success: var(--tone-light-blue);
+  --success-soft: color-mix(in srgb, var(--tone-light-blue) 18%, transparent);
+  --accent: var(--tone-light-blue);
+  --accent-soft: color-mix(in srgb, var(--tone-light-blue) 16%, transparent);
 
-  /* Shadows - warm tint */
-  --shadow-sm: 0 1px 2px rgba(30, 20, 10, 0.05);
-  --shadow-md: 0 4px 12px rgba(30, 20, 10, 0.08);
-  --shadow-lg: 0 8px 24px rgba(30, 20, 10, 0.12);
+  /* Shadows */
+  --shadow-sm: 0 1px 2px rgba(47, 42, 58, 0.08);
+  --shadow-md: 0 4px 12px rgba(47, 42, 58, 0.12);
+  --shadow-lg: 0 8px 24px rgba(47, 42, 58, 0.16);
 
   /* Semantic aliases */
-  --error: #ef4444;
-  --warning: #f59e0b;
-  --brand-dark: #818cf8;
+  --error: var(--tone-rose);
+  --warning: var(--tone-pink);
+  --brand-dark: var(--tone-dark-purple-grey);
 
   /* Typography - Clean sans-serif */
   --font-sans: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
@@ -132,37 +145,37 @@
    ======================================== */
 
 [data-theme="dark"] {
-  --bg: #0f0f0f;
-  --bg-secondary: #171717;
-  --bg-tertiary: #1e1e1e;
-  --bg-hover: #262626;
-  --surface: #171717;
-  --surface-subtle: #1e1e1e;
-  --surface-elevated: #212121;
-  --border: #2a2a2a;
-  --border-strong: #3a3a3a;
-  --text: #f0f0f0;
-  --text-secondary: #a0a0a0;
-  --text-muted: #707070;
-  --text-placeholder: #555555;
-  --text-inverse: #111111;
-  --brand: #818cf8;
-  --brand-hover: #6366f1;
-  --brand-soft: rgba(129, 140, 248, 0.12);
-  --brand-medium: rgba(129, 140, 248, 0.20);
-  --brand-light: rgba(129, 140, 248, 0.10);
-  --blue: #60a5fa;
-  --purple: #a78bfa;
-  --orange: #fbbf24;
-  --red: #f87171;
-  --success: #34d399;
-  --accent: #60a5fa;
-  --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.3);
-  --shadow-md: 0 4px 12px rgba(0, 0, 0, 0.25);
-  --shadow-lg: 0 8px 24px rgba(0, 0, 0, 0.35);
-  --error: #f87171;
-  --warning: #fbbf24;
-  --brand-dark: #818cf8;
+  --bg: #2f2a3a;
+  --bg-secondary: #33353b;
+  --bg-tertiary: #3d4049;
+  --bg-hover: #4a4f5a;
+  --surface: #33353b;
+  --surface-subtle: #3d4049;
+  --surface-elevated: #444954;
+  --border: #4a5160;
+  --border-strong: #5f6778;
+  --text: #ffffff;
+  --text-secondary: #c5bcd8;
+  --text-muted: #a4b8cd;
+  --text-placeholder: #8ea0b3;
+  --text-inverse: #2f2a3a;
+  --brand: #63dff6;
+  --brand-hover: #a4b8cd;
+  --brand-soft: rgba(99, 223, 246, 0.16);
+  --brand-medium: rgba(99, 223, 246, 0.24);
+  --brand-light: rgba(99, 223, 246, 0.10);
+  --blue: #63dff6;
+  --purple: #c5bcd8;
+  --orange: #fbc8c8;
+  --red: #fddcee;
+  --success: #63dff6;
+  --accent: #63dff6;
+  --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.28);
+  --shadow-md: 0 4px 12px rgba(0, 0, 0, 0.26);
+  --shadow-lg: 0 8px 24px rgba(0, 0, 0, 0.34);
+  --error: #fddcee;
+  --warning: #fbc8c8;
+  --brand-dark: #63dff6;
 }
 
 /* ========================================
@@ -172,8 +185,8 @@
 .theme-icon-dark { display: none; }
 [data-theme="dark"] .theme-icon-light { display: none; }
 [data-theme="dark"] .theme-icon-dark { display: block; }
-[data-theme="dark"] .top-nav { background: rgba(15, 15, 15, 0.85); }
-[data-theme="dark"] .btn-primary:hover:not(:disabled) { background: #d4d4d4; }
+[data-theme="dark"] .top-nav { background: rgba(47, 42, 58, 0.86); }
+[data-theme="dark"] .btn-primary:hover:not(:disabled) { background: var(--tone-light-grey); }
 
 /* ========================================
    2. RESET & BASE
@@ -819,7 +832,7 @@ h6 { font-size: var(--text-md); }
 }
 
 .btn-primary:hover:not(:disabled) {
-  background: #333333;
+  background: var(--brand-hover);
   transform: translateY(-1px);
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
 }
