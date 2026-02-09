@@ -576,11 +576,11 @@
       const heroPalette = {
         light: {
           bg: '#eaf6f5',
-          colors: ['#c5bcd8', '#a4b8cd', '#fddcee', '#fbc8c8', '#d8dbe2', '#c5bcd8', '#a4b8cd'],
+          colors: ['#c5bcd8', '#a4b8cd', '#fddcee', '#fbc8c8', '#d8dbe2', '#c5bcd8', '#ffffff'],
         },
         dark: {
-          bg: '#2f2a3a',
-          colors: ['#63dff6', '#c5bcd8', '#fbc8c8', '#a4b8cd', '#63dff6', '#fddcee', '#c5bcd8'],
+          bg: '#33353b',
+          colors: ['#f7f5f2', '#33353b', '#ffffff', '#d8dbe2', '#1f2126', '#2f2a3a', '#a4b8cd'],
         },
       };
 
@@ -658,7 +658,7 @@
           ctx.arc(p.x, p.y, p.r, 0, Math.PI * 2);
           var isDark = document.documentElement.getAttribute('data-theme') === 'dark';
           ctx.fillStyle = isDark
-            ? 'rgba(99, 223, 246, ' + p.a * 0.42 + ')'
+            ? 'rgba(247, 245, 242, ' + p.a * 0.24 + ')'
             : 'rgba(51, 53, 59, ' + p.a * 0.18 + ')';
           ctx.fill();
         }
