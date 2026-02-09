@@ -41,27 +41,6 @@
   padding: 0 18px;
 }
 
-.editor-nav-primary {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  min-width: 0;
-}
-
-.editor-nav .nav-brand {
-  color: rgba(255, 255, 255, 0.92);
-  flex-shrink: 0;
-}
-
-.editor-nav .nav-brand-icon {
-  background: rgba(255, 255, 255, 0.16);
-  color: #fff;
-}
-
-.editor-nav .nav-brand:hover {
-  color: #fff;
-}
-
 .editor-nav-links {
   display: flex;
   align-items: center;
@@ -299,18 +278,6 @@
   gap: 8px;
 }
 
-.chat-welcome-icon {
-  width: 64px;
-  height: 64px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  background: var(--brand-soft);
-  border-radius: var(--radius-lg);
-  color: var(--brand);
-  margin-bottom: 12px;
-}
-
 .chat-full-welcome h1 {
   font-size: var(--text-2xl);
   font-weight: var(--font-semibold);
@@ -433,7 +400,7 @@
 
 .chat-composer-wrap {
   display: flex;
-  align-items: flex-end;
+  align-items: center;
   gap: 8px;
   background: var(--bg-secondary);
   border-radius: var(--radius-lg);
@@ -625,34 +592,6 @@
   display: flex;
   gap: 10px;
   margin-top: 24px;
-}
-
-.deploy-connection-grid {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 12px;
-}
-
-.deploy-connection-card {
-  border: 1px solid var(--editor-border);
-  border-radius: var(--radius-md);
-  background: color-mix(in srgb, var(--editor-surface-strong) 75%, transparent);
-  padding: 12px;
-}
-
-.deploy-connection-head {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  margin-bottom: 10px;
-  font-size: var(--text-sm);
-  color: var(--text);
-}
-
-.deploy-connection-actions {
-  display: flex;
-  gap: 8px;
-  flex-wrap: wrap;
 }
 
 .deploy-note {
@@ -1941,7 +1880,6 @@ body.right-collapsed .panel-right::after {
   .canvas-layout { grid-template-columns: 220px 1fr 260px; }
   .chat-full { grid-template-columns: 1fr 260px; }
   .deploy-view { grid-template-columns: 1fr 260px; }
-  .editor-nav .nav-brand-text { display: none; }
 }
 
 @media (max-width: 1024px) {
@@ -1963,7 +1901,6 @@ body.right-collapsed .panel-right::after {
   .chat-full-log { display: none; }
   .deploy-view { grid-template-columns: 1fr; }
   .deploy-sidebar { display: none; }
-  .deploy-connection-grid { grid-template-columns: 1fr; }
   .nav-canvas-controls {
     display: none !important;
   }
@@ -1972,10 +1909,6 @@ body.right-collapsed .panel-right::after {
 @media (max-width: 760px) {
   .editor-nav .editor-nav-links {
     display: flex;
-  }
-
-  .editor-nav .nav-brand {
-    display: none;
   }
 
   .mode-tab span {

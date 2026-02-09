@@ -17,28 +17,19 @@
     <!-- Navigation -->
     <nav class="top-nav editor-nav">
       <div class="top-nav-inner">
-        <div class="editor-nav-primary">
-          <a href="/" class="nav-brand">
-            <div class="nav-brand-icon">
-              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2L2 7l10 5 10-5-10-5z"/><path d="M2 17l10 5 10-5"/><path d="M2 12l10 5 10-5"/></svg>
-            </div>
-            <span class="nav-brand-text">Voyager</span>
-          </a>
-
-          <div class="nav-links editor-nav-links" role="tablist" aria-label="Editor modes">
-            <button class="nav-link mode-tab active" data-mode="chat" id="modeChatTab" type="button" aria-controls="chatFullView" aria-selected="true">
-              <svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
-              <span>Chat</span>
-            </button>
-            <button class="nav-link mode-tab" data-mode="canvas" id="modeCanvasTab" type="button" aria-controls="canvasView" aria-selected="false">
-              <svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>
-              <span>Canvas</span>
-            </button>
-            <button class="nav-link mode-tab" data-mode="deploy" id="modeDeployTab" type="button" aria-controls="deployView" aria-selected="false">
-              <svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 2L11 13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
-              <span>Deploy</span>
-            </button>
-          </div>
+        <div class="nav-links editor-nav-links" role="tablist" aria-label="Editor modes">
+          <button class="nav-link mode-tab active" data-mode="chat" id="modeChatTab" type="button" aria-controls="chatFullView" aria-selected="true">
+            <svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+            <span>Chat</span>
+          </button>
+          <button class="nav-link mode-tab" data-mode="canvas" id="modeCanvasTab" type="button" aria-controls="canvasView" aria-selected="false">
+            <svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>
+            <span>Canvas</span>
+          </button>
+          <button class="nav-link mode-tab" data-mode="deploy" id="modeDeployTab" type="button" aria-controls="deployView" aria-selected="false">
+            <svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 2L11 13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
+            <span>Deploy</span>
+          </button>
         </div>
 
         <!-- Canvas-mode controls (hidden in chat mode) -->
@@ -84,9 +75,6 @@
           <div class="chat-full-scroll" id="chatFullScroll">
             <div id="buildChatMessages" class="chat-full-messages">
               <div class="chat-full-welcome" id="chatWelcome">
-                <div class="chat-welcome-icon anim-in">
-                  <svg xmlns="http://www.w3.org/2000/svg" width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
-                </div>
                 <h1 class="anim-in anim-d1">What would you like to build?</h1>
                 <p class="anim-in anim-d2">Describe your agent in plain English and I'll generate the flow.</p>
                 <div class="chat-welcome-chips anim-in anim-d3">
@@ -281,44 +269,7 @@
               </div>
             </div>
 
-            <div class="deploy-section anim-in anim-d3" id="deploy-connections">
-              <h3 class="deploy-section-title">Connections (OAuth)</h3>
-              <div class="deploy-card">
-                <div class="deploy-connection-grid">
-                  <div class="deploy-connection-card">
-                    <div class="deploy-connection-head">
-                      <strong>GitHub</strong>
-                      <span id="githubConnectionState" class="badge badge-warning">Disconnected</span>
-                    </div>
-                    <div class="deploy-field">
-                      <label class="deploy-label" for="oauthGithubClientId">OAuth Client ID</label>
-                      <input id="oauthGithubClientId" type="text" class="form-input" placeholder="GitHub OAuth App client id" />
-                    </div>
-                    <div class="deploy-connection-actions">
-                      <button id="connectGithubBtn" class="btn btn-secondary btn-sm">Connect GitHub</button>
-                      <button id="disconnectGithubBtn" class="btn btn-ghost btn-sm">Disconnect</button>
-                    </div>
-                  </div>
-                  <div class="deploy-connection-card">
-                    <div class="deploy-connection-head">
-                      <strong>Cloudflare</strong>
-                      <span id="cloudflareConnectionState" class="badge badge-warning">Disconnected</span>
-                    </div>
-                    <div class="deploy-field">
-                      <label class="deploy-label" for="oauthCloudflareClientId">OAuth Client ID</label>
-                      <input id="oauthCloudflareClientId" type="text" class="form-input" placeholder="Cloudflare OAuth client id" />
-                    </div>
-                    <div class="deploy-connection-actions">
-                      <button id="connectCloudflareBtn" class="btn btn-secondary btn-sm">Connect Cloudflare</button>
-                      <button id="disconnectCloudflareBtn" class="btn btn-ghost btn-sm">Disconnect</button>
-                    </div>
-                  </div>
-                </div>
-                <p class="deploy-note">Static mode: tokens stay in this browser session only and are used for direct deploy/push actions.</p>
-              </div>
-            </div>
-
-            <div class="deploy-section anim-in anim-d4" id="llm-provider-section">
+            <div class="deploy-section anim-in anim-d3" id="llm-provider-section">
               <h3 class="deploy-section-title">LLM Provider (User Configurable)</h3>
               <div class="deploy-card">
                 <div class="deploy-field">
@@ -338,7 +289,7 @@
               </div>
             </div>
 
-            <div class="deploy-section anim-in anim-d5">
+            <div class="deploy-section anim-in anim-d4">
               <h3 class="deploy-section-title">Deployment Method</h3>
               <div class="deploy-method-tabs">
                 <button class="deploy-method-tab active" data-method="cloudflare" id="deployCfTab">
@@ -370,7 +321,7 @@
                 </div>
                 <div id="deployCfMissing" class="deploy-missing" style="display:none">
                   <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
-                  <span>Connect Cloudflare OAuth and set account id to deploy directly from this IDE.</span>
+                  <span>Set Cloudflare token and account id in Settings to deploy directly.</span>
                 </div>
                 <button id="deployCfBtn" class="btn btn-primary press-feedback">Deploy to Cloudflare</button>
                 <div id="deployCfProgress" class="deploy-progress" style="display:none">
@@ -399,7 +350,7 @@
                 </div>
                 <div id="deployGhMissing" class="deploy-missing" style="display:none">
                   <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
-                  <span>Connect GitHub OAuth to list repos and push generated worker code.</span>
+                  <span>Set a GitHub token in Settings to list repos and push worker code.</span>
                 </div>
                 <button id="deployGhBtn" class="btn btn-primary press-feedback">Push to GitHub</button>
                 <div id="deployGhProgress" class="deploy-progress" style="display:none">

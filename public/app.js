@@ -3812,7 +3812,7 @@ export default {
     const apiToken = getCloudflareToken();
     const accountId = getCloudflareAccountId();
     if (!apiToken || !accountId) {
-      if (typeof VoyagerToast !== "undefined") VoyagerToast.warning({ title: "Missing connection", message: "Connect Cloudflare and set Account ID." });
+      if (typeof VoyagerToast !== "undefined") VoyagerToast.warning({ title: "Missing settings", message: "Set Cloudflare token and Account ID in Settings." });
       return;
     }
     writeLocal(STORAGE_KEYS.cloudflareAccountId, accountId);
@@ -4008,7 +4008,7 @@ export default {
 
     const token = getGithubToken();
     if (!token) {
-      if (typeof VoyagerToast !== "undefined") VoyagerToast.warning({ title: "Missing connection", message: "Connect GitHub OAuth first." });
+      if (typeof VoyagerToast !== "undefined") VoyagerToast.warning({ title: "Missing settings", message: "Set a GitHub token in Settings." });
       return;
     }
 
