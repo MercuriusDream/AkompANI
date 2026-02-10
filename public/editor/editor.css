@@ -634,6 +634,12 @@
   color: var(--text-muted);
 }
 
+.deploy-inline-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
 .deploy-status {
   font-size: var(--text-sm);
   color: var(--text-muted);

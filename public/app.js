@@ -72,8 +72,10 @@
   const githubConnectionState = document.getElementById("githubConnectionState");
   const cloudflareConnectionState = document.getElementById("cloudflareConnectionState");
   const deployCfAccountIdInput = document.getElementById("deployCfAccountId");
+  const llmProviderInput = document.getElementById("llmProvider");
   const llmEndpointInput = document.getElementById("llmEndpoint");
   const llmApiKeyInput = document.getElementById("llmApiKey");
+  const llmModelSelectInput = document.getElementById("llmModelSelect");
   const llmModelInput = document.getElementById("llmModel");
   const saveLlmConfigBtn = document.getElementById("saveLlmConfigBtn");
   const llmConfigStatus = document.getElementById("llmConfigStatus");
@@ -112,6 +114,9 @@
     llmEndpoint: "voyager_llm_endpoint",
     llmModel: "voyager_llm_model",
     llmApiKeySession: "voyager_llm_api_key",
+    llmProviderProfiles: "voyager_llm_provider_profiles_v2",
+    llmActiveProviderId: "voyager_llm_active_provider_id_v2",
+    llmProviderKeysSession: "voyager_llm_provider_keys_v2",
     oauthGithubToken: "voyager_oauth_github_token",
     oauthCloudflareToken: "voyager_oauth_cloudflare_token",
     oauthGithubClientId: "voyager_oauth_github_client_id",
@@ -129,6 +134,11 @@
   editor.start();
 
   const NODE_GROUPS = [
+    {
+      id: "makers",
+      label: "IDE Makers",
+      types: ["vibe_agent_maker", "agent_flow_maker", "agent_block_maker", "chat_code_to_elysia"],
+    },
     {
       id: "flow",
       label: "Flow Control",
@@ -162,6 +172,66 @@
   ];
 
   const NODE_CATALOG = {
+    vibe_agent_maker: {
+      group: "makers",
+      label: "Vibe Agent Maker",
+      icon: "Vibe",
+      meta: "macro",
+      color: "#7c72ff",
+      ports: "macro: flow blueprint",
+      description: "Generates a full multi-step vibe planning and execution flow using reusable core blocks.",
+      inputs: 0,
+      outputs: 0,
+      isMacro: true,
+      macroKind: "vibe",
+      data: {},
+      fields: [],
+    },
+    agent_flow_maker: {
+      group: "makers",
+      label: "Agent Flow Maker",
+      icon: "Flow+",
+      meta: "macro",
+      color: "#26b39d",
+      ports: "macro: flow blueprint",
+      description: "Builds an end-to-end flow scaffold with branching, validation, and output routing.",
+      inputs: 0,
+      outputs: 0,
+      isMacro: true,
+      macroKind: "flow",
+      data: {},
+      fields: [],
+    },
+    agent_block_maker: {
+      group: "makers",
+      label: "Agent Block Maker",
+      icon: "Block+",
+      meta: "macro",
+      color: "#f59e0b",
+      ports: "macro: block chain",
+      description: "Drops a reusable block-chain template for classify, tool call, and structured summary.",
+      inputs: 0,
+      outputs: 0,
+      isMacro: true,
+      macroKind: "block",
+      data: {},
+      fields: [],
+    },
+    chat_code_to_elysia: {
+      group: "makers",
+      label: "Chat Code -> Elysia",
+      icon: "Ely",
+      meta: "macro",
+      color: "#ef476f",
+      ports: "macro: chat runtime chain",
+      description: "Adds chat+code conversion blocks tuned for Elysia+Bun deployment targets.",
+      inputs: 0,
+      outputs: 0,
+      isMacro: true,
+      macroKind: "chat_to_elysia",
+      data: {},
+      fields: [],
+    },
     start: {
       group: "flow",
       label: "Start",
@@ -1013,11 +1083,70 @@
     );
   }
 
+  function getIdeRuntime() {
+    const runtime = window.CANARIA_IDE;
+    if (!runtime || typeof runtime !== "object") return null;
+    return runtime;
+  }
+
+  function parseEndpointParts(endpoint) {
+    const text = String(endpoint || "").trim();
+    if (!text) {
+      return {
+        baseUrl: "",
+        path: "/v1/chat/completions",
+      };
+    }
+
+    try {
+      const url = new URL(text);
+      return {
+        baseUrl: `${url.protocol}//${url.host}`,
+        path: url.pathname || "/v1/chat/completions",
+      };
+    } catch {
+      return {
+        baseUrl: text.replace(/\/v1\/chat\/completions$/i, "").replace(/\/+$/, ""),
+        path: "/v1/chat/completions",
+      };
+    }
+  }
+
+  function buildLlmRequestHeaders(cfg) {
+    const headers = cfg?.headers && typeof cfg.headers === "object" ? { ...cfg.headers } : {};
+    if (!headers["Content-Type"] && !headers["content-type"]) {
+      headers["Content-Type"] = "application/json";
+    }
+
+    const hasAuthHeader = Object.keys(headers).some((key) => key.toLowerCase() === "authorization");
+    if (!hasAuthHeader && cfg?.apiKey) {
+      headers.Authorization = `Bearer ${cfg.apiKey}`;
+    }
+
+    return headers;
+  }
+
   function getLlmConfig() {
+    const runtime = getIdeRuntime();
+    if (runtime?.getActiveLlmConfig) {
+      const resolved = runtime.getActiveLlmConfig() || {};
+      return {
+        providerId: String(resolved.providerId || "").trim(),
+        providerName: String(resolved.providerName || "").trim(),
+        endpoint: String(resolved.endpoint || readLocal(STORAGE_KEYS.llmEndpoint)).trim(),
+        apiKey: String(resolved.apiKey || readSession(STORAGE_KEYS.llmApiKeySession)).trim(),
+        model: String(resolved.model || readLocal(STORAGE_KEYS.llmModel)).trim(),
+        headers: resolved.headers && typeof resolved.headers === "object" ? resolved.headers : {},
+      };
+    }
+
     return {
+      providerId: "",
+      providerName: "",
       endpoint: readLocal(STORAGE_KEYS.llmEndpoint),
       apiKey: readSession(STORAGE_KEYS.llmApiKeySession),
       model: readLocal(STORAGE_KEYS.llmModel),
+      headers: {},
     };
   }
 
@@ -1031,6 +1160,108 @@
     }
     if (level === "success") {
       llmConfigStatus.classList.add("success");
+    }
+  }
+
+  function renderLlmProviderOptions(preferredProviderId = "") {
+    if (!llmProviderInput) return [];
+    const runtime = getIdeRuntime();
+    if (!runtime?.listProviders) return [];
+
+    const providers = runtime.listProviders();
+    llmProviderInput.innerHTML = "";
+
+    if (!providers.length) {
+      const empty = document.createElement("option");
+      empty.value = "";
+      empty.textContent = "No providers configured";
+      llmProviderInput.appendChild(empty);
+      return [];
+    }
+
+    for (const provider of providers) {
+      const opt = document.createElement("option");
+      opt.value = provider.id;
+      opt.textContent = provider.name;
+      llmProviderInput.appendChild(opt);
+    }
+
+    const selected =
+      String(preferredProviderId || "").trim() ||
+      String(llmProviderInput.value || "").trim() ||
+      String(runtime.getActiveProviderId?.() || "").trim() ||
+      providers[0].id;
+
+    llmProviderInput.value = selected;
+    return providers;
+  }
+
+  function renderLlmModelOptions(providerId, preferredModel = "") {
+    if (!llmModelSelectInput) return;
+    const runtime = getIdeRuntime();
+    if (!runtime?.getProviderById) return;
+
+    const provider = runtime.getProviderById(providerId);
+    if (!provider) {
+      llmModelSelectInput.innerHTML = '<option value="">No models</option>';
+      return;
+    }
+
+    const models = Array.isArray(provider.models) ? provider.models : [];
+    llmModelSelectInput.innerHTML = "";
+    for (const model of models) {
+      const opt = document.createElement("option");
+      opt.value = model;
+      opt.textContent = model;
+      llmModelSelectInput.appendChild(opt);
+    }
+
+    const selectedModel =
+      String(preferredModel || "").trim() ||
+      String(llmModelInput?.value || "").trim() ||
+      String(provider.activeModel || "").trim() ||
+      String(models[0] || "").trim();
+
+    if (selectedModel && !models.includes(selectedModel)) {
+      const custom = document.createElement("option");
+      custom.value = selectedModel;
+      custom.textContent = `${selectedModel} (custom)`;
+      llmModelSelectInput.appendChild(custom);
+    }
+
+    if (selectedModel) {
+      llmModelSelectInput.value = selectedModel;
+    }
+
+    if (llmModelInput) {
+      llmModelInput.value = selectedModel || "";
+    }
+
+    if (llmEndpointInput) {
+      llmEndpointInput.value = String(provider.endpoint || "").trim();
+    }
+
+    if (llmApiKeyInput && runtime.getProviderApiKey) {
+      llmApiKeyInput.value = runtime.getProviderApiKey(provider.id) || "";
+    }
+  }
+
+  function syncDeployLlmProviderUi(preferredProviderId = "", preferredModel = "") {
+    const cfg = getLlmConfig();
+    const selectedProviderId = String(preferredProviderId || cfg.providerId || "").trim();
+    renderLlmProviderOptions(selectedProviderId);
+    if (llmProviderInput) {
+      renderLlmModelOptions(llmProviderInput.value, preferredModel || cfg.model);
+    }
+
+    if (llmEndpointInput && !llmEndpointInput.value) {
+      llmEndpointInput.value = cfg.endpoint || "";
+    }
+    if (llmApiKeyInput && !llmApiKeyInput.value) {
+      llmApiKeyInput.value = cfg.apiKey || "";
+    }
+    if (llmModelInput && !llmModelInput.value) {
+      llmModelInput.value = cfg.model || "";
     }
   }
 
@@ -1332,9 +1563,238 @@
     };
   }
 
+  function connectNodesSafe(sourceId, targetId, sourcePort = "output_1", targetPort = "input_1") {
+    if (!sourceId || !targetId) return;
+    try {
+      editor.addConnection(sourceId, targetId, sourcePort, targetPort);
+    } catch {
+      // Ignore macro connection errors.
+    }
+  }
+
+  function insertMakerMacro(kind, x, y) {
+    const baseX = Number.isFinite(x) ? x : Math.round(220 + Math.random() * 240);
+    const baseY = Number.isFinite(y) ? y : Math.round(150 + Math.random() * 220);
+
+    if (kind === "vibe") {
+      const start = addNode("start", baseX, baseY);
+      const template = addNode("template", baseX + 230, baseY, {
+        template:
+          "Vibe brief: {{input.prompt}}\\nConstraints: {{json input.constraints}}\\nBudget: {{input.budget}}\\nDeadline: {{input.deadline}}",
+        parseJson: false,
+        storeAs: "vibePrompt",
+      });
+      const llm = addNode("openai_structured", baseX + 470, baseY, {
+        model: "gpt-4.1-mini",
+        systemPrompt:
+          "You are Vibe Agent Maker. Return JSON with intent, architecture, taskBlocks, deploymentPlan, and riskChecks.",
+        userPrompt: "{{vars.vibePrompt}}",
+        schemaName: "vibe_plan",
+        schema: {
+          type: "object",
+          properties: {
+            intent: { type: "string" },
+            architecture: { type: "string" },
+            taskBlocks: { type: "array", items: { type: "string" } },
+            deploymentPlan: { type: "array", items: { type: "string" } },
+            riskChecks: { type: "array", items: { type: "string" } },
+          },
+          required: ["intent", "architecture", "taskBlocks", "deploymentPlan", "riskChecks"],
+          additionalProperties: false,
+        },
+        storeAs: "vibePlan",
+      });
+      const gate = addNode("if", baseX + 700, baseY, {
+        condition: "Boolean(vars.vibePlan && vars.vibePlan.taskBlocks && vars.vibePlan.taskBlocks.length)",
+      });
+      const execute = addNode("http", baseX + 940, baseY - 120, {
+        method: "POST",
+        url: "https://example.tools/agent/execute",
+        headers: { "content-type": "application/json" },
+        body: "{{json vars.vibePlan}}",
+        storeAs: "executionResult",
+      });
+      const fallback = addNode("log", baseX + 940, baseY + 120, {
+        messageTemplate: "Vibe planning gate failed. Plan payload: {{json vars.vibePlan}}",
+      });
+      const end = addNode("end", baseX + 1180, baseY, {
+        returnExpr: "({ plan: vars.vibePlan, execution: vars.executionResult, last })",
+      });
+
+      connectNodesSafe(start, template);
+      connectNodesSafe(template, llm);
+      connectNodesSafe(llm, gate);
+      connectNodesSafe(gate, execute, "output_1", "input_1");
+      connectNodesSafe(gate, fallback, "output_2", "input_1");
+      connectNodesSafe(execute, end);
+      connectNodesSafe(fallback, end);
+      return start;
+    }
+
+    if (kind === "flow") {
+      const start = addNode("start", baseX, baseY);
+      const brief = addNode("template", baseX + 220, baseY, {
+        template: "Flow request: {{input.goal}}\\nPriority: {{input.priority}}\\nContext: {{json input.context}}",
+        parseJson: false,
+        storeAs: "flowBrief",
+      });
+      const route = addNode("openai_structured", baseX + 460, baseY, {
+        model: "gpt-4.1-mini",
+        systemPrompt: "Return route, urgency, rationale in JSON.",
+        userPrompt: "{{vars.flowBrief}}",
+        schemaName: "flow_route",
+        schema: {
+          type: "object",
+          properties: {
+            route: { type: "string" },
+            urgency: { type: "string" },
+            rationale: { type: "string" },
+          },
+          required: ["route", "urgency", "rationale"],
+          additionalProperties: false,
+        },
+        storeAs: "routeResult",
+      });
+      const gate = addNode("if", baseX + 700, baseY, {
+        condition: "vars.routeResult && vars.routeResult.urgency === 'high'",
+      });
+      const escalate = addNode("http", baseX + 940, baseY - 120, {
+        method: "POST",
+        url: "https://example.internal/escalate",
+        headers: { "content-type": "application/json" },
+        body: "{{json vars.routeResult}}",
+        storeAs: "escalationResult",
+      });
+      const standard = addNode("transform", baseX + 940, baseY + 120, {
+        expression: "({ mode: 'standard', route: vars.routeResult.route, reason: vars.routeResult.rationale })",
+        storeAs: "standardResult",
+      });
+      const end = addNode("end", baseX + 1170, baseY, {
+        returnExpr: "({ route: vars.routeResult, escalation: vars.escalationResult, standard: vars.standardResult })",
+      });
+
+      connectNodesSafe(start, brief);
+      connectNodesSafe(brief, route);
+      connectNodesSafe(route, gate);
+      connectNodesSafe(gate, escalate, "output_1", "input_1");
+      connectNodesSafe(gate, standard, "output_2", "input_1");
+      connectNodesSafe(escalate, end);
+      connectNodesSafe(standard, end);
+      return start;
+    }
+
+    if (kind === "block") {
+      const start = addNode("start", baseX, baseY);
+      const classify = addNode("openai_structured", baseX + 240, baseY, {
+        model: "gpt-4.1-mini",
+        systemPrompt: "Classify intent and return toolCategory and postProcess in JSON.",
+        userPrompt: "{{json input}}",
+        schemaName: "block_classify",
+        schema: {
+          type: "object",
+          properties: {
+            intent: { type: "string" },
+            toolCategory: { type: "string" },
+            postProcess: { type: "string" },
+          },
+          required: ["intent", "toolCategory", "postProcess"],
+          additionalProperties: false,
+        },
+        storeAs: "blockClassify",
+      });
+      const tool = addNode("http", baseX + 490, baseY, {
+        method: "POST",
+        url: "https://example.tools/router",
+        headers: { "content-type": "application/json" },
+        body: "{{json vars.blockClassify}}",
+        storeAs: "toolResponse",
+      });
+      const summary = addNode("transform", baseX + 740, baseY, {
+        expression: "({ classify: vars.blockClassify, tool: vars.toolResponse })",
+        storeAs: "blockSummary",
+      });
+      const end = addNode("end", baseX + 980, baseY, {
+        returnExpr: "vars.blockSummary",
+      });
+
+      connectNodesSafe(start, classify);
+      connectNodesSafe(classify, tool);
+      connectNodesSafe(tool, summary);
+      connectNodesSafe(summary, end);
+      return start;
+    }
+
+    if (kind === "chat_to_elysia") {
+      const start = addNode("start", baseX, baseY);
+      const prompt = addNode("template", baseX + 220, baseY, {
+        template:
+          "Convert chat request to Elysia+Bun deploy spec.\\nPrompt: {{input.prompt}}\\nTarget: {{input.target}}\\nProviders: {{json input.providers}}",
+        parseJson: false,
+        storeAs: "conversionPrompt",
+      });
+      const code = addNode("typescript_script", baseX + 470, baseY, {
+        code:
+          "const request = String(vars.conversionPrompt || input.prompt || '');\\n" +
+          "const result = {\\n" +
+          "  runtime: 'elysia-bun',\\n" +
+          "  deployTargets: ['cloudflare_workers_elysia_bun', 'vercel_elysia_bun', 'local_elysia_bun'],\\n" +
+          "  routes: ['/health', '/flow', '/invoke', '/v1/chat/completions'],\\n" +
+          "  request\\n" +
+          "};",
+        timeout: 5000,
+        storeAs: "elysiaSpec",
+      });
+      const stringify = addNode("json_stringify", baseX + 730, baseY, {
+        sourceExpr: "vars.elysiaSpec",
+        indent: 2,
+        storeAs: "elysiaSpecJson",
+      });
+      const checklist = addNode("openai_structured", baseX + 980, baseY, {
+        model: "gpt-4.1-mini",
+        systemPrompt: "Produce JSON deployment checklists for cloudflare, vercel, and local targets.",
+        userPrompt: "{{vars.elysiaSpecJson}}",
+        schemaName: "deploy_checklist",
+        schema: {
+          type: "object",
+          properties: {
+            cloudflare: { type: "array", items: { type: "string" } },
+            vercel: { type: "array", items: { type: "string" } },
+            local: { type: "array", items: { type: "string" } },
+          },
+          required: ["cloudflare", "vercel", "local"],
+          additionalProperties: false,
+        },
+        storeAs: "deployChecklist",
+      });
+      const end = addNode("end", baseX + 1220, baseY, {
+        returnExpr: "({ spec: vars.elysiaSpec, checklist: vars.deployChecklist })",
+      });
+
+      connectNodesSafe(start, prompt);
+      connectNodesSafe(prompt, code);
+      connectNodesSafe(code, stringify);
+      connectNodesSafe(stringify, checklist);
+      connectNodesSafe(checklist, end);
+      return start;
+    }
+
+    return undefined;
+  }
+
   function addNode(type, x, y, dataOverride) {
     const def = NODE_CATALOG[type];
     if (!def) return undefined;
+
+    if (def.isMacro) {
+      const created = insertMakerMacro(def.macroKind, x, y);
+      if (created && typeof CANARIAToast !== "undefined") {
+        CANARIAToast.success({
+          title: `${def.label} inserted`,
+          message: "Maker blueprint blocks were added to the canvas.",
+        });
+      }
+      return created;
+    }
 
     const finalX = Number.isFinite(x) ? x : Math.round(220 + Math.random() * 300);
     const finalY = Number.isFinite(y) ? y : Math.round(160 + Math.random() * 200);
@@ -2982,6 +3442,46 @@
     return makeFallbackGeneratedFlow(prompt);
   }
 
+  function summarizeGeneratedBlocks(drawflow) {
+    const data = drawflow?.drawflow?.Home?.data;
+    if (!data || typeof data !== "object") {
+      return {
+        nodeCount: 0,
+        topTypes: "",
+      };
+    }
+
+    const rows = Object.values(data);
+    const counts = {};
+    for (const node of rows) {
+      const type = String(node?.name || "unknown");
+      counts[type] = Number(counts[type] || 0) + 1;
+    }
+
+    const topTypes = Object.entries(counts)
+      .sort((a, b) => b[1] - a[1])
+      .slice(0, 5)
+      .map(([type, count]) => `${type} x${count}`)
+      .join(", ");
+
+    return {
+      nodeCount: rows.length,
+      topTypes,
+    };
+  }
+
+  function generationSummaryText(flowPayload) {
+    const summary = summarizeGeneratedBlocks(flowPayload?.drawflow || {});
+    const parts = [];
+    parts.push(`Flow "${flowPayload?.name || "Untitled"}" generated.`);
+    parts.push(`Blocks: ${summary.nodeCount}.`);
+    if (summary.topTypes) {
+      parts.push(`Top blocks: ${summary.topTypes}.`);
+    }
+    parts.push("Open Canvas mode to refine blocks, provider routing, and deploy target.");
+    return parts.join(" ");
+  }
+
   async function generateFlowViaLlm(prompt) {
     const cfg = getLlmConfig();
     if (!cfg.endpoint || !cfg.apiKey || !cfg.model) {
@@ -3005,10 +3505,7 @@
 
     const response = await fetch(endpoint, {
       method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${cfg.apiKey}`,
-      },
+      headers: buildLlmRequestHeaders(cfg),
       body: JSON.stringify({
         model: cfg.model,
         temperature: 0.2,
@@ -3231,7 +3728,7 @@
     try {
       const data = await generateFlowPayload(text);
       applyGeneratedFlow(data);
-      appendPillChatMessage("assistant", `Flow "${data.name || "Untitled"}" generated.`);
+      appendPillChatMessage("assistant", generationSummaryText(data));
     } catch (error) {
       appendPillChatMessage("assistant", `Error: ${error.message}`);
     }
@@ -3277,7 +3774,7 @@
     try {
       const data = await generateFlowPayload(text);
       applyGeneratedFlow(data);
-      appendBuildChatMessage("assistant", `Flow "${data.name || "Untitled"}" has been generated and loaded onto the canvas. Switch to Canvas mode to view and edit it.`);
+      appendBuildChatMessage("assistant", generationSummaryText(data));
       runStatus.textContent = "Flow generated from chat.";
 
       // Auto-switch to canvas after generation
@@ -3367,10 +3864,7 @@
 
       const response = await fetch(endpoint, {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${cfg.apiKey}`,
-        },
+        headers: buildLlmRequestHeaders(cfg),
         body: JSON.stringify({
           model: cfg.model,
           temperature: 0.2,
@@ -3507,12 +4001,23 @@
     if (deployStatus) { deployStatus.textContent = "Saving..."; deployStatus.className = "deploy-status"; }
     try {
       const drawflowData = editor ? editor.export() : {};
+      const deployTarget = String(document.getElementById("deployCfTarget")?.value || "cloudflare_workers_elysia_bun").trim();
+      const llmConfig = getLlmConfig();
       const agents = readJsonArrayFromLocalStorage(STORAGE_KEYS.localAgents);
       const agent = {
         id: `agent_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 8)}`,
         name,
         description,
         flow: drawflowData,
+        llm: {
+          providerId: llmConfig.providerId || "",
+          providerName: llmConfig.providerName || "",
+          endpoint: llmConfig.endpoint || "",
+          model: llmConfig.model || "",
+        },
+        deploy: {
+          preferredTarget: deployTarget,
+        },
         createdAt: new Date().toISOString(),
         updatedAt: new Date().toISOString(),
       };
@@ -3543,13 +4048,15 @@
     const hasGh = Boolean(getGithubToken());
     const hasCf = Boolean(getCloudflareToken());
     const accountId = getCloudflareAccountId();
+    const targetId = getSelectedDeployTarget();
+    const needsCloudflare = String(targetId || "").startsWith("cloudflare");
 
     setConnectionBadge(githubConnectionState, hasGh, "Connected");
     setConnectionBadge(cloudflareConnectionState, hasCf, accountId ? "Connected" : "Connected (set account)");
 
     const cfMissing = document.getElementById("deployCfMissing");
     if (cfMissing) {
-      cfMissing.style.display = hasCf && accountId ? "none" : "";
+      cfMissing.style.display = needsCloudflare && !(hasCf && accountId) ? "" : "none";
     }
 
     const ghMissing = document.getElementById("deployGhMissing");
@@ -3559,12 +4066,15 @@
   }
 
   async function validateGithubToken(token) {
-    const res = await fetch("https://api.github.com/user", {
-      headers: {
-        Authorization: `Bearer ${token}`,
-        Accept: "application/vnd.github+json",
-      },
-    });
+    const res = await withRequestTimeout((signal) =>
+      fetch("https://api.github.com/user", {
+        headers: {
+          Authorization: `Bearer ${token}`,
+          Accept: "application/vnd.github+json",
+        },
+        signal,
+      }),
+    );
     const data = await res.json().catch(() => null);
     if (!res.ok || !data?.login) {
       throw new Error(data?.message || `GitHub validation failed (${res.status})`);
@@ -3573,15 +4083,10 @@
   }
 
   async function validateCloudflareToken(token) {
-    const res = await fetch("https://api.cloudflare.com/client/v4/user/tokens/verify", {
-      headers: {
-        Authorization: `Bearer ${token}`,
-      },
-    });
-    const data = await res.json().catch(() => null);
-    if (!res.ok || !data?.success) {
-      const firstError = Array.isArray(data?.errors) && data.errors[0] ? data.errors[0].message : "";
-      throw new Error(firstError || `Cloudflare validation failed (${res.status})`);
+    const url = "https://api.cloudflare.com/client/v4/user/tokens/verify";
+    const { response, data } = await cloudflareApiRequest(url, token, { method: "GET" });
+    if (!response.ok || !data?.success) {
+      throw new Error(extractCloudflareErrorMessage(data, response.status));
     }
     return true;
   }
@@ -3677,7 +4182,7 @@
   function saveLlmConfig() {
     const endpoint = String(llmEndpointInput?.value || "").trim();
     const apiKey = String(llmApiKeyInput?.value || "").trim();
-    const model = String(llmModelInput?.value || "").trim();
+    const model = String(llmModelInput?.value || llmModelSelectInput?.value || "").trim();
 
     if (!endpoint || !model) {
       setLlmStatus("Endpoint and model are required.", "error");
@@ -3691,6 +4196,34 @@
       return;
     }
 
+    const runtime = getIdeRuntime();
+    if (runtime?.upsertProvider) {
+      const selectedProviderId = String(llmProviderInput?.value || runtime.getActiveProviderId?.() || "").trim();
+      const selectedProvider = selectedProviderId ? runtime.getProviderById?.(selectedProviderId) : null;
+      const endpointParts = parseEndpointParts(endpoint);
+
+      const nextProvider = runtime.upsertProvider({
+        ...(selectedProvider || {}),
+        id: selectedProvider?.id || `provider_${Date.now().toString(36)}`,
+        name: selectedProvider?.name || "Custom Provider",
+        baseUrl: endpointParts.baseUrl,
+        path: endpointParts.path,
+        models: [model, ...(selectedProvider?.models || [])],
+        activeModel: model,
+        updatedAt: new Date().toISOString(),
+      });
+
+      runtime.setProviderApiKey(nextProvider.id, apiKey);
+      runtime.setActiveProvider(nextProvider.id);
+      if (runtime.syncLegacyFromActive) {
+        runtime.syncLegacyFromActive();
+      }
+
+      syncDeployLlmProviderUi(nextProvider.id, model);
+      setLlmStatus(`Saved ${nextProvider.name} (${model}).`, "success");
+      return;
+    }
+
     writeLocal(STORAGE_KEYS.llmEndpoint, endpoint);
     writeLocal(STORAGE_KEYS.llmModel, model);
     writeSession(STORAGE_KEYS.llmApiKeySession, apiKey);
@@ -3699,13 +4232,17 @@
 
   function loadLlmConfig() {
     const cfg = getLlmConfig();
-    if (llmEndpointInput) llmEndpointInput.value = cfg.endpoint || "";
-    if (llmApiKeyInput) llmApiKeyInput.value = cfg.apiKey || "";
-    if (llmModelInput) llmModelInput.value = cfg.model || "";
+    syncDeployLlmProviderUi(cfg.providerId, cfg.model);
+    if (llmEndpointInput) llmEndpointInput.value = cfg.endpoint || llmEndpointInput.value || "";
+    if (llmApiKeyInput) llmApiKeyInput.value = cfg.apiKey || llmApiKeyInput.value || "";
+    if (llmModelInput) llmModelInput.value = cfg.model || llmModelInput.value || "";
+    if (llmModelSelectInput && cfg.model) {
+      llmModelSelectInput.value = cfg.model;
+    }
     if (cfg.endpoint && cfg.apiKey && cfg.model) {
       setLlmStatus("LLM provider configured.", "success");
     } else {
-      setLlmStatus("Set endpoint, API key, and model for static generation.", null);
+      setLlmStatus("Set provider, endpoint, model, and API key for static generation.", null);
     }
   }
 
@@ -3729,85 +4266,308 @@
       .replace(/[^a-z0-9-]+/g, "-")
       .replace(/--+/g, "-")
       .replace(/^-+|-+$/g, "");
-    return normalized || fallback;
+    const limited = normalized.slice(0, 63).replace(/^-+|-+$/g, "");
+    return limited || fallback;
   }
 
-  // ── Generate worker script from flow ──
-  function generateWorkerScript(name, description) {
-    const drawflowData = editor ? editor.export() : {};
-    const safeName = JSON.stringify(name);
-    const safeDesc = (description || "").replace(/\*\//g, "* /");
-    return `// Generated by CANARIA IDE
-// Agent: ${safeDesc ? name.replace(/\n/g, " ") : "Unnamed"}
-// ${safeDesc}
-
-const FLOW = ${JSON.stringify(drawflowData, null, 2)};
-const AGENT_NAME = ${safeName};
-
-function json(data, status = 200) {
-  return new Response(JSON.stringify(data, null, 2), {
-    status,
-    headers: {
-      "content-type": "application/json; charset=utf-8",
-      "cache-control": "no-store",
-      "access-control-allow-origin": "*",
-      "access-control-allow-methods": "GET,POST,OPTIONS",
-      "access-control-allow-headers": "content-type,authorization,x-debug-token",
-    },
-  });
-}
-
-export default {
-  async fetch(request, env) {
-    if (request.method === "OPTIONS") return json({ ok: true });
-    const url = new URL(request.url);
-
-    if (url.pathname === "/health") {
-      return json({
-        ok: true,
-        agent: AGENT_NAME,
-        nodeCount: Object.keys(FLOW?.drawflow?.Home?.data || {}).length,
-      });
+  function toErrorMessage(error, fallback = "Unexpected error.") {
+    if (error instanceof Error && error.message) {
+      return error.message;
     }
+    const text = String(error || "").trim();
+    return text || fallback;
+  }
 
-    if (url.pathname === "/flow") {
-      const expected = String(env.DEBUG_FLOW_TOKEN || "").trim();
-      const got = String(request.headers.get("x-debug-token") || "").trim();
-      if (!expected || got !== expected) {
-        return json({ error: "Unauthorized." }, 401);
+  function extractCloudflareErrorMessage(data, status) {
+    if (data && typeof data === "object") {
+      if (Array.isArray(data.errors) && data.errors.length) {
+        const lines = data.errors
+          .map((item) => {
+            if (!item) return "";
+            const code = item.code ? `[${item.code}] ` : "";
+            const message = String(item.message || "").trim();
+            return `${code}${message}`.trim();
+          })
+          .filter(Boolean);
+        if (lines.length) return lines.join("; ");
       }
-      return json({ flow: FLOW });
+
+      const topLevel =
+        String(data.message || "").trim() ||
+        String(data.error || "").trim() ||
+        String(data.result?.error || "").trim();
+      if (topLevel) return topLevel;
     }
 
-    if (request.method === "POST") {
-      let input = null;
-      try {
-        input = await request.json();
-      } catch {
-        // Keep null.
+    return `Cloudflare API request failed (${status})`;
+  }
+
+  function isLikelyCloudflareAccountId(value) {
+    return /^[a-f0-9]{32}$/i.test(String(value || "").trim());
+  }
+
+  function getDeployObjectCompatibilityDate(deployObject) {
+    const files = Array.isArray(deployObject?.files) ? deployObject.files : [];
+    const wranglerFile = files.find((row) => String(row?.path || "").toLowerCase() === "wrangler.toml");
+    const content = String(wranglerFile?.content || "");
+    const match = content.match(/^\s*compatibility_date\s*=\s*"(\d{4}-\d{2}-\d{2})"\s*$/m);
+    return match?.[1] || new Date().toISOString().slice(0, 10);
+  }
+
+  async function withRequestTimeout(requestFactory, timeoutMs = 30000) {
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), timeoutMs);
+
+    try {
+      return await requestFactory(controller.signal);
+    } catch (error) {
+      if (error && error.name === "AbortError") {
+        throw new Error("Request timed out.");
       }
-      return json({
-        ok: true,
-        agent: AGENT_NAME,
-        received: input !== null,
-        note: "Attach your own runtime/LLM handler to execute FLOW.",
-      });
+      throw error;
+    } finally {
+      clearTimeout(timer);
     }
+  }
 
-    return json(
-      {
-        agent: AGENT_NAME,
-        status: "ready",
-        endpoints: ["/health", "/flow (debug-token)", "/ (POST)"],
-      },
-      200,
+  async function cloudflareApiRequest(url, apiToken, options = {}) {
+    const init = options && typeof options === "object" ? options : {};
+    const headers = {
+      Authorization: `Bearer ${apiToken}`,
+      ...(init.headers || {}),
+    };
+
+    const response = await withRequestTimeout((signal) =>
+      fetch(url, {
+        ...init,
+        headers,
+        signal,
+      }),
     );
-  },
-};
-`;
+
+    const raw = await response.text().catch(() => "");
+    let data = null;
+    if (raw) {
+      try {
+        data = JSON.parse(raw);
+      } catch {
+        data = { error: raw };
+      }
+    }
+    return { response, data };
   }
 
-  // ── Deploy to Cloudflare ──
+  async function uploadCloudflareWorkerScript(params) {
+    const deployUrl = String(params?.deployUrl || "").trim();
+    const apiToken = String(params?.apiToken || "").trim();
+    const script = String(params?.script || "");
+    const compatibilityDate = String(params?.compatibilityDate || "").trim() || new Date().toISOString().slice(0, 10);
+
+    if (!deployUrl || !apiToken) {
+      throw new Error("Cloudflare deploy URL and API token are required.");
+    }
+    if (!script.trim()) {
+      throw new Error("Generated worker script is empty.");
+    }
+
+    const moduleFilename = "index.js";
+    const moduleForm = new FormData();
+    moduleForm.append(
+      "metadata",
+      new Blob(
+        [
+          JSON.stringify({
+            main_module: moduleFilename,
+            compatibility_date: compatibilityDate,
+          }),
+        ],
+        { type: "application/json" },
+      ),
+    );
+    moduleForm.append(moduleFilename, new Blob([script], { type: "application/javascript+module" }), moduleFilename);
+
+    const serviceWorkerForm = new FormData();
+    serviceWorkerForm.append(
+      "metadata",
+      new Blob(
+        [
+          JSON.stringify({
+            body_part: "script",
+            compatibility_date: compatibilityDate,
+          }),
+        ],
+        { type: "application/json" },
+      ),
+    );
+    serviceWorkerForm.append("script", new Blob([script], { type: "application/javascript" }), "script.js");
+
+    const attempts = [
+      {
+        id: "module_multipart",
+        run: () =>
+          cloudflareApiRequest(deployUrl, apiToken, {
+            method: "PUT",
+            body: moduleForm,
+          }),
+      },
+      {
+        id: "service_worker_multipart",
+        run: () =>
+          cloudflareApiRequest(deployUrl, apiToken, {
+            method: "PUT",
+            body: serviceWorkerForm,
+          }),
+      },
+      {
+        id: "module_content_type",
+        run: () =>
+          cloudflareApiRequest(deployUrl, apiToken, {
+            method: "PUT",
+            headers: {
+              "Content-Type": "application/javascript+module",
+            },
+            body: script,
+          }),
+      },
+      {
+        id: "plain_javascript",
+        run: () =>
+          cloudflareApiRequest(deployUrl, apiToken, {
+            method: "PUT",
+            headers: {
+              "Content-Type": "application/javascript",
+            },
+            body: script,
+          }),
+      },
+    ];
+
+    let lastError = null;
+    for (const attempt of attempts) {
+      const { response, data } = await attempt.run();
+      if (response.ok && data?.success) {
+        return {
+          strategy: attempt.id,
+          data,
+        };
+      }
+
+      const message = extractCloudflareErrorMessage(data, response.status);
+      if (response.status === 401 || response.status === 403 || response.status === 404 || response.status === 429) {
+        throw new Error(message);
+      }
+      lastError = new Error(message);
+    }
+
+    throw lastError || new Error("Cloudflare deploy failed.");
+  }
+
+  function getSelectedDeployTarget() {
+    const targetSelect = document.getElementById("deployCfTarget");
+    return String(targetSelect?.value || "cloudflare_workers_elysia_bun").trim() || "cloudflare_workers_elysia_bun";
+  }
+
+  function getDeployTargetDefinition(targetId) {
+    const runtime = getIdeRuntime();
+    if (runtime?.getDeployTargetById) {
+      return runtime.getDeployTargetById(targetId);
+    }
+    return { id: targetId, label: targetId, platform: targetId.startsWith("cloudflare") ? "cloudflare" : "unknown" };
+  }
+
+  function generateWorkerScript(name, description, targetId = "cloudflare_workers") {
+    const drawflowData = editor ? editor.export() : {};
+    const runtime = getIdeRuntime();
+    if (runtime?.buildCloudflareWorkerModule) {
+      return runtime.buildCloudflareWorkerModule({
+        agentName: name,
+        description,
+        drawflow: drawflowData,
+        providerConfig: getLlmConfig(),
+        target: targetId,
+      });
+    }
+
+    return `export default { fetch() { return new Response("Generated runtime unavailable", { status: 501 }); } };`;
+  }
+
+  function buildDeployObjectForCurrentFlow(name, description, targetId) {
+    const drawflowData = editor ? editor.export() : {};
+    const runtime = getIdeRuntime();
+    const workerName = sanitizeWorkerName(name || "canaria-agent");
+    if (runtime?.buildDeployObject) {
+      return runtime.buildDeployObject({
+        target: targetId,
+        agentName: name,
+        workerName,
+        description,
+        drawflow: drawflowData,
+        providerConfig: getLlmConfig(),
+      });
+    }
+
+    return {
+      id: `deployobj_${Date.now().toString(36)}`,
+      target: targetId,
+      targetLabel: targetId,
+      rootDir: workerName,
+      files: [
+        {
+          path: "src/worker.js",
+          content: generateWorkerScript(name, description, targetId),
+        },
+      ],
+      summary: {
+        fileCount: 1,
+      },
+    };
+  }
+
+  function downloadTextFile(filename, content) {
+    const blob = new Blob([String(content || "")], { type: "text/plain;charset=utf-8" });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = filename;
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+    URL.revokeObjectURL(url);
+  }
+
+  function renderDeployObjectResult(resultEl, deployObject, headline, opts = {}) {
+    if (!resultEl || !deployObject) return;
+    const safeHeadline = escapeHtml(headline || "Deploy object generated");
+    const fileCount = Number(deployObject?.summary?.fileCount || deployObject?.files?.length || 0);
+    const target = escapeHtml(String(deployObject.targetLabel || deployObject.target || ""));
+    const rootDir = escapeHtml(String(deployObject.rootDir || ""));
+    const deployUrl = String(opts.url || "").trim();
+    const safeDeployUrl = escapeHtml(deployUrl);
+
+    resultEl.className = "deploy-result success";
+    resultEl.innerHTML = `
+      ${safeHeadline}
+      <div class="result-url">Target: ${target}</div>
+      <div class="result-url">Files: ${fileCount}</div>
+      <div class="result-url">Folder: ${rootDir}</div>
+      ${
+        deployUrl
+          ? `<div class="result-url"><a href="${safeDeployUrl}" target="_blank" rel="noopener noreferrer">${safeDeployUrl}</a> <button class="copy-url" data-action="copyDeployUrl">Copy URL</button></div>`
+          : ""
+      }
+      <div class="result-url"><button class="copy-url" data-action="downloadDeployObject">Download deploy object JSON</button></div>
+    `;
+    resultEl.querySelector('[data-action="copyDeployUrl"]')?.addEventListener("click", () => {
+      navigator.clipboard.writeText(deployUrl);
+    });
+    resultEl.querySelector('[data-action="downloadDeployObject"]')?.addEventListener("click", () => {
+      const filename = `${deployObject.rootDir || "deploy-object"}.json`;
+      downloadTextFile(filename, JSON.stringify(deployObject, null, 2));
+    });
+    resultEl.style.display = "";
+  }
+
+  // ── Deploy / generate target object ──
   async function deployCf() {
     const nameInput = document.getElementById("deployAgentName");
     const descInput = document.getElementById("deployAgentDesc");
@@ -3825,13 +4585,17 @@ export default {
       return;
     }
 
+    const targetId = String(targetSelect?.value || "cloudflare_workers_elysia_bun").trim();
+    const targetDef = getDeployTargetDefinition(targetId);
+    const deployObject = buildDeployObjectForCurrentFlow(name, description, targetId);
+
     const apiToken = getCloudflareToken();
     const accountId = getCloudflareAccountId();
-    if (!apiToken || !accountId) {
-      if (typeof CANARIAToast !== "undefined") CANARIAToast.warning({ title: "Missing settings", message: "Set Cloudflare token and Account ID in Settings." });
-      return;
+    const canDirectDeploy = Boolean(targetDef?.platform === "cloudflare");
+    const hasCloudflareCreds = Boolean(apiToken && accountId);
+    if (hasCloudflareCreds && isLikelyCloudflareAccountId(accountId)) {
+      writeLocal(STORAGE_KEYS.cloudflareAccountId, accountId);
     }
-    writeLocal(STORAGE_KEYS.cloudflareAccountId, accountId);
 
     const progress = document.getElementById("deployCfProgress");
     const steps = document.getElementById("deployCfSteps");
@@ -3839,34 +4603,62 @@ export default {
     const btn = document.getElementById("deployCfBtn");
     if (progress) progress.style.display = "";
     if (result) { result.style.display = "none"; result.className = "deploy-result"; }
-    if (btn) { btn.disabled = true; btn.textContent = "Deploying..."; }
-    if (steps) steps.innerHTML = '<div class="deploy-step active"><span class="deploy-step-icon"><svg class="spin" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83"/></svg></span><span>Deploying to Cloudflare...</span></div>';
+    if (btn) { btn.disabled = true; btn.textContent = "Running..."; }
+    if (steps) steps.innerHTML = '<div class="deploy-step active"><span class="deploy-step-icon"><svg class="spin" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83"/></svg></span><span>Generating deploy object...</span></div>';
 
     try {
-      const script = generateWorkerScript(name, description);
-      const deployUrl = `https://api.cloudflare.com/client/v4/accounts/${encodeURIComponent(accountId)}/workers/scripts/${encodeURIComponent(workerName)}`;
-      const res = await fetch(deployUrl, {
-        method: "PUT",
-        headers: {
-          Authorization: `Bearer ${apiToken}`,
-          "Content-Type": "application/javascript",
-        },
-        body: script,
-      });
-      const data = await res.json().catch(() => null);
-      if (!(res.ok && data?.success)) {
-        const errMessage = Array.isArray(data?.errors) && data.errors[0]
-          ? data.errors[0].message
-          : data?.error || `Deploy failed (${res.status})`;
-        throw new Error(errMessage);
+      if (!canDirectDeploy || !hasCloudflareCreds) {
+        if (steps) {
+          steps.innerHTML = '<div class="deploy-step completed"><span class="deploy-step-icon">&#x2713;</span><span>Deploy object generated</span></div>';
+        }
+        renderDeployObjectResult(
+          result,
+          deployObject,
+          !canDirectDeploy
+            ? "Target object generated (no direct deploy for this platform in browser mode)."
+            : "Cloudflare credentials missing. Generated deploy object for Wrangler/Bun path.",
+        );
+        appendDeploymentLog({
+          id: `obj_${Date.now().toString(36)}`,
+          name,
+          target: targetId,
+          status: "generated",
+          updatedAt: new Date().toISOString(),
+          url: "",
+          deployObject,
+        });
+        loadDeployments();
+        if (typeof CANARIAToast !== "undefined") {
+          CANARIAToast.info({ title: "Deploy object ready", message: "Download JSON or push to GitHub." });
+        }
+        return;
       }
+
+      if (!isLikelyCloudflareAccountId(accountId)) {
+        throw new Error("Cloudflare account ID looks invalid. Use the 32-character account ID from Cloudflare dashboard.");
+      }
+
+      if (steps) {
+        steps.innerHTML = '<div class="deploy-step active"><span class="deploy-step-icon"><svg class="spin" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83"/></svg></span><span>Uploading worker script to Cloudflare...</span></div>';
+      }
+
+      const script = generateWorkerScript(name, description, targetId);
+      const deployUrl = `https://api.cloudflare.com/client/v4/accounts/${encodeURIComponent(accountId)}/workers/scripts/${encodeURIComponent(workerName)}`;
+      const compatibilityDate = getDeployObjectCompatibilityDate(deployObject);
+      const uploadResult = await uploadCloudflareWorkerScript({
+        deployUrl,
+        apiToken,
+        script,
+        compatibilityDate,
+      });
 
       let workerUrl = "";
       try {
-        const subRes = await fetch(`https://api.cloudflare.com/client/v4/accounts/${encodeURIComponent(accountId)}/workers/subdomain`, {
-          headers: { Authorization: `Bearer ${apiToken}` },
-        });
-        const subData = await subRes.json().catch(() => null);
+        if (steps) {
+          steps.innerHTML = '<div class="deploy-step active"><span class="deploy-step-icon"><svg class="spin" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83"/></svg></span><span>Resolving workers.dev URL...</span></div>';
+        }
+        const subUrl = `https://api.cloudflare.com/client/v4/accounts/${encodeURIComponent(accountId)}/workers/subdomain`;
+        const { response: subRes, data: subData } = await cloudflareApiRequest(subUrl, apiToken, { method: "GET" });
         if (subRes.ok && subData?.success && subData?.result?.subdomain) {
           workerUrl = `https://${workerName}.${subData.result.subdomain}.workers.dev`;
         }
@@ -3876,37 +4668,43 @@ export default {
 
       const dashboardUrl = `https://dash.cloudflare.com/?to=/:account/workers/services/view/${encodeURIComponent(workerName)}/production`;
       const url = workerUrl || dashboardUrl;
-      const safeUrl = escapeHtml(url);
       if (result) {
-        result.className = "deploy-result success";
-        result.innerHTML = `Deployed successfully!<div class="result-url"><a href="${safeUrl}" target="_blank" rel="noopener noreferrer">${safeUrl}</a><button class="copy-url" data-url="${safeUrl}"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg></button></div>`;
-        result.querySelector(".copy-url")?.addEventListener("click", function() {
-          navigator.clipboard.writeText(url);
-        });
-        result.style.display = "";
+        renderDeployObjectResult(
+          result,
+          deployObject,
+          "Cloudflare deploy complete. Elysia/Bun deploy object also generated.",
+          { url },
+        );
       }
-      if (steps) steps.innerHTML = '<div class="deploy-step completed"><span class="deploy-step-icon">&#x2713;</span><span>Deployed</span></div>';
+      if (steps) steps.innerHTML = '<div class="deploy-step completed"><span class="deploy-step-icon">&#x2713;</span><span>Deployed + object generated</span></div>';
       appendDeploymentLog({
         id: `cf_${Date.now().toString(36)}`,
         name,
-        target: targetSelect?.value || "cloudflare_workers",
-        status: "generated",
+        target: targetId || "cloudflare_workers",
+        status: "deployed",
         updatedAt: new Date().toISOString(),
         url,
+        deployObject,
       });
       loadDeployments();
-      if (typeof CANARIAToast !== "undefined") CANARIAToast.success({ title: "Deployed", message: url });
+      if (typeof CANARIAToast !== "undefined") {
+        CANARIAToast.success({
+          title: "Deployed",
+          message: `${url} (${uploadResult.strategy})`,
+        });
+      }
     } catch (err) {
+      const message = toErrorMessage(err, "Cloudflare deploy failed.");
       if (result) {
         result.className = "deploy-result error";
-        result.textContent = err.message;
+        result.textContent = message;
         result.style.display = "";
       }
       if (steps) steps.innerHTML = '<div class="deploy-step error"><span class="deploy-step-icon">&#x2717;</span><span>Failed</span></div>';
-      if (typeof CANARIAToast !== "undefined") CANARIAToast.error({ title: "Deploy failed", message: err.message });
+      if (typeof CANARIAToast !== "undefined") CANARIAToast.error({ title: "Deploy failed", message });
     } finally {
       if (progress) { const bar = progress.querySelector(".progress-bar"); if (bar) bar.style.display = "none"; }
-      if (btn) { btn.disabled = false; btn.textContent = "Deploy to Cloudflare"; }
+      if (btn) { btn.disabled = false; btn.textContent = "Deploy / Generate Target Object"; }
     }
   }
 
@@ -4016,6 +4814,7 @@ export default {
     const repoFullName = repoSelect ? repoSelect.value : "";
     const branch = branchInput ? branchInput.value.trim() : "main";
     const message = messageInput ? messageInput.value.trim() : "Deploy agent via CANARIA";
+    const targetId = getSelectedDeployTarget();
 
     if (!name || !repoFullName) {
       if (typeof CANARIAToast !== "undefined") CANARIAToast.warning({ title: "Missing fields", message: "Agent name and repository are required." });
@@ -4037,34 +4836,44 @@ export default {
 
     const [owner, repo] = repoFullName.split("/");
     try {
-      const workerName = sanitizeWorkerName(name);
-      const script = generateWorkerScript(name, description);
-      const wranglerConfig = [
-        `name = "${workerName}"`,
-        'main = "src/worker.js"',
-        `compatibility_date = "${new Date().toISOString().split("T")[0]}"`,
-        "",
-      ].join("\n");
+      const deployObject = buildDeployObjectForCurrentFlow(name, description, targetId);
+      const prefix = String(deployObject.rootDir || sanitizeWorkerName(name)).replace(/^\/+|\/+$/g, "");
+      let lastCommit = null;
 
-      await upsertGithubFile(owner, repo, branch, token, "src/worker.js", script, message);
-      const wranglerCommit = await upsertGithubFile(owner, repo, branch, token, "wrangler.toml", wranglerConfig, message);
+      for (const file of deployObject.files || []) {
+        const filePath = `${prefix}/${String(file.path || "").replace(/^\/+/, "")}`;
+        lastCommit = await upsertGithubFile(owner, repo, branch, token, filePath, String(file.content || ""), message);
+      }
 
-      const commitUrl = String(wranglerCommit?.commit?.html_url || "");
+      const manifestPath = `${prefix}/deploy-object.json`;
+      lastCommit = await upsertGithubFile(
+        owner,
+        repo,
+        branch,
+        token,
+        manifestPath,
+        JSON.stringify(deployObject, null, 2),
+        message,
+      );
+
+      const commitUrl = String(lastCommit?.commit?.html_url || "");
+      const fileCount = Number(deployObject?.files?.length || 0) + 1;
       if (result) {
         result.className = "deploy-result success";
         result.innerHTML = commitUrl
-          ? `Pushed to GitHub!<div class="result-url"><a href="${escapeHtml(commitUrl)}" target="_blank" rel="noopener noreferrer">${escapeHtml(commitUrl)}</a></div>`
-          : "Pushed to GitHub!";
+          ? `Pushed ${fileCount} files to GitHub (${escapeHtml(targetId)}).<div class="result-url"><a href="${escapeHtml(commitUrl)}" target="_blank" rel="noopener noreferrer">${escapeHtml(commitUrl)}</a></div>`
+          : `Pushed ${fileCount} files to GitHub (${escapeHtml(targetId)}).`;
         result.style.display = "";
       }
 
       appendDeploymentLog({
         id: `gh_${Date.now().toString(36)}`,
         name,
-        target: "github",
+        target: `github:${targetId}`,
         status: "generated",
         updatedAt: new Date().toISOString(),
         url: commitUrl,
+        deployObject,
       });
       loadDeployments();
       if (typeof CANARIAToast !== "undefined") CANARIAToast.success({ title: "Pushed to GitHub", message: repoFullName });
@@ -4105,6 +4914,39 @@ export default {
     if (connectCloudflareBtn) connectCloudflareBtn.addEventListener("click", () => connectCloudflare());
     if (disconnectCloudflareBtn) disconnectCloudflareBtn.addEventListener("click", () => disconnectCloudflare());
     if (saveLlmConfigBtn) saveLlmConfigBtn.addEventListener("click", () => saveLlmConfig());
+    if (llmProviderInput) {
+      llmProviderInput.addEventListener("change", () => {
+        const runtime = getIdeRuntime();
+        if (runtime?.setActiveProvider) {
+          runtime.setActiveProvider(llmProviderInput.value);
+        }
+        syncDeployLlmProviderUi(llmProviderInput.value, "");
+      });
+    }
+    if (llmModelSelectInput) {
+      llmModelSelectInput.addEventListener("change", () => {
+        const nextModel = String(llmModelSelectInput.value || "").trim();
+        if (llmModelInput) llmModelInput.value = nextModel;
+        const runtime = getIdeRuntime();
+        if (runtime?.setProviderActiveModel && llmProviderInput?.value && nextModel) {
+          runtime.setProviderActiveModel(llmProviderInput.value, nextModel);
+        }
+      });
+    }
+    if (llmModelInput) {
+      llmModelInput.addEventListener("change", () => {
+        const nextModel = String(llmModelInput.value || "").trim();
+        if (!nextModel || !llmModelSelectInput) return;
+        const exists = Array.from(llmModelSelectInput.options).some((opt) => opt.value === nextModel);
+        if (!exists) {
+          const custom = document.createElement("option");
+          custom.value = nextModel;
+          custom.textContent = `${nextModel} (custom)`;
+          llmModelSelectInput.appendChild(custom);
+        }
+        llmModelSelectInput.value = nextModel;
+      });
+    }
   }
 
   function updateAuthUiNavSignals() {
@@ -4125,6 +4967,12 @@ export default {
     // CF deploy
     const deployCfBtn = document.getElementById("deployCfBtn");
     if (deployCfBtn) deployCfBtn.addEventListener("click", () => deployCf());
+    const deployCfTarget = document.getElementById("deployCfTarget");
+    if (deployCfTarget) {
+      deployCfTarget.addEventListener("change", () => {
+        refreshDeployConnectionState();
+      });
+    }
     // GitHub push
     const deployGhBtn = document.getElementById("deployGhBtn");
     if (deployGhBtn) deployGhBtn.addEventListener("click", () => deployGithub());

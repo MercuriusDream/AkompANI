@@ -78,9 +78,11 @@
                 <h1 class="anim-in anim-d1">What would you like to build?</h1>
                 <p class="anim-in anim-d2">Describe your agent in plain English and I'll generate the flow.</p>
                 <div class="chat-welcome-chips anim-in anim-d3">
-                  <button class="welcome-chip" data-prompt="Build an agent that calls a weather API for a city and summarizes the forecast">Weather summarizer</button>
-                  <button class="welcome-chip" data-prompt="Create a data pipeline that fetches JSON from an API, extracts key fields, and logs the results">Data pipeline</button>
-                  <button class="welcome-chip" data-prompt="Make a chatbot agent that takes user input, sends it to OpenAI, and returns a structured JSON response">Chatbot agent</button>
+                  <button class="welcome-chip" data-prompt="Vibe Agent Maker: Build an autonomous product ideation agent with planning, scoring, and deployment notes">Vibe Agent Maker</button>
+                  <button class="welcome-chip" data-prompt="Agent Flow Maker: Create an end-to-end support triage flow with validation, branch routing, and API escalation">Agent Flow Maker</button>
+                  <button class="welcome-chip" data-prompt="Agent Block Maker: Add reusable blocks for classify, tool call, summarize, and post-process in one chain">Agent Block Maker</button>
+                  <button class="welcome-chip" data-prompt="Build a weather agent that calls a weather API for a city and returns structured forecast insights">Weather agent</button>
+                  <button class="welcome-chip" data-prompt="Convert this chat idea into Elysia+Bun deployable agent runtime for Cloudflare, Vercel, and local">Chat to Elysia runtime</button>
                 </div>
               </div>
             </div>
@@ -154,9 +156,10 @@
               </button>
               <div class="generate-examples">
                 <span class="generate-examples-label">Try:</span>
-                <button class="generate-example-chip" data-prompt="Build an agent that calls a weather API for a city and summarizes the forecast">Weather summarizer</button>
-                <button class="generate-example-chip" data-prompt="Create a data pipeline that fetches JSON from an API, extracts key fields, and logs the results">Data pipeline</button>
-                <button class="generate-example-chip" data-prompt="Make a chatbot agent that takes user input, sends it to OpenAI, and returns a structured JSON response">Chatbot agent</button>
+                <button class="generate-example-chip" data-prompt="Vibe Agent Maker: Build an autonomous product ideation agent with planning, scoring, and deployment notes">Vibe Agent</button>
+                <button class="generate-example-chip" data-prompt="Agent Flow Maker: Create an end-to-end support triage flow with validation, branch routing, and API escalation">Flow Maker</button>
+                <button class="generate-example-chip" data-prompt="Agent Block Maker: Add reusable blocks for classify, tool call, summarize, and post-process in one chain">Block Maker</button>
+                <button class="generate-example-chip" data-prompt="Convert this chat idea into Elysia+Bun deployable agent runtime for Cloudflare, Vercel, and local">Elysia deploy runtime</button>
               </div>
               <div id="generateError" class="generate-error" style="display:none"></div>
             </div>
@@ -269,21 +272,36 @@
             </div>
 
             <div class="deploy-section anim-in anim-d3" id="llm-provider-section">
-              <h3 class="deploy-section-title">LLM Provider (User Configurable)</h3>
+              <h3 class="deploy-section-title">LLM Providers and Models</h3>
               <div class="deploy-card">
+                <div class="deploy-field">
+                  <label class="deploy-label" for="llmProvider">Provider</label>
+                  <select id="llmProvider" class="form-select">
+                    <option value="">Select provider...</option>
+                  </select>
+                </div>
                 <div class="deploy-field">
                   <label class="deploy-label" for="llmEndpoint">Chat Completions Endpoint</label>
                   <input id="llmEndpoint" type="text" class="form-input" placeholder="https://api.openai.com/v1/chat/completions" />
+                </div>
+                <div class="deploy-field">
+                  <label class="deploy-label" for="llmModelSelect">Model (saved per provider)</label>
+                  <select id="llmModelSelect" class="form-select">
+                    <option value="">Select model...</option>
+                  </select>
                 </div>
                 <div class="deploy-field">
                   <label class="deploy-label" for="llmApiKey">API Key</label>
                   <input id="llmApiKey" type="password" class="form-input" placeholder="sk-..." />
                 </div>
                 <div class="deploy-field">
-                  <label class="deploy-label" for="llmModel">Model</label>
-                  <input id="llmModel" type="text" class="form-input" placeholder="gpt-4.1-mini" />
+                  <label class="deploy-label" for="llmModel">Custom model override</label>
+                  <input id="llmModel" type="text" class="form-input" placeholder="Optional: custom model id" />
                 </div>
-                <button id="saveLlmConfigBtn" class="btn btn-secondary btn-sm">Save Provider</button>
+                <div class="deploy-inline-actions">
+                  <button id="saveLlmConfigBtn" class="btn btn-secondary btn-sm">Save Provider + Model</button>
+                  <a href="/settings" class="btn btn-ghost btn-sm">Manage providers in Settings</a>
+                </div>
                 <div id="llmConfigStatus" class="deploy-status"></div>
               </div>
             </div>
@@ -306,8 +324,10 @@
                 <div class="deploy-field">
                   <label class="deploy-label" for="deployCfTarget">Deploy Target</label>
                   <select id="deployCfTarget" class="form-select">
-                    <option value="cloudflare_workers_elysia">Cloudflare Workers (Elysia)</option>
-                    <option value="cloudflare">Cloudflare Workers</option>
+                    <option value="cloudflare_workers_elysia_bun">Cloudflare Workers (Elysia + Wrangler + Bun)</option>
+                    <option value="vercel_elysia_bun">Vercel (Elysia + Bun)</option>
+                    <option value="local_elysia_bun">Local Environment (Elysia + Bun)</option>
+                    <option value="cloudflare_workers">Cloudflare Workers (Module fallback)</option>
                   </select>
                 </div>
                 <div class="deploy-field">
@@ -322,7 +342,7 @@
                   <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
                   <span>Set Cloudflare token and account id in Settings to deploy directly.</span>
                 </div>
-                <button id="deployCfBtn" class="btn btn-primary press-feedback">Deploy to Cloudflare</button>
+                <button id="deployCfBtn" class="btn btn-primary press-feedback">Deploy / Generate Target Object</button>
                 <div id="deployCfProgress" class="deploy-progress" style="display:none">
                   <div class="progress-bar"><div class="progress-bar-fill progress-bar-indeterminate"></div></div>
                   <div class="deploy-steps" id="deployCfSteps"></div>
@@ -417,6 +437,7 @@
     <script src="https://cdn.jsdelivr.net/npm/drawflow/dist/drawflow.min.js"></script>
     <script src="/toast.js"></script>
     <script src="/auth-ui.js"></script>
+    <script src="/ide-runtime.js"></script>
     <script>if('serviceWorker' in navigator){navigator.serviceWorker.register('/sw.js')}</script>
     <script src="/app.js"></script>
     <script>

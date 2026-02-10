@@ -122,8 +122,75 @@
         </div>
       </section>
 
-      <!-- API Keys -->
+      <!-- LLM Providers -->
       <section class="settings-section anim-in anim-d2">
+        <div class="settings-section-header">
+          <h2>LLM Providers</h2>
+          <p class="text-muted">OpenAI-style multi-provider model routing with per-provider model stacks and API keys.</p>
+        </div>
+        <div class="settings-card">
+          <div class="settings-card-body">
+            <div class="settings-field">
+              <label for="llmProviderSelect">Saved Providers</label>
+              <select id="llmProviderSelect" class="form-select">
+                <option value="">Select provider...</option>
+              </select>
+              <span class="field-hint">Pick an existing provider or create a new one.</span>
+            </div>
+
+            <div class="settings-field-grid">
+              <div class="settings-field">
+                <label for="llmProviderName">Provider Name</label>
+                <input id="llmProviderName" type="text" class="form-input" placeholder="OpenAI / OpenRouter / Custom" />
+              </div>
+              <div class="settings-field">
+                <label for="llmProviderBaseUrl">Base URL</label>
+                <input id="llmProviderBaseUrl" type="text" class="form-input" placeholder="https://api.openai.com" />
+              </div>
+            </div>
+
+            <div class="settings-field">
+              <label for="llmProviderPath">Endpoint Path</label>
+              <input id="llmProviderPath" type="text" class="form-input" placeholder="/v1/chat/completions" />
+              <span class="field-hint">Use an OpenAI-compatible chat completions path.</span>
+            </div>
+
+            <div class="settings-field">
+              <label for="llmProviderModels">Models (comma or newline separated)</label>
+              <textarea id="llmProviderModels" class="form-textarea" rows="4" placeholder="gpt-4.1-mini&#10;gpt-4.1&#10;gpt-4o-mini"></textarea>
+            </div>
+
+            <div class="settings-field">
+              <label for="llmProviderModelSelect">Active Model</label>
+              <select id="llmProviderModelSelect" class="form-select">
+                <option value="">Select active model...</option>
+              </select>
+            </div>
+
+            <div class="settings-field">
+              <label for="llmProviderApiKey">Provider API Key (session)</label>
+              <div class="input-reveal">
+                <input id="llmProviderApiKey" type="password" class="form-input" placeholder="sk-..." autocomplete="off" />
+                <button class="reveal-btn" data-target="llmProviderApiKey" title="Show/hide">
+                  <svg class="eye-open" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+                  <svg class="eye-closed" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:none"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"/><line x1="1" y1="1" x2="23" y2="23"/></svg>
+                </button>
+              </div>
+            </div>
+
+            <div class="settings-actions-row">
+              <button id="newLlmProvider" class="btn btn-ghost btn-sm press-feedback">New Provider</button>
+              <button id="saveLlmProvider" class="btn btn-secondary btn-sm press-feedback">Save Provider</button>
+              <button id="removeLlmProvider" class="btn btn-danger btn-sm press-feedback">Remove Provider</button>
+              <button id="setActiveLlmProvider" class="btn btn-primary btn-sm press-feedback">Set Active</button>
+            </div>
+            <div id="llmProviderStatus" class="settings-inline-status"></div>
+          </div>
+        </div>
+      </section>
+
+      <!-- API Keys -->
+      <section class="settings-section anim-in anim-d3">
         <div class="settings-section-header">
           <h2>API Keys</h2>
           <p class="text-muted">Session-scoped keys used by static generation/chat/deploy tools.</p>
@@ -131,7 +198,7 @@
         <div class="settings-card">
           <div class="settings-card-body">
             <div class="settings-field">
-              <label for="openaiKey">LLM API Key</label>
+              <label for="openaiKey">Active Provider API Key</label>
               <div class="input-reveal">
                 <input id="openaiKey" type="password" class="form-input" placeholder="sk-..." autocomplete="off" />
                 <button class="reveal-btn" data-target="openaiKey" title="Show/hide">
@@ -156,7 +223,7 @@
       </section>
 
       <!-- Appearance -->
-      <section class="settings-section anim-in anim-d3">
+      <section class="settings-section anim-in anim-d4">
         <div class="settings-section-header">
           <h2>Appearance</h2>
         </div>
@@ -184,7 +251,7 @@
       </section>
 
       <!-- Data -->
-      <section class="settings-section anim-in anim-d4">
+      <section class="settings-section anim-in anim-d5">
         <div class="settings-section-header">
           <h2>Data</h2>
         </div>
@@ -201,10 +268,11 @@
     </div>
   </main>
 
-  <script src="/toast.js"></script>
-  <script src="/auth-ui.js"></script>
-  <script>if('serviceWorker' in navigator){navigator.serviceWorker.register('/sw.js')}</script>
-  <script src="/settings.js"></script>
+    <script src="/toast.js"></script>
+    <script src="/auth-ui.js"></script>
+    <script src="/ide-runtime.js"></script>
+    <script>if('serviceWorker' in navigator){navigator.serviceWorker.register('/sw.js')}</script>
+    <script src="/settings.js"></script>
   <script>
     document.getElementById('themeToggle').addEventListener('click', function() {
       var root = document.documentElement;

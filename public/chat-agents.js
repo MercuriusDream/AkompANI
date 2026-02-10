@@ -204,7 +204,36 @@
     return readLocal(STORAGE.cfAccountId);
   }
 
+  function getIdeRuntime() {
+    const ide = window.CANARIA_IDE;
+    if (!ide || typeof ide !== "object") return null;
+    return ide;
+  }
+
+  function buildLlmHeaders(cfg) {
+    const headers = cfg?.headers && typeof cfg.headers === "object" ? { ...cfg.headers } : {};
+    if (!headers["Content-Type"] && !headers["content-type"]) {
+      headers["Content-Type"] = "application/json";
+    }
+    const hasAuth = Object.keys(headers).some((key) => key.toLowerCase() === "authorization");
+    if (!hasAuth && cfg?.apiKey) {
+      headers.Authorization = `Bearer ${cfg.apiKey}`;
+    }
+    return headers;
+  }
+
   function getLlmConfig() {
+    const ide = getIdeRuntime();
+    if (ide?.getActiveLlmConfig) {
+      const cfg = ide.getActiveLlmConfig() || {};
+      return {
+        endpoint: String(cfg.endpoint || "").trim(),
+        model: String(cfg.model || "").trim(),
+        apiKey: String(cfg.apiKey || "").trim(),
+        headers: cfg.headers && typeof cfg.headers === "object" ? cfg.headers : {},
+      };
+    }
+
     const endpoint =
       readLocal(STORAGE.llmEndpoint) ||
       "https://api.openai.com/v1/chat/completions";
@@ -221,6 +250,7 @@
       endpoint,
       model,
       apiKey,
+      headers: {},
     };
   }
 
@@ -559,10 +589,7 @@
 
     const response = await fetch(endpoint, {
       method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${cfg.apiKey}`,
-      },
+      headers: buildLlmHeaders(cfg),
       body: JSON.stringify({
         model: cfg.model,
         temperature: 0.2,

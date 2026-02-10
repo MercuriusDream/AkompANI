@@ -104,6 +104,12 @@
   margin-bottom: var(--space-4);
 }
 
+.settings-field-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--space-3);
+}
+
 .settings-field:last-child {
   margin-bottom: 0;
 }
@@ -201,6 +207,26 @@
   background: var(--brand-soft);
 }
 
+.settings-actions-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+}
+
+.settings-inline-status {
+  margin-top: var(--space-3);
+  font-size: var(--text-xs);
+  color: var(--text-muted);
+}
+
+.settings-inline-status.success {
+  color: var(--success);
+}
+
+.settings-inline-status.error {
+  color: var(--error);
+}
+
 /* Entrance animations */
 .anim-in {
   opacity: 0;
@@ -212,6 +238,7 @@
 .anim-d2 { animation-delay: 0.16s; }
 .anim-d3 { animation-delay: 0.24s; }
 .anim-d4 { animation-delay: 0.32s; }
+.anim-d5 { animation-delay: 0.4s; }
 
 @keyframes settingsFadeIn {
   to { opacity: 1; transform: translateY(0); }
@@ -221,4 +248,5 @@
   .settings-main { padding: var(--space-4); }
   .settings-card-header { flex-wrap: wrap; }
   .theme-picker { flex-direction: column; }
+  .settings-field-grid { grid-template-columns: 1fr; }
 }

@@ -1,75 +1,106 @@
 /**
- * CANARIA Settings — localStorage-based settings management
+ * CANARIA Settings - localStorage/sessionStorage settings management
+ * Includes multi-provider LLM profiles via window.CANARIA_IDE.
  */
 (function () {
-  // localStorage key map
+  const runtime = window.CANARIA_IDE || null;
+
   const KEYS = {
-    githubPat: 'voyager_oauth_github_token',
-    cfApiToken: 'voyager_oauth_cloudflare_token',
-    cfAccountId: 'voyager_cf_account_id',
-    openaiKey: 'voyager_llm_api_key',
-    serverApiKey: 'voyager_server_api_key',
+    githubPat: "voyager_oauth_github_token",
+    cfApiToken: "voyager_oauth_cloudflare_token",
+    cfAccountId: "voyager_cf_account_id",
+    openaiKey: "voyager_llm_api_key",
+    serverApiKey: "voyager_server_api_key",
   };
+
   const LEGACY_KEYS = {
-    githubPat: 'voyager_github_pat',
-    cfApiToken: 'voyager_cf_api_token',
-    openaiKey: 'voyager_openai_key',
+    githubPat: "voyager_github_pat",
+    cfApiToken: "voyager_cf_api_token",
+    openaiKey: "voyager_openai_key",
   };
-  const SESSION_SECRET_KEYS = new Set([
-    'githubPat',
-    'cfApiToken',
-    'openaiKey',
-    'serverApiKey',
-  ]);
+
+  const SESSION_SECRET_KEYS = new Set(["githubPat", "cfApiToken", "openaiKey", "serverApiKey"]);
+
+  const els = {
+    githubPat: document.getElementById("githubPat"),
+    cfApiToken: document.getElementById("cfApiToken"),
+    cfAccountId: document.getElementById("cfAccountId"),
+    openaiKey: document.getElementById("openaiKey"),
+    serverApiKey: document.getElementById("serverApiKey"),
+    githubStatus: document.getElementById("githubStatus"),
+    cfStatus: document.getElementById("cfStatus"),
+    testGithub: document.getElementById("testGithub"),
+    testCf: document.getElementById("testCf"),
+    themePicker: document.getElementById("themePicker"),
+    clearSettings: document.getElementById("clearSettings"),
+    llmProviderSelect: document.getElementById("llmProviderSelect"),
+    llmProviderName: document.getElementById("llmProviderName"),
+    llmProviderBaseUrl: document.getElementById("llmProviderBaseUrl"),
+    llmProviderPath: document.getElementById("llmProviderPath"),
+    llmProviderModels: document.getElementById("llmProviderModels"),
+    llmProviderModelSelect: document.getElementById("llmProviderModelSelect"),
+    llmProviderApiKey: document.getElementById("llmProviderApiKey"),
+    saveLlmProvider: document.getElementById("saveLlmProvider"),
+    removeLlmProvider: document.getElementById("removeLlmProvider"),
+    setActiveLlmProvider: document.getElementById("setActiveLlmProvider"),
+    newLlmProvider: document.getElementById("newLlmProvider"),
+    llmProviderStatus: document.getElementById("llmProviderStatus"),
+  };
+
+  let providerDraftId = "";
 
   function readValue(id) {
-    var key = KEYS[id];
-    if (!key) return '';
+    const key = KEYS[id];
+    if (!key) return "";
+
     try {
       if (SESSION_SECRET_KEYS.has(id)) {
-        return sessionStorage.getItem(key) || '';
+        return sessionStorage.getItem(key) || "";
       }
-      return localStorage.getItem(key) || '';
+      return localStorage.getItem(key) || "";
     } catch {
-      return '';
+      return "";
     }
   }
 
-  function writeValue(id, val) {
-    var key = KEYS[id];
+  function writeValue(id, value) {
+    const key = KEYS[id];
     if (!key) return;
-    var clean = String(val || '').trim();
+
+    const clean = String(value || "").trim();
     try {
       if (!clean) {
         sessionStorage.removeItem(key);
         localStorage.removeItem(key);
         return;
       }
+
       if (SESSION_SECRET_KEYS.has(id)) {
         sessionStorage.setItem(key, clean);
         localStorage.removeItem(key);
         return;
       }
+
       localStorage.setItem(key, clean);
     } catch {
-      // Ignore storage failures.
+      // Ignore storage errors.
     }
   }
 
   function migrateLegacyValues() {
     Object.keys(LEGACY_KEYS).forEach(function (id) {
-      var nextKey = KEYS[id];
-      var legacyKey = LEGACY_KEYS[id];
+      const nextKey = KEYS[id];
+      const legacyKey = LEGACY_KEYS[id];
       if (!nextKey || !legacyKey) return;
 
-      var current = readValue(id);
+      const current = readValue(id);
       if (current) return;
 
-      var legacy = '';
+      let legacy = "";
       try {
-        legacy = String(sessionStorage.getItem(legacyKey) || localStorage.getItem(legacyKey) || '').trim();
+        legacy = String(sessionStorage.getItem(legacyKey) || localStorage.getItem(legacyKey) || "").trim();
       } catch {
-        legacy = '';
+        legacy = "";
       }
       if (!legacy) return;
 
@@ -83,244 +114,558 @@
     });
   }
 
-  // DOM refs
-  const els = {
-    githubPat: document.getElementById('githubPat'),
-    cfApiToken: document.getElementById('cfApiToken'),
-    cfAccountId: document.getElementById('cfAccountId'),
-    openaiKey: document.getElementById('openaiKey'),
-    serverApiKey: document.getElementById('serverApiKey'),
-    githubStatus: document.getElementById('githubStatus'),
-    cfStatus: document.getElementById('cfStatus'),
-    testGithub: document.getElementById('testGithub'),
-    testCf: document.getElementById('testCf'),
-    themePicker: document.getElementById('themePicker'),
-    clearSettings: document.getElementById('clearSettings'),
-  };
-
-  function getServerApiKey() {
-    return String(readValue('serverApiKey') || '').trim();
-  }
-
-  function withServerAuthHeaders(url, headers) {
-    var merged = new Headers(headers || {});
-    if (!String(url || '').startsWith('/api/')) return merged;
-
-    var apiKey = getServerApiKey();
-    if (!apiKey) return merged;
-
-    merged.set('Authorization', 'Bearer ' + apiKey);
-    merged.set('x-api-key', apiKey);
-    return merged;
-  }
-
-  // ─── Load saved values ───────────────────────────
-  function load() {
-    Object.entries(KEYS).forEach(function (entry) {
-      var id = entry[0], key = entry[1];
-      var el = els[id];
-      if (el) el.value = readValue(id);
-    });
-    updateStatuses();
-    updateThemePicker();
-  }
-
-  // ─── Auto-save on input (debounced) ──────────────
-  var timers = {};
-  function autoSave(id) {
-    var el = els[id];
-    if (!el) return;
-    el.addEventListener('input', function () {
-      clearTimeout(timers[id]);
-      timers[id] = setTimeout(function () {
-        var val = el.value.trim();
-        writeValue(id, val);
-        updateStatuses();
-      }, 400);
-    });
-  }
-
-  Object.keys(KEYS).forEach(autoSave);
-
-  // ─── Connection status indicators ────────────────
-  function updateStatuses() {
-    var hasGh = !!readValue('githubPat');
-    var hasCf = !!(readValue('cfApiToken') && readValue('cfAccountId'));
-
-    setStatus(els.githubStatus, hasGh);
-    setStatus(els.cfStatus, hasCf);
+  function setInlineStatus(text, level) {
+    if (!els.llmProviderStatus) return;
+    els.llmProviderStatus.textContent = text;
+    els.llmProviderStatus.className = "settings-inline-status";
+    if (level === "success") {
+      els.llmProviderStatus.classList.add("success");
+    }
+    if (level === "error") {
+      els.llmProviderStatus.classList.add("error");
+    }
   }
 
   function setStatus(statusEl, connected) {
     if (!statusEl) return;
-    var dot = statusEl.querySelector('.connection-dot');
-    var label = statusEl.querySelector('.status-label');
+    const dot = statusEl.querySelector(".connection-dot");
+    const label = statusEl.querySelector(".status-label");
     if (connected) {
-      statusEl.classList.add('connected');
-      if (dot) dot.classList.add('connected');
-      if (label) label.textContent = 'Connected';
+      statusEl.classList.add("connected");
+      if (dot) dot.classList.add("connected");
+      if (label) label.textContent = "Connected";
     } else {
-      statusEl.classList.remove('connected');
-      if (dot) dot.classList.remove('connected');
-      if (label) label.textContent = 'Not connected';
+      statusEl.classList.remove("connected");
+      if (dot) dot.classList.remove("connected");
+      if (label) label.textContent = "Not connected";
     }
   }
 
-  // ─── Reveal / hide password fields ───────────────
-  document.querySelectorAll('.reveal-btn').forEach(function (btn) {
-    btn.addEventListener('click', function () {
-      var targetId = btn.getAttribute('data-target');
-      var input = document.getElementById(targetId);
+  function updateStatuses() {
+    const hasGh = !!readValue("githubPat");
+    const hasCf = !!(readValue("cfApiToken") && readValue("cfAccountId"));
+    setStatus(els.githubStatus, hasGh);
+    setStatus(els.cfStatus, hasCf);
+  }
+
+  function updateThemePicker() {
+    if (!els.themePicker) return;
+    const stored = localStorage.getItem("voyager-theme");
+    const current = stored || "system";
+    els.themePicker.querySelectorAll(".theme-option").forEach(function (opt) {
+      opt.classList.toggle("active", opt.getAttribute("data-theme") === current);
+    });
+  }
+
+  function activeProvider() {
+    if (!runtime?.getActiveProvider) return null;
+    return runtime.getActiveProvider();
+  }
+
+  function selectedProviderId() {
+    const uiValue = String(els.llmProviderSelect?.value || "").trim();
+    if (uiValue) return uiValue;
+    if (runtime?.getActiveProviderId) return String(runtime.getActiveProviderId() || "").trim();
+    return "";
+  }
+
+  function parseModelsFromForm() {
+    const text = String(els.llmProviderModels?.value || "").trim();
+    if (!text) return [];
+    if (runtime?.parseModelText) {
+      return runtime.parseModelText(text);
+    }
+    return text
+      .split(/[\n,]/)
+      .map((item) => item.trim())
+      .filter(Boolean);
+  }
+
+  function renderProviderModelSelect(models, preferredModel) {
+    if (!els.llmProviderModelSelect) return;
+    const list = Array.isArray(models) ? models : [];
+    els.llmProviderModelSelect.innerHTML = "";
+
+    if (!list.length) {
+      const empty = document.createElement("option");
+      empty.value = "";
+      empty.textContent = "No models";
+      els.llmProviderModelSelect.appendChild(empty);
+      return;
+    }
+
+    for (const model of list) {
+      const opt = document.createElement("option");
+      opt.value = model;
+      opt.textContent = model;
+      els.llmProviderModelSelect.appendChild(opt);
+    }
+
+    const selected = String(preferredModel || list[0] || "").trim();
+    if (selected) {
+      const exists = list.includes(selected);
+      if (!exists) {
+        const custom = document.createElement("option");
+        custom.value = selected;
+        custom.textContent = `${selected} (custom)`;
+        els.llmProviderModelSelect.appendChild(custom);
+      }
+      els.llmProviderModelSelect.value = selected;
+    }
+  }
+
+  function fillProviderForm(provider) {
+    const row = provider || null;
+    providerDraftId = row?.id || "";
+
+    if (els.llmProviderName) {
+      els.llmProviderName.value = row?.name || "";
+    }
+    if (els.llmProviderBaseUrl) {
+      els.llmProviderBaseUrl.value = row?.baseUrl || "";
+    }
+    if (els.llmProviderPath) {
+      els.llmProviderPath.value = row?.path || "/v1/chat/completions";
+    }
+
+    const models = Array.isArray(row?.models) ? row.models : [];
+    if (els.llmProviderModels) {
+      els.llmProviderModels.value = models.join("\n");
+    }
+
+    renderProviderModelSelect(models, row?.activeModel || models[0] || "");
+
+    if (els.llmProviderApiKey && runtime?.getProviderApiKey && row?.id) {
+      els.llmProviderApiKey.value = runtime.getProviderApiKey(row.id) || "";
+    }
+
+    if (els.openaiKey && runtime?.getProviderApiKey && row?.id) {
+      els.openaiKey.value = runtime.getProviderApiKey(row.id) || "";
+    }
+  }
+
+  function renderProviderSelect(preferredId) {
+    if (!runtime?.listProviders || !els.llmProviderSelect) return;
+
+    const providers = runtime.listProviders();
+    const activeId = String(preferredId || runtime.getActiveProviderId?.() || "").trim();
+
+    els.llmProviderSelect.innerHTML = "";
+    for (const provider of providers) {
+      const opt = document.createElement("option");
+      opt.value = provider.id;
+      opt.textContent = provider.name;
+      els.llmProviderSelect.appendChild(opt);
+    }
+
+    const selected = providers.some((row) => row.id === activeId)
+      ? activeId
+      : providers[0]?.id || "";
+
+    if (selected) {
+      els.llmProviderSelect.value = selected;
+      const provider = providers.find((row) => row.id === selected) || null;
+      fillProviderForm(provider);
+    }
+  }
+
+  function syncActiveProviderKeysToLegacyFields() {
+    const provider = activeProvider();
+    if (!provider) return;
+
+    if (runtime?.getProviderApiKey) {
+      const key = runtime.getProviderApiKey(provider.id) || "";
+      if (els.openaiKey) {
+        els.openaiKey.value = key;
+      }
+    }
+  }
+
+  function saveProviderFromForm() {
+    if (!runtime?.upsertProvider) {
+      setInlineStatus("Provider runtime is unavailable.", "error");
+      return;
+    }
+
+    const name = String(els.llmProviderName?.value || "").trim();
+    const baseUrl = String(els.llmProviderBaseUrl?.value || "").trim();
+    const path = String(els.llmProviderPath?.value || "").trim() || "/v1/chat/completions";
+    const models = parseModelsFromForm();
+    const modelFromSelect = String(els.llmProviderModelSelect?.value || "").trim();
+    const activeModel = modelFromSelect || models[0] || "";
+
+    if (!name || !baseUrl || !activeModel) {
+      setInlineStatus("Provider name, base URL, and at least one model are required.", "error");
+      return;
+    }
+
+    const provider = runtime.upsertProvider({
+      id: providerDraftId || undefined,
+      name,
+      baseUrl,
+      path,
+      models: models.length ? models : [activeModel],
+      activeModel,
+    });
+
+    const key = String(els.llmProviderApiKey?.value || "").trim();
+    if (runtime.setProviderApiKey) {
+      runtime.setProviderApiKey(provider.id, key);
+    }
+
+    if (runtime.setActiveProvider) {
+      runtime.setActiveProvider(provider.id);
+    }
+
+    renderProviderSelect(provider.id);
+    syncActiveProviderKeysToLegacyFields();
+    setInlineStatus(`Saved ${provider.name}.`, "success");
+  }
+
+  function removeSelectedProvider() {
+    if (!runtime?.removeProvider) {
+      setInlineStatus("Provider runtime is unavailable.", "error");
+      return;
+    }
+
+    const id = selectedProviderId();
+    if (!id) {
+      setInlineStatus("Select a provider first.", "error");
+      return;
+    }
+
+    const current = runtime.getProviderById?.(id);
+    const label = current?.name || id;
+    const ok = runtime.removeProvider(id);
+    if (!ok) {
+      setInlineStatus("Cannot remove provider. Keep at least one provider profile.", "error");
+      return;
+    }
+
+    renderProviderSelect("");
+    syncActiveProviderKeysToLegacyFields();
+    setInlineStatus(`Removed ${label}.`, "success");
+  }
+
+  function setSelectedProviderActive() {
+    if (!runtime?.setActiveProvider) {
+      setInlineStatus("Provider runtime is unavailable.", "error");
+      return;
+    }
+
+    const id = selectedProviderId();
+    if (!id) {
+      setInlineStatus("Select a provider first.", "error");
+      return;
+    }
+
+    const ok = runtime.setActiveProvider(id);
+    if (!ok) {
+      setInlineStatus("Could not set active provider.", "error");
+      return;
+    }
+
+    renderProviderSelect(id);
+    syncActiveProviderKeysToLegacyFields();
+    setInlineStatus("Active provider updated.", "success");
+  }
+
+  function resetProviderForm() {
+    providerDraftId = "";
+    if (els.llmProviderName) els.llmProviderName.value = "";
+    if (els.llmProviderBaseUrl) els.llmProviderBaseUrl.value = "";
+    if (els.llmProviderPath) els.llmProviderPath.value = "/v1/chat/completions";
+    if (els.llmProviderModels) els.llmProviderModels.value = "";
+    if (els.llmProviderApiKey) els.llmProviderApiKey.value = "";
+    renderProviderModelSelect([], "");
+    setInlineStatus("Creating new provider profile.", null);
+  }
+
+  function load() {
+    Object.entries(KEYS).forEach(function (entry) {
+      const id = entry[0];
+      const el = els[id];
+      if (!el) return;
+      if (id === "openaiKey" && runtime?.getProviderApiKey) {
+        const active = activeProvider();
+        el.value = active ? runtime.getProviderApiKey(active.id) || "" : "";
+      } else {
+        el.value = readValue(id);
+      }
+    });
+
+    if (runtime?.ensureProviderAndReturn) {
+      runtime.ensureProviderAndReturn();
+      renderProviderSelect(runtime.getActiveProviderId?.() || "");
+      syncActiveProviderKeysToLegacyFields();
+    }
+
+    updateStatuses();
+    updateThemePicker();
+  }
+
+  // Reveal / hide password fields.
+  document.querySelectorAll(".reveal-btn").forEach(function (btn) {
+    btn.addEventListener("click", function () {
+      const targetId = btn.getAttribute("data-target");
+      const input = document.getElementById(targetId);
       if (!input) return;
-      var isPassword = input.type === 'password';
-      input.type = isPassword ? 'text' : 'password';
-      var eyeOpen = btn.querySelector('.eye-open');
-      var eyeClosed = btn.querySelector('.eye-closed');
-      if (eyeOpen) eyeOpen.style.display = isPassword ? 'none' : '';
-      if (eyeClosed) eyeClosed.style.display = isPassword ? '' : 'none';
+      const isPassword = input.type === "password";
+      input.type = isPassword ? "text" : "password";
+      const eyeOpen = btn.querySelector(".eye-open");
+      const eyeClosed = btn.querySelector(".eye-closed");
+      if (eyeOpen) eyeOpen.style.display = isPassword ? "none" : "";
+      if (eyeClosed) eyeClosed.style.display = isPassword ? "" : "none";
     });
   });
 
-  // ─── Test GitHub connection ──────────────────────
+  // Auto-save for simple key fields.
+  const timers = {};
+  ["githubPat", "cfApiToken", "cfAccountId", "serverApiKey"].forEach(function (id) {
+    const el = els[id];
+    if (!el) return;
+    el.addEventListener("input", function () {
+      clearTimeout(timers[id]);
+      timers[id] = setTimeout(function () {
+        writeValue(id, el.value.trim());
+        updateStatuses();
+      }, 300);
+    });
+  });
+
+  if (els.openaiKey) {
+    els.openaiKey.addEventListener("input", function () {
+      clearTimeout(timers.openaiKey);
+      timers.openaiKey = setTimeout(function () {
+        const value = els.openaiKey.value.trim();
+        if (runtime?.setProviderApiKey) {
+          const active = activeProvider();
+          if (active) {
+            runtime.setProviderApiKey(active.id, value);
+            if (els.llmProviderApiKey) {
+              els.llmProviderApiKey.value = value;
+            }
+          }
+        }
+        writeValue("openaiKey", value);
+      }, 250);
+    });
+  }
+
+  // Provider events.
+  if (els.llmProviderSelect) {
+    els.llmProviderSelect.addEventListener("change", function () {
+      const id = String(els.llmProviderSelect.value || "").trim();
+      if (!id || !runtime?.getProviderById) return;
+      if (runtime.setActiveProvider) {
+        runtime.setActiveProvider(id);
+      }
+      fillProviderForm(runtime.getProviderById(id));
+      syncActiveProviderKeysToLegacyFields();
+      setInlineStatus("Loaded provider profile.", null);
+    });
+  }
+
+  if (els.llmProviderModels) {
+    els.llmProviderModels.addEventListener("input", function () {
+      const models = parseModelsFromForm();
+      const preferred = String(els.llmProviderModelSelect?.value || models[0] || "").trim();
+      renderProviderModelSelect(models, preferred);
+    });
+  }
+
+  if (els.llmProviderModelSelect) {
+    els.llmProviderModelSelect.addEventListener("change", function () {
+      const model = String(els.llmProviderModelSelect.value || "").trim();
+      if (!model || !runtime?.setProviderActiveModel) return;
+      const id = selectedProviderId();
+      if (!id) return;
+      runtime.setProviderActiveModel(id, model);
+      setInlineStatus(`Model set to ${model}.`, null);
+    });
+  }
+
+  if (els.saveLlmProvider) {
+    els.saveLlmProvider.addEventListener("click", saveProviderFromForm);
+  }
+
+  if (els.removeLlmProvider) {
+    els.removeLlmProvider.addEventListener("click", removeSelectedProvider);
+  }
+
+  if (els.setActiveLlmProvider) {
+    els.setActiveLlmProvider.addEventListener("click", setSelectedProviderActive);
+  }
+
+  if (els.newLlmProvider) {
+    els.newLlmProvider.addEventListener("click", resetProviderForm);
+  }
+
+  // Test GitHub connection.
   if (els.testGithub) {
-    els.testGithub.addEventListener('click', function () {
-      var pat = (els.githubPat && els.githubPat.value.trim()) || '';
+    els.testGithub.addEventListener("click", function () {
+      const pat = (els.githubPat && els.githubPat.value.trim()) || "";
       if (!pat) {
-        CANARIAToast.warning({ title: 'Missing token', message: 'Enter a GitHub Personal Access Token first.' });
+        CANARIAToast.warning({ title: "Missing token", message: "Enter a GitHub Personal Access Token first." });
         return;
       }
       els.testGithub.disabled = true;
-      els.testGithub.textContent = 'Testing...';
+      els.testGithub.textContent = "Testing...";
 
-      fetch('https://api.github.com/user', {
+      fetch("https://api.github.com/user", {
         headers: {
-          Authorization: 'Bearer ' + pat,
-          Accept: 'application/vnd.github+json',
+          Authorization: `Bearer ${pat}`,
+          Accept: "application/vnd.github+json",
         },
       })
-        .then(function (r) { return r.json().then(function (d) { return { ok: r.ok, data: d }; }); })
+        .then(function (r) {
+          return r.json().then(function (d) {
+            return { ok: r.ok, data: d };
+          });
+        })
         .then(function (res) {
           if (res.ok && res.data.login) {
-            CANARIAToast.success({ title: 'GitHub connected', message: 'Authenticated as ' + res.data.login });
-            writeValue('githubPat', pat);
+            CANARIAToast.success({ title: "GitHub connected", message: `Authenticated as ${res.data.login}` });
+            writeValue("githubPat", pat);
             updateStatuses();
           } else {
-            CANARIAToast.error({ title: 'GitHub failed', message: res.data.message || 'Invalid token' });
+            CANARIAToast.error({ title: "GitHub failed", message: res.data.message || "Invalid token" });
           }
         })
         .catch(function () {
-          CANARIAToast.error({ title: 'Network error', message: 'Could not reach GitHub API.' });
+          CANARIAToast.error({ title: "Network error", message: "Could not reach GitHub API." });
         })
         .finally(function () {
           els.testGithub.disabled = false;
-          els.testGithub.textContent = 'Test Connection';
+          els.testGithub.textContent = "Test Connection";
         });
     });
   }
 
-  // ─── Test Cloudflare connection ──────────────────
+  // Test Cloudflare connection.
   if (els.testCf) {
-    els.testCf.addEventListener('click', function () {
-      var token = (els.cfApiToken && els.cfApiToken.value.trim()) || '';
-      var accountId = (els.cfAccountId && els.cfAccountId.value.trim()) || '';
+    els.testCf.addEventListener("click", function () {
+      const token = (els.cfApiToken && els.cfApiToken.value.trim()) || "";
+      const accountId = (els.cfAccountId && els.cfAccountId.value.trim()) || "";
       if (!token) {
-        CANARIAToast.warning({ title: 'Missing token', message: 'Enter a Cloudflare API Token first.' });
+        CANARIAToast.warning({ title: "Missing token", message: "Enter a Cloudflare API Token first." });
         return;
       }
       els.testCf.disabled = true;
-      els.testCf.textContent = 'Testing...';
+      els.testCf.textContent = "Testing...";
 
-      fetch('https://api.cloudflare.com/client/v4/user/tokens/verify', {
+      fetch("https://api.cloudflare.com/client/v4/user/tokens/verify", {
         headers: {
-          Authorization: 'Bearer ' + token,
+          Authorization: `Bearer ${token}`,
         },
       })
-        .then(function (r) { return r.json().then(function (d) { return { ok: r.ok, data: d }; }); })
+        .then(function (r) {
+          return r.json().then(function (d) {
+            return { ok: r.ok, data: d };
+          });
+        })
         .then(function (res) {
           if (res.ok && res.data && res.data.success) {
-            writeValue('cfApiToken', token);
+            writeValue("cfApiToken", token);
             if (accountId) {
-              writeValue('cfAccountId', accountId);
-              CANARIAToast.success({ title: 'Cloudflare connected', message: 'API token is valid.' });
+              writeValue("cfAccountId", accountId);
+              CANARIAToast.success({ title: "Cloudflare connected", message: "API token is valid." });
             } else {
-              CANARIAToast.warning({ title: 'Token valid', message: 'Add your Account ID to enable deployments.' });
+              CANARIAToast.warning({ title: "Token valid", message: "Add your Account ID to enable deployments." });
             }
             updateStatuses();
           } else {
-            var firstError = res.data && Array.isArray(res.data.errors) && res.data.errors[0] ? res.data.errors[0].message : '';
-            CANARIAToast.error({ title: 'Cloudflare failed', message: firstError || 'Invalid token' });
+            const firstError =
+              res.data && Array.isArray(res.data.errors) && res.data.errors[0]
+                ? res.data.errors[0].message
+                : "";
+            CANARIAToast.error({ title: "Cloudflare failed", message: firstError || "Invalid token" });
           }
         })
         .catch(function () {
-          CANARIAToast.error({ title: 'Network error', message: 'Could not reach Cloudflare API.' });
+          CANARIAToast.error({ title: "Network error", message: "Could not reach Cloudflare API." });
         })
         .finally(function () {
           els.testCf.disabled = false;
-          els.testCf.textContent = 'Test Connection';
+          els.testCf.textContent = "Test Connection";
         });
     });
   }
 
-  // ─── Theme picker ────────────────────────────────
-  function updateThemePicker() {
-    if (!els.themePicker) return;
-    var stored = localStorage.getItem('voyager-theme');
-    var current = stored || 'system';
-    els.themePicker.querySelectorAll('.theme-option').forEach(function (opt) {
-      opt.classList.toggle('active', opt.getAttribute('data-theme') === current);
-    });
-  }
-
+  // Theme picker.
   if (els.themePicker) {
-    els.themePicker.addEventListener('click', function (e) {
-      var btn = e.target.closest('.theme-option');
+    els.themePicker.addEventListener("click", function (e) {
+      const btn = e.target.closest(".theme-option");
       if (!btn) return;
-      var theme = btn.getAttribute('data-theme');
-      var root = document.documentElement;
-      root.classList.add('theme-transition');
+      const theme = btn.getAttribute("data-theme");
+      const root = document.documentElement;
+      root.classList.add("theme-transition");
 
-      if (theme === 'system') {
-        localStorage.removeItem('voyager-theme');
-        var sys = matchMedia('(prefers-color-scheme:dark)').matches ? 'dark' : 'light';
-        root.setAttribute('data-theme', sys);
+      if (theme === "system") {
+        localStorage.removeItem("voyager-theme");
+        const sys = matchMedia("(prefers-color-scheme:dark)").matches ? "dark" : "light";
+        root.setAttribute("data-theme", sys);
       } else {
-        localStorage.setItem('voyager-theme', theme);
-        root.setAttribute('data-theme', theme);
+        localStorage.setItem("voyager-theme", theme);
+        root.setAttribute("data-theme", theme);
       }
 
       updateThemePicker();
-      setTimeout(function () { root.classList.remove('theme-transition'); }, 400);
+      setTimeout(function () {
+        root.classList.remove("theme-transition");
+      }, 400);
     });
   }
 
-  // ─── Clear all settings ──────────────────────────
+  // Clear settings.
   if (els.clearSettings) {
-    els.clearSettings.addEventListener('click', function () {
-      if (!confirm('Clear all CANARIA settings? This removes stored API keys and preferences.')) return;
-      Object.values(KEYS).forEach(function (k) {
-        localStorage.removeItem(k);
-        sessionStorage.removeItem(k);
-      });
-      localStorage.removeItem('voyager-theme');
-      localStorage.removeItem('voyager_editor_mode');
-      localStorage.removeItem('voyager_right_collapsed');
+    els.clearSettings.addEventListener("click", function () {
+      if (!confirm("Clear all CANARIA settings? This removes stored API keys and preferences.")) return;
 
-      // Reset form
-      Object.keys(KEYS).forEach(function (id) {
-        if (els[id]) els[id].value = '';
+      Object.values(KEYS).forEach(function (key) {
+        localStorage.removeItem(key);
+        sessionStorage.removeItem(key);
       });
+
+      Object.values(LEGACY_KEYS).forEach(function (key) {
+        localStorage.removeItem(key);
+        sessionStorage.removeItem(key);
+      });
+
+      if (runtime?.storage) {
+        const runtimeKeys = Object.values(runtime.storage || {});
+        runtimeKeys.forEach(function (key) {
+          localStorage.removeItem(key);
+          sessionStorage.removeItem(key);
+        });
+      }
+
+      localStorage.removeItem("voyager-theme");
+      localStorage.removeItem("voyager_editor_mode");
+      localStorage.removeItem("voyager_right_collapsed");
+
+      Object.keys(KEYS).forEach(function (id) {
+        if (els[id]) {
+          els[id].value = "";
+        }
+      });
+
+      resetProviderForm();
+      if (runtime?.ensureProviderAndReturn) {
+        runtime.ensureProviderAndReturn();
+        renderProviderSelect(runtime.getActiveProviderId?.() || "");
+      }
+
       updateStatuses();
 
-      // Reset theme to system default
-      var sys = matchMedia('(prefers-color-scheme:dark)').matches ? 'dark' : 'light';
-      document.documentElement.setAttribute('data-theme', sys);
+      const sys = matchMedia("(prefers-color-scheme:dark)").matches ? "dark" : "light";
+      document.documentElement.setAttribute("data-theme", sys);
       updateThemePicker();
 
-      CANARIAToast.info({ title: 'Cleared', message: 'All settings have been removed.' });
+      CANARIAToast.info({ title: "Cleared", message: "All settings have been removed." });
     });
   }
 
-  // ─── Init ────────────────────────────────────────
   migrateLegacyValues();
   load();
 })();
