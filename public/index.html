@@ -19,12 +19,12 @@
   <nav class="top-nav landing-nav">
     <div class="top-nav-inner">
       <div class="nav-links">
-        <a href="/editor" class="nav-link">Flow Editor</a>
-        <a href="/chat" class="nav-link">Chat</a>
-        <a href="/ops" class="nav-link">Ops</a>
+        <a href="/editor?mode=canvas" class="nav-link">Flow Editor</a>
         <a href="https://docs.voyager.dev" target="_blank" rel="noopener noreferrer" class="nav-link">Docs</a>
       </div>
       <div class="nav-actions">
+        <a href="/editor?mode=chat" class="btn btn-ghost btn-sm">/chat</a>
+        <a href="/editor?mode=deploy" class="btn btn-ghost btn-sm">/ops</a>
         <a href="/settings" class="btn btn-ghost btn-icon btn-sm" title="Open settings" aria-label="Open settings">
           <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor"
             stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
@@ -74,16 +74,16 @@
     <div class="container">
       <div class="hero-content">
         <h1 class="hero-title">
-          <a href="/editor" class="hero-word"><span class="hero-word-text">Build</span><span
+          <a href="/editor?mode=canvas" class="hero-word"><span class="hero-word-text">Build</span><span
               class="hero-word-label">Flow Editor</span></a><span class="hero-punct">,</span>
-          <a href="/chat" class="hero-word"><span class="hero-word-text">run</span><span class="hero-word-label">Chat
+          <a href="/editor?mode=chat" class="hero-word"><span class="hero-word-text">run</span><span class="hero-word-label">Chat
               Console</span></a><span class="hero-punct">,</span>
-          <a href="/ops" class="hero-word"><span class="hero-word-text">deploy</span><span class="hero-word-label">Ops
+          <a href="/editor?mode=deploy" class="hero-word"><span class="hero-word-text">deploy</span><span class="hero-word-label">Ops
               Console</span></a><span class="hero-punct">.</span>
           <br /><span class="hero-tagline">Build the Frontier.</span>
         </h1>
         <div class="hero-actions">
-          <a href="/editor" class="btn btn-primary btn-lg press-feedback">Get Started</a>
+          <a href="/editor?mode=chat" class="btn btn-primary btn-lg press-feedback">Get Started</a>
           <a href="https://docs.voyager.dev" target="_blank" rel="noopener noreferrer" class="btn btn-secondary btn-lg">Documentation</a>
         </div>
       </div>
@@ -403,7 +403,7 @@
         <div class="cta-body">
           <h2 class="cta-title">Chat with agents you've built</h2>
           <p class="cta-desc">Test your agents in a real conversation. Select any finalized agent and start chatting — see how it handles real inputs, iterates on responses, and uses your configured tools.</p>
-          <a href="/chat" class="btn btn-primary btn-lg press-feedback">Open Chat Console</a>
+          <a href="/editor?mode=chat" class="btn btn-primary btn-lg press-feedback">Open Chat Console</a>
         </div>
       </div>
     </div>
@@ -415,9 +415,9 @@
       <div class="footer-inner">
         <p class="footer-copy">CANARIA</p>
         <div class="footer-links">
-          <a href="/editor">Editor</a>
-          <a href="/chat">Chat</a>
-          <a href="/ops">Ops</a>
+          <a href="/editor?mode=canvas">Editor</a>
+          <a href="/editor?mode=chat">Chat</a>
+          <a href="/editor?mode=deploy">Ops</a>
           <a href="https://docs.voyager.dev" target="_blank" rel="noopener noreferrer">Docs</a>
           <a href="https://github.com" target="_blank" rel="noopener noreferrer">GitHub</a>
         </div>

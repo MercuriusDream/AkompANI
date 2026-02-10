@@ -85,6 +85,43 @@
     canvas: canvasView,
     deploy: deployView,
   };
+  const editorNavModeLinks = Array.from(document.querySelectorAll("[data-editor-nav-mode]"));
+
+  function normalizeEditorMode(mode) {
+    const normalized = String(mode || "").trim().toLowerCase();
+    if (normalized === "ops") return "deploy";
+    if (normalized === "flow" || normalized === "editor") return "canvas";
+    return Object.prototype.hasOwnProperty.call(modeViews, normalized) ? normalized : "";
+  }
+
+  function readModeFromLocation() {
+    try {
+      const url = new URL(window.location.href);
+      const queryMode = normalizeEditorMode(url.searchParams.get("mode") || url.searchParams.get("perspective"));
+      if (queryMode) return queryMode;
+      const hashMode = normalizeEditorMode(url.hash.replace(/^#/, ""));
+      if (hashMode) return hashMode;
+    } catch {
+      // ignore malformed location values
+    }
+    return "";
+  }
+
+  function syncModeInLocation(mode) {
+    if (!window?.history?.replaceState) return;
+    const normalizedMode = normalizeEditorMode(mode);
+    if (!normalizedMode) return;
+    try {
+      const url = new URL(window.location.href);
+      if (url.searchParams.get("mode") === normalizedMode) return;
+      url.searchParams.set("mode", normalizedMode);
+      const query = url.searchParams.toString();
+      const nextHref = `${url.pathname}${query ? `?${query}` : ""}${url.hash}`;
+      window.history.replaceState(null, "", nextHref);
+    } catch {
+      // ignore history mutation failures
+    }
+  }
 
   // Sliding mode indicator
   const editorNavLinks = document.querySelector(".editor-nav-links");
@@ -103,6 +140,19 @@
     // This avoids fractional rounding issues with getBoundingClientRect
     modeIndicator.style.width = activeTab.offsetWidth + "px";
     modeIndicator.style.transform = "translateX(" + (activeTab.offsetLeft - 4) + "px)";
+  }
+
+  function updateEditorNavModeLinks(mode) {
+    for (const link of editorNavModeLinks) {
+      const linkMode = normalizeEditorMode(link.dataset.editorNavMode);
+      const isActive = Boolean(linkMode) && linkMode === mode;
+      link.classList.toggle("is-active", isActive);
+      if (isActive) {
+        link.setAttribute("aria-current", "page");
+      } else {
+        link.removeAttribute("aria-current");
+      }
+    }
   }
 
   window.addEventListener("resize", () => updateModeIndicator(state.editorMode));
@@ -2636,28 +2686,29 @@
   }
 
   function switchMode(mode) {
-    if (!modeViews[mode]) mode = "chat";
-    state.editorMode = mode;
-    document.body.setAttribute("data-editor-mode", mode);
+    const resolvedMode = normalizeEditorMode(mode) || "chat";
+    state.editorMode = resolvedMode;
+    document.body.setAttribute("data-editor-mode", resolvedMode);
 
     // Toggle tab active states
     for (const tab of modeTabs) {
-      const isActive = tab?.dataset?.mode === mode;
+      const isActive = tab?.dataset?.mode === resolvedMode;
       tab.classList.toggle("active", isActive);
       tab.setAttribute("aria-selected", isActive ? "true" : "false");
     }
-    updateModeIndicator(mode);
+    updateModeIndicator(resolvedMode);
+    updateEditorNavModeLinks(resolvedMode);
 
     // Toggle view active states with CSS transitions
     for (const [viewMode, viewEl] of Object.entries(modeViews)) {
-      setModeViewActive(viewEl, viewMode === mode);
+      setModeViewActive(viewEl, viewMode === resolvedMode);
     }
 
     // Canvas controls are always visible across all editor modes
 
     // Show/hide chat pill (only in canvas mode)
     if (chatPill) {
-      const showPill = mode === "canvas";
+      const showPill = resolvedMode === "canvas";
       chatPill.classList.toggle("is-visible", showPill);
       if (!showPill) {
         if (chatPillWindow) chatPillWindow.style.display = "none";
@@ -2666,7 +2717,7 @@
     }
 
     // Apply inspector collapse state in canvas mode
-    if (mode === "canvas") {
+    if (resolvedMode === "canvas") {
       document.body.classList.toggle("right-collapsed", state.isInspectorCollapsed);
       if (toggleInspectorBtn) {
         toggleInspectorBtn.classList.toggle("collapsed", state.isInspectorCollapsed);
@@ -2677,16 +2728,17 @@
     }
 
     // Load deployment data when entering deploy mode
-    if (mode === "deploy") {
+    if (resolvedMode === "deploy") {
       loadDeployments();
       prefillDeployAgent();
     }
 
     hidePaletteHoverCard();
+    syncModeInLocation(resolvedMode);
     persistEditorMode();
 
     // Refresh canvas connections after mode switch transition
-    if (mode === "canvas") {
+    if (resolvedMode === "canvas") {
       setTimeout(() => refreshCanvasConnections(), 150);
     }
   }
@@ -3616,6 +3668,18 @@
     }
     if (modeDeployTab) {
       modeDeployTab.addEventListener("click", () => switchMode("deploy"));
+    }
+  }
+
+  function bindEditorNavModeEvents() {
+    for (const link of editorNavModeLinks) {
+      const mode = normalizeEditorMode(link.dataset.editorNavMode);
+      if (!mode) continue;
+      link.addEventListener("click", (event) => {
+        if (event.button !== 0 || event.metaKey || event.ctrlKey || event.altKey || event.shiftKey) return;
+        event.preventDefault();
+        switchMode(mode);
+      });
     }
   }
 
@@ -5418,6 +5482,7 @@
     bindKeyboardShortcuts();
     bindGenerateEvents();
     bindModeTabEvents();
+    bindEditorNavModeEvents();
     bindBuildChatEvents();
     bindEditorChatEvents();
     bindWelcomeChipEvents();
@@ -5431,11 +5496,12 @@
   async function boot() {
     try {
       try {
-        const savedMode = localStorage.getItem("voyager_editor_mode");
-        if (savedMode === "canvas" || savedMode === "deploy") {
-          state.editorMode = savedMode;
+        const locationMode = readModeFromLocation();
+        if (locationMode) {
+          state.editorMode = locationMode;
         } else {
-          state.editorMode = "chat";
+          const savedMode = normalizeEditorMode(localStorage.getItem("voyager_editor_mode"));
+          state.editorMode = savedMode || "chat";
         }
         state.isInspectorCollapsed = localStorage.getItem("voyager_right_collapsed") === "1";
       } catch {
