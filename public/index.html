@@ -575,16 +575,16 @@
 
       const heroPalette = {
         light: {
-          bg: '#fff8e4',
-          colors: ['#ff98cf', '#e8b7f2', '#fef6c9', '#3ce586', '#ffd0eb', '#97f4be', '#f6efa3'],
+          bg: '#eaf6f5',
+          colors: ['#fbc8c8', '#63dff6', '#eaf6f5', '#c5bcd8', '#fddcee', '#63dff6', '#c5bcd8'],
           coreAlpha: 0.36,
           midAlpha: 0.18,
         },
         dark: {
-          bg: '#161a19',
-          colors: ['#2f2635', '#493d55', '#314237', '#57e692', '#f0b7da', '#95e7b7', '#8b8452'],
-          coreAlpha: 0.24,
-          midAlpha: 0.11,
+          bg: '#33353b',
+          colors: ['#3d4049', '#4a4f5a', '#565c68', '#a4b8cd', '#d8dbe2', '#f7f5f2', '#2a2c33'],
+          coreAlpha: 0.22,
+          midAlpha: 0.1,
         },
       };
 
@@ -759,10 +759,10 @@
           if (p.y > h + 10) p.y = -10;
           ctx.beginPath();
           ctx.arc(p.x, p.y, p.r, 0, Math.PI * 2);
-          var r = Math.round(lerp(255, 113, themeBlendValue));
-          var g = Math.round(lerp(152, 240, themeBlendValue));
-          var b = Math.round(lerp(207, 167, themeBlendValue));
-          var a = lerp(p.a * 0.2, p.a * 0.28, themeBlendValue);
+          var r = Math.round(lerp(99, 247, themeBlendValue));
+          var g = Math.round(lerp(223, 245, themeBlendValue));
+          var b = Math.round(lerp(246, 242, themeBlendValue));
+          var a = lerp(p.a * 0.2, p.a * 0.24, themeBlendValue);
           ctx.fillStyle = 'rgba(' + r + ', ' + g + ', ' + b + ', ' + a + ')';
           ctx.fill();
         }
