@@ -80,7 +80,7 @@
               Console</span></a><span class="hero-punct">,</span>
           <a href="/ops" class="hero-word"><span class="hero-word-text">deploy</span><span class="hero-word-label">Ops
               Console</span></a><span class="hero-punct">.</span>
-          <br />Build the Frontier.
+          <br /><span class="hero-tagline">Build the Frontier.</span>
         </h1>
         <div class="hero-actions">
           <a href="/editor" class="btn btn-primary btn-lg press-feedback">Get Started</a>
@@ -388,13 +388,13 @@
             </div>
             <div class="cta-bubble cta-bubble--agent">
               <span class="cta-bubble-avatar">
-                <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+                <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 8V4H8"/><rect width="16" height="12" x="4" y="8" rx="2"/><path d="M2 14h2"/><path d="M20 14h2"/><path d="M15 13v2"/><path d="M9 13v2"/></svg>
               </span>
               <span class="cta-bubble-text">Found 3 reports. Revenue up 12%, user signups increased 28%, churn reduced to 4.1%. Key takeaway: growth accelerating across all metrics.</span>
             </div>
             <div class="cta-bubble cta-bubble--agent">
               <span class="cta-bubble-avatar">
-                <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+                <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 8V4H8"/><rect width="16" height="12" x="4" y="8" rx="2"/><path d="M2 14h2"/><path d="M20 14h2"/><path d="M15 13v2"/><path d="M9 13v2"/></svg>
               </span>
               <span class="cta-bubble-text">Want me to draft an executive summary?</span>
             </div>
@@ -575,16 +575,16 @@
 
       const heroPalette = {
         light: {
-          bg: '#eaf6f5',
-          colors: ['#fbc8c8', '#63dff6', '#eaf6f5', '#c5bcd8', '#fddcee', '#63dff6', '#c5bcd8'],
-          coreAlpha: 0.34,
-          midAlpha: 0.16,
+          bg: '#fff8e4',
+          colors: ['#ff98cf', '#e8b7f2', '#fef6c9', '#3ce586', '#ffd0eb', '#97f4be', '#f6efa3'],
+          coreAlpha: 0.36,
+          midAlpha: 0.18,
         },
         dark: {
-          bg: '#33353b',
-          colors: ['#3d4049', '#4a4f5a', '#565c68', '#a4b8cd', '#d8dbe2', '#f7f5f2', '#2a2c33'],
-          coreAlpha: 0.22,
-          midAlpha: 0.1,
+          bg: '#161a19',
+          colors: ['#2f2635', '#493d55', '#314237', '#57e692', '#f0b7da', '#95e7b7', '#8b8452'],
+          coreAlpha: 0.24,
+          midAlpha: 0.11,
         },
       };
 
@@ -759,10 +759,10 @@
           if (p.y > h + 10) p.y = -10;
           ctx.beginPath();
           ctx.arc(p.x, p.y, p.r, 0, Math.PI * 2);
-          var r = Math.round(lerp(99, 247, themeBlendValue));
-          var g = Math.round(lerp(223, 245, themeBlendValue));
-          var b = Math.round(lerp(246, 242, themeBlendValue));
-          var a = lerp(p.a * 0.2, p.a * 0.24, themeBlendValue);
+          var r = Math.round(lerp(255, 113, themeBlendValue));
+          var g = Math.round(lerp(152, 240, themeBlendValue));
+          var b = Math.round(lerp(207, 167, themeBlendValue));
+          var a = lerp(p.a * 0.2, p.a * 0.28, themeBlendValue);
           ctx.fillStyle = 'rgba(' + r + ', ' + g + ', ' + b + ', ' + a + ')';
           ctx.fill();
         }

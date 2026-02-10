@@ -7,7 +7,6 @@
   const blockSearch = document.getElementById("blockSearch");
   const palettePanel = document.getElementById("palettePanel");
   const paletteSections = document.getElementById("paletteSections");
-  const discardZone = document.getElementById("discardZone");
   const duplicateNodeBtn = document.getElementById("duplicateNodeBtn");
   const deleteNodeBtn = document.getElementById("deleteNodeBtn");
   const nodeTypeTag = document.getElementById("nodeTypeTag");
@@ -84,6 +83,27 @@
     canvas: canvasView,
     deploy: deployView,
   };
+
+  // Sliding mode indicator
+  const editorNavLinks = document.querySelector(".editor-nav-links");
+  let modeIndicator = null;
+  if (editorNavLinks) {
+    modeIndicator = document.createElement("div");
+    modeIndicator.className = "mode-indicator";
+    editorNavLinks.appendChild(modeIndicator);
+  }
+
+  function updateModeIndicator(mode) {
+    if (!modeIndicator || !editorNavLinks) return;
+    const activeTab = modeTabs.find((t) => t?.dataset?.mode === mode);
+    if (!activeTab) return;
+    // Use offsetLeft which is relative to the offsetParent (the nav-links container)
+    // This avoids fractional rounding issues with getBoundingClientRect
+    modeIndicator.style.width = activeTab.offsetWidth + "px";
+    modeIndicator.style.transform = "translateX(" + (activeTab.offsetLeft - 4) + "px)";
+  }
+
+  window.addEventListener("resize", () => updateModeIndicator(state.editorMode));
 
   const STORAGE_KEYS = {
     localFlows: "voyager_local_flows",
@@ -2166,16 +2186,14 @@
       tab.classList.toggle("active", isActive);
       tab.setAttribute("aria-selected", isActive ? "true" : "false");
     }
+    updateModeIndicator(mode);
 
     // Toggle view active states with CSS transitions
     for (const [viewMode, viewEl] of Object.entries(modeViews)) {
       setModeViewActive(viewEl, viewMode === mode);
     }
 
-    // Show/hide canvas-specific nav controls
-    if (navCanvasControls) {
-      navCanvasControls.classList.toggle("is-visible", mode === "canvas");
-    }
+    // Canvas controls are always visible across all editor modes
 
     // Show/hide chat pill (only in canvas mode)
     if (chatPill) {
@@ -2314,7 +2332,7 @@
       headBtn.type = "button";
       headBtn.className = "palette-group-head-btn";
       headBtn.innerHTML = `
-        <span class="palette-group-caret">${collapsed ? "+" : "-"}</span>
+        <svg class="palette-group-caret" xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
         <span class="palette-group-label">${group.label}</span>
         <span class="palette-group-count">${matchedTypes.length}</span>
       `;
@@ -2324,18 +2342,21 @@
       });
       wrap.appendChild(headBtn);
 
-      if (!collapsed) {
-        if (matchedTypes.length === 0) {
-          const empty = document.createElement("div");
-          empty.className = "palette-group-empty";
-          empty.textContent = query ? "No matching blocks" : "No blocks";
-          wrap.appendChild(empty);
-        } else {
-          for (const type of matchedTypes) {
-            wrap.appendChild(createBlockCard(type));
-          }
+      const itemsWrap = document.createElement("div");
+      itemsWrap.className = "palette-group-items";
+
+      if (matchedTypes.length === 0) {
+        const empty = document.createElement("div");
+        empty.className = "palette-group-empty";
+        empty.textContent = query ? "No matching blocks" : "No blocks";
+        itemsWrap.appendChild(empty);
+      } else {
+        for (const type of matchedTypes) {
+          itemsWrap.appendChild(createBlockCard(type));
         }
       }
+
+      wrap.appendChild(itemsWrap);
 
       paletteSections.appendChild(wrap);
     }
@@ -2354,14 +2375,9 @@
     return x >= rect.left && x <= rect.right && y >= rect.top && y <= rect.bottom;
   }
 
-  function clearDiscardHover() {
-    discardZone.classList.remove("active");
-  }
+  function clearDiscardHover() {}
 
-  function updateDiscardHover(x, y) {
-    const active = pointInside(discardZone, x, y) || pointInside(palettePanel, x, y);
-    discardZone.classList.toggle("active", active);
-  }
+  function updateDiscardHover(x, y) {}
 
   function resetCanvasNodeDragging() {
     state.dragCandidateNodeId = "";
@@ -2405,7 +2421,7 @@
         return;
       }
 
-      const shouldDiscard = pointInside(discardZone, event.clientX, event.clientY) || pointInside(palettePanel, event.clientX, event.clientY);
+      const shouldDiscard = pointInside(palettePanel, event.clientX, event.clientY);
       if (shouldDiscard) {
         const removingSelected = state.selectedNodeId === state.draggingCanvasNodeId;
         removeNodeById(state.draggingCanvasNodeId);
@@ -4348,6 +4364,78 @@ export default {
       }
     });
   }
+
+  /* ===== Panel Resize Handles ===== */
+  (function initPanelResize() {
+    const handleLeft = document.getElementById("resizeHandleLeft");
+    const handleRight = document.getElementById("resizeHandleRight");
+    const canvasLayout = document.getElementById("canvasView");
+    if (!canvasLayout) return;
+
+    const MIN_PANEL = 160;
+    const MAX_PANEL = 480;
+    let dragging = null; // "left" | "right" | null
+
+    function onPointerDown(e, side) {
+      e.preventDefault();
+      dragging = side;
+      const handle = side === "left" ? handleLeft : handleRight;
+      if (handle) handle.classList.add("is-dragging");
+      document.body.style.cursor = "col-resize";
+      document.body.style.userSelect = "none";
+    }
+
+    function onPointerMove(e) {
+      if (!dragging) return;
+      const rect = canvasLayout.getBoundingClientRect();
+      const totalW = rect.width;
+
+      if (dragging === "left") {
+        let leftW = Math.round(e.clientX - rect.left);
+        leftW = Math.max(MIN_PANEL, Math.min(MAX_PANEL, leftW));
+        const rightCol = document.body.classList.contains("right-collapsed") ? "44px" : (state._rightW || 300) + "px";
+        canvasLayout.style.gridTemplateColumns = leftW + "px 4px 1fr 4px " + rightCol;
+        state._leftW = leftW;
+      } else {
+        let rightW = Math.round(rect.right - e.clientX);
+        rightW = Math.max(MIN_PANEL, Math.min(MAX_PANEL, rightW));
+        const leftCol = (state._leftW || 280) + "px";
+        canvasLayout.style.gridTemplateColumns = leftCol + " 4px 1fr 4px " + rightW + "px";
+        state._rightW = rightW;
+      }
+    }
+
+    function onPointerUp() {
+      if (!dragging) return;
+      const handle = dragging === "left" ? handleLeft : handleRight;
+      if (handle) handle.classList.remove("is-dragging");
+      dragging = null;
+      document.body.style.cursor = "";
+      document.body.style.userSelect = "";
+      try {
+        localStorage.setItem("voyager_panel_left_w", String(state._leftW || 280));
+        localStorage.setItem("voyager_panel_right_w", String(state._rightW || 300));
+      } catch {}
+    }
+
+    if (handleLeft) handleLeft.addEventListener("pointerdown", (e) => onPointerDown(e, "left"));
+    if (handleRight) handleRight.addEventListener("pointerdown", (e) => onPointerDown(e, "right"));
+    document.addEventListener("pointermove", onPointerMove);
+    document.addEventListener("pointerup", onPointerUp);
+
+    // Restore persisted widths
+    try {
+      const savedL = parseInt(localStorage.getItem("voyager_panel_left_w"), 10);
+      const savedR = parseInt(localStorage.getItem("voyager_panel_right_w"), 10);
+      if (savedL >= MIN_PANEL && savedL <= MAX_PANEL) state._leftW = savedL;
+      if (savedR >= MIN_PANEL && savedR <= MAX_PANEL) state._rightW = savedR;
+      if (state._leftW || state._rightW) {
+        const l = (state._leftW || 280) + "px";
+        const r = (state._rightW || 300) + "px";
+        canvasLayout.style.gridTemplateColumns = l + " 4px 1fr 4px " + r;
+      }
+    } catch {}
+  })();
 
   function bindEvents() {
     editor.on("nodeSelected", (id) => {

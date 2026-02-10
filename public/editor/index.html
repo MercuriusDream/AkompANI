@@ -32,7 +32,7 @@
           </button>
         </div>
 
-        <!-- Canvas-mode controls (hidden in chat mode) -->
+        <!-- Editor controls (visible across all modes) -->
         <div class="nav-canvas-controls" id="navCanvasControls">
           <div class="flow-selector">
             <select id="flowSelect" class="form-select form-select-sm">
@@ -109,19 +109,15 @@
       <div id="canvasView" class="canvas-layout editor-view" aria-hidden="true">
         <!-- Blocks Palette -->
         <aside class="blocks-panel" id="palettePanel">
-          <div class="blocks-panel-header">
-            <h3>Blocks</h3>
-          </div>
           <div class="panel-search">
             <input id="blockSearch" type="text" class="form-input" placeholder="Search blocks..." />
             <svg class="search-icon" xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/></svg>
           </div>
           <div id="paletteSections" class="palette-content"></div>
-          <div id="discardZone" class="discard-zone">
-            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
-            Drop to remove
-          </div>
         </aside>
+
+        <!-- Resize handle: blocks ↔ canvas -->
+        <div class="panel-resize-handle" id="resizeHandleLeft" data-panel="left"></div>
 
         <!-- Canvas -->
         <section class="editor-canvas">
@@ -132,10 +128,10 @@
             </div>
             <div class="canvas-actions">
               <button id="generateBtn" class="btn btn-secondary btn-sm">
-                <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+                <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9.937 15.5A2 2 0 0 0 8.5 14.063l-6.135-1.582a.5.5 0 0 1 0-.962L8.5 9.936A2 2 0 0 0 9.937 8.5l1.582-6.135a.5.5 0 0 1 .963 0L14.063 8.5A2 2 0 0 0 15.5 9.937l6.135 1.581a.5.5 0 0 1 0 .964L15.5 14.063a2 2 0 0 0-1.437 1.437l-1.582 6.135a.5.5 0 0 1-.963 0z"/><path d="M20 3v4"/><path d="M22 5h-4"/></svg>
                 Generate
               </button>
-              <button id="runFlowBtn" class="btn btn-accent btn-sm">
+              <button id="runFlowBtn" class="btn btn-secondary btn-sm">
                 <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="5 3 19 12 5 21 5 3"/></svg>
                 Run
               </button>
@@ -166,6 +162,9 @@
             </div>
           </div>
         </section>
+
+        <!-- Resize handle: canvas ↔ inspector -->
+        <div class="panel-resize-handle" id="resizeHandleRight" data-panel="right"></div>
 
         <!-- Right Panel: Inspector -->
         <aside class="editor-panel panel-right" id="inspectorPanel">
