@@ -74,15 +74,15 @@ body {
   --hero-text: #2f2a3a;
   --hero-text-soft: rgba(47, 42, 58, 0.82);
   --hero-line: rgba(47, 42, 58, 0.35);
-  --hero-line-active: #2ed477;
+  --hero-line-active: #c8b4ff;
   --hero-title-color: #2f2a3a;
   --hero-title-bottom-shadow: 0 6px 0 rgba(183, 169, 187, 0.28);
-  --hero-title-gradient: linear-gradient(112deg, #f3a9d2 0%, #cab8e2 42%, #8fd3f3 72%, #63dff6 100%);
-  --hero-btn-primary-bg: #2f2a3a;
+  --hero-title-gradient: linear-gradient(112deg, #e399c2 0%, #daa8d2 42%, #7fb3e3 72%, #43acf6 100%);
+  --hero-btn-primary-bg: #f2c9e6;
   --hero-btn-primary-fg: #ffffff;
-  --hero-btn-primary-border: rgba(60, 229, 134, 0.44);
+  --hero-btn-primary-border: rgba(255, 255, 255, 0.44);
   --hero-btn-primary-hover-bg: #33353b;
-  --hero-btn-primary-hover-border: rgba(47, 215, 121, 0.58);
+  --hero-btn-primary-hover-border: rgba(215, 215, 215, 0.58);
   --hero-btn-secondary-border: rgba(47, 42, 58, 0.4);
   --hero-btn-secondary-hover-bg: rgba(47, 42, 58, 0.08);
   min-height: 120vh;
@@ -101,15 +101,14 @@ body {
   --hero-text: #f8f7f2;
   --hero-text-soft: rgba(248, 247, 242, 0.82);
   --hero-line: rgba(248, 247, 242, 0.46);
-  --hero-line-active: #71f0a7;
-  --hero-title-color: #dfd9ed;
+  --hero-line-active: #f3e28a;
+  --hero-title-color: #2f2a3a;
   --hero-title-bottom-shadow: 0 6px 0 rgba(170, 157, 182, 0.24);
-  --hero-title-gradient: linear-gradient(112deg, #fddcee 0%, #c5bcd8 30%, #d8dbe2 62%, #63dff6 100%);
-  --hero-btn-primary-bg: #f7f5f2;
+  --hero-btn-primary-bg: #f2c9e6;
   --hero-btn-primary-fg: #2f2a3a;
-  --hero-btn-primary-border: rgba(113, 240, 167, 0.6);
+  --hero-btn-primary-border: rgba(201, 182, 255, 0.6);
   --hero-btn-primary-hover-bg: #ffffff;
-  --hero-btn-primary-hover-border: rgba(126, 244, 174, 0.76);
+  --hero-btn-primary-hover-border: rgba(249, 230, 151, 0.76);
   --hero-btn-secondary-border: rgba(255, 255, 255, 0.38);
   --hero-btn-secondary-hover-bg: rgba(255, 255, 255, 0.1);
 }
@@ -258,6 +257,16 @@ body {
   background: var(--hero-btn-primary-bg);
   color: var(--hero-btn-primary-fg);
   border-color: var(--hero-btn-primary-bg);
+}
+
+.hero .btn.btn-primary.btn-lg.press-feedback {
+  box-shadow: var(--hero-title-bottom-shadow);
+}
+
+.hero .btn.btn-primary.btn-lg.press-feedback:hover {
+  background: #ffffff;
+  color: #2f2a3a;
+  border-color: #ffffff;
 }
 
 .hero .btn-primary:hover {
