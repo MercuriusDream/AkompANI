@@ -9,8 +9,10 @@
     githubPat: "voyager_oauth_github_token",
     cfApiToken: "voyager_oauth_cloudflare_token",
     cfAccountId: "voyager_cf_account_id",
+    vercelToken: "voyager_oauth_vercel_token",
+    vercelProject: "voyager_vercel_project",
+    vercelTeamId: "voyager_vercel_team_id",
     openaiKey: "voyager_llm_api_key",
-    serverApiKey: "voyager_server_api_key",
   };
 
   const LEGACY_KEYS = {
@@ -19,18 +21,22 @@
     openaiKey: "voyager_openai_key",
   };
 
-  const SESSION_SECRET_KEYS = new Set(["githubPat", "cfApiToken", "openaiKey", "serverApiKey"]);
+  const SESSION_SECRET_KEYS = new Set(["githubPat", "cfApiToken", "vercelToken", "openaiKey"]);
 
   const els = {
     githubPat: document.getElementById("githubPat"),
     cfApiToken: document.getElementById("cfApiToken"),
     cfAccountId: document.getElementById("cfAccountId"),
+    vercelToken: document.getElementById("vercelToken"),
+    vercelProject: document.getElementById("vercelProject"),
+    vercelTeamId: document.getElementById("vercelTeamId"),
     openaiKey: document.getElementById("openaiKey"),
-    serverApiKey: document.getElementById("serverApiKey"),
     githubStatus: document.getElementById("githubStatus"),
     cfStatus: document.getElementById("cfStatus"),
+    vercelStatus: document.getElementById("vercelStatus"),
     testGithub: document.getElementById("testGithub"),
     testCf: document.getElementById("testCf"),
+    testVercel: document.getElementById("testVercel"),
     themePicker: document.getElementById("themePicker"),
     clearSettings: document.getElementById("clearSettings"),
     llmProviderSelect: document.getElementById("llmProviderSelect"),
@@ -144,8 +150,14 @@
   function updateStatuses() {
     const hasGh = !!readValue("githubPat");
     const hasCf = !!(readValue("cfApiToken") && readValue("cfAccountId"));
+    const hasVercel = !!readValue("vercelToken");
     setStatus(els.githubStatus, hasGh);
     setStatus(els.cfStatus, hasCf);
+    setStatus(els.vercelStatus, hasVercel);
+  }
+
+  function isLikelyCloudflareAccountId(value) {
+    return /^[a-f0-9]{32}$/i.test(String(value || "").trim());
   }
 
   function updateThemePicker() {
@@ -421,7 +433,7 @@
 
   // Auto-save for simple key fields.
   const timers = {};
-  ["githubPat", "cfApiToken", "cfAccountId", "serverApiKey"].forEach(function (id) {
+  ["githubPat", "cfApiToken", "cfAccountId", "vercelToken", "vercelProject", "vercelTeamId"].forEach(function (id) {
     const el = els[id];
     if (!el) return;
     el.addEventListener("input", function () {
@@ -551,6 +563,13 @@
         CANARIAToast.warning({ title: "Missing token", message: "Enter a Cloudflare API Token first." });
         return;
       }
+      if (accountId && !isLikelyCloudflareAccountId(accountId)) {
+        CANARIAToast.warning({
+          title: "Invalid account ID",
+          message: "Cloudflare Account ID should be a 32-character hex string.",
+        });
+        return;
+      }
       els.testCf.disabled = true;
       els.testCf.textContent = "Testing...";
 
@@ -588,6 +607,57 @@
         .finally(function () {
           els.testCf.disabled = false;
           els.testCf.textContent = "Test Connection";
+        });
+    });
+  }
+
+  // Test Vercel connection.
+  if (els.testVercel) {
+    els.testVercel.addEventListener("click", function () {
+      const token = (els.vercelToken && els.vercelToken.value.trim()) || "";
+      const project = (els.vercelProject && els.vercelProject.value.trim()) || "";
+      const teamId = (els.vercelTeamId && els.vercelTeamId.value.trim()) || "";
+      if (!token) {
+        CANARIAToast.warning({ title: "Missing token", message: "Enter a Vercel access token first." });
+        return;
+      }
+      els.testVercel.disabled = true;
+      els.testVercel.textContent = "Testing...";
+
+      const endpoint = `https://api.vercel.com/v2/user${teamId ? `?teamId=${encodeURIComponent(teamId)}` : ""}`;
+      fetch(endpoint, {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      })
+        .then(function (r) {
+          return r.json().then(function (d) {
+            return { ok: r.ok, data: d };
+          });
+        })
+        .then(function (res) {
+          const user = res.data?.user || null;
+          if (res.ok && user) {
+            writeValue("vercelToken", token);
+            writeValue("vercelProject", project);
+            writeValue("vercelTeamId", teamId);
+            const label = String(user.username || user.name || user.email || "Vercel user");
+            CANARIAToast.success({ title: "Vercel connected", message: `Authenticated as ${label}` });
+            updateStatuses();
+          } else {
+            const msg =
+              res.data?.error?.message ||
+              res.data?.message ||
+              "Invalid token";
+            CANARIAToast.error({ title: "Vercel failed", message: msg });
+          }
+        })
+        .catch(function () {
+          CANARIAToast.error({ title: "Network error", message: "Could not reach Vercel API." });
+        })
+        .finally(function () {
+          els.testVercel.disabled = false;
+          els.testVercel.textContent = "Test Connection";
         });
     });
   }

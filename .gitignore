@@ -3,6 +3,7 @@ package-lock.json
 .env
 .DS_Store
 dist
+dist-static
 *.log
 data/*.json
 !data/.gitkeep

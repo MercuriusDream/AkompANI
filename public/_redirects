@@ -1,0 +1,16 @@
+/app /app/ 301
+/app/index.html /app/ 301
+/editor /app/ 301
+/editor/ /app/ 301
+/editor/index.html /app/ 301
+/settings /app/?mode=settings 301
+/settings/ /app/?mode=settings 301
+/settings/index.html /app/?mode=settings 301
+/chat /app/?mode=chat 301
+/chat/ /app/?mode=chat 301
+/chat/index.html /app/?mode=chat 301
+/ops /app/?mode=deploy 301
+/ops/ /app/?mode=deploy 301
+/ops/index.html /app/?mode=deploy 301
+/chat-agents /chat-agents.html 301
+/ops-console /ops-console.html 301

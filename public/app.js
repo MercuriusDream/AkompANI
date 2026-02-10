@@ -4,6 +4,9 @@
   const newFlowBtn = document.getElementById("newFlowBtn");
   const saveFlowBtn = document.getElementById("saveFlowBtn");
   const deleteFlowBtn = document.getElementById("deleteFlowBtn");
+  const importFlowBtn = document.getElementById("importFlowBtn");
+  const exportFlowBtn = document.getElementById("exportFlowBtn");
+  const flowImportInput = document.getElementById("flowImportInput");
   const blockSearch = document.getElementById("blockSearch");
   const palettePanel = document.getElementById("palettePanel");
   const paletteSections = document.getElementById("paletteSections");
@@ -27,6 +30,7 @@
   const drawflowEl = document.getElementById("drawflow");
   const modeChatTab = document.getElementById("modeChatTab");
   const modeCanvasTab = document.getElementById("modeCanvasTab");
+  const modeSettingsTab = document.getElementById("modeSettingsTab");
   const navCanvasControls = document.getElementById("navCanvasControls");
   const chatFullView = document.getElementById("chatFullView");
   const canvasView = document.getElementById("canvasView");
@@ -34,6 +38,7 @@
   const chatFullScroll = document.getElementById("chatFullScroll");
   const modeDeployTab = document.getElementById("modeDeployTab");
   const deployView = document.getElementById("deployView");
+  const settingsView = document.getElementById("settingsView");
   const deploySaveBtn = document.getElementById("deploySaveBtn");
   const deployStatus = document.getElementById("deployStatus");
   const deployLogList = document.getElementById("deployLogList");
@@ -72,6 +77,7 @@
   const githubConnectionState = document.getElementById("githubConnectionState");
   const cloudflareConnectionState = document.getElementById("cloudflareConnectionState");
   const deployCfAccountIdInput = document.getElementById("deployCfAccountId");
+  const deployEndpointModeInput = document.getElementById("deployEndpointMode");
   const llmProviderInput = document.getElementById("llmProvider");
   const llmEndpointInput = document.getElementById("llmEndpoint");
   const llmApiKeyInput = document.getElementById("llmApiKey");
@@ -79,11 +85,12 @@
   const llmModelInput = document.getElementById("llmModel");
   const saveLlmConfigBtn = document.getElementById("saveLlmConfigBtn");
   const llmConfigStatus = document.getElementById("llmConfigStatus");
-  const modeTabs = [modeChatTab, modeCanvasTab, modeDeployTab].filter(Boolean);
+  const modeTabs = [modeChatTab, modeCanvasTab, modeDeployTab, modeSettingsTab].filter(Boolean);
   const modeViews = {
     chat: chatFullView,
     canvas: canvasView,
     deploy: deployView,
+    settings: settingsView,
   };
   const editorNavModeLinks = Array.from(document.querySelectorAll("[data-editor-nav-mode]"));
 
@@ -91,6 +98,7 @@
     const normalized = String(mode || "").trim().toLowerCase();
     if (normalized === "ops") return "deploy";
     if (normalized === "flow" || normalized === "editor") return "canvas";
+    if (normalized === "setting" || normalized === "config") return "settings";
     return Object.prototype.hasOwnProperty.call(modeViews, normalized) ? normalized : "";
   }
 
@@ -169,9 +177,13 @@
     llmProviderKeysSession: "voyager_llm_provider_keys_v2",
     oauthGithubToken: "voyager_oauth_github_token",
     oauthCloudflareToken: "voyager_oauth_cloudflare_token",
+    oauthVercelToken: "voyager_oauth_vercel_token",
     oauthGithubClientId: "voyager_oauth_github_client_id",
     oauthCloudflareClientId: "voyager_oauth_cloudflare_client_id",
     cloudflareAccountId: "voyager_cf_account_id",
+    vercelProject: "voyager_vercel_project",
+    vercelTeamId: "voyager_vercel_team_id",
+    deployEndpointMode: "voyager_deploy_endpoint_mode",
   };
 
   const editor = new Drawflow(drawflowEl);
@@ -962,7 +974,6 @@
     activeInspectorTab: "config",
     isInspectorFloating: false,
     floatingPos: { x: null, y: null },
-    apiAvailable: true,
   };
 
   function clone(value) {
@@ -1049,6 +1060,16 @@
       .replace(/'/g, "&#39;");
   }
 
+  function sanitizeCssColor(value, fallback = "#666") {
+    const text = String(value || "").trim();
+    if (!text) return fallback;
+    if (/^#[0-9a-f]{3,8}$/i.test(text)) return text;
+    if (/^rgba?\(\s*[\d.\s,%]+\)$/i.test(text)) return text;
+    if (/^hsla?\(\s*[\d.\s,%]+\)$/i.test(text)) return text;
+    if (/^[a-z]{3,20}$/i.test(text)) return text;
+    return fallback;
+  }
+
   function truncateText(value, max = 80) {
     const text = String(value || "").replace(/\s+/g, " ").trim();
     if (!text) return "";
@@ -1125,6 +1146,18 @@
     return readSession(STORAGE_KEYS.oauthCloudflareToken);
   }
 
+  function getVercelToken() {
+    return readSession(STORAGE_KEYS.oauthVercelToken);
+  }
+
+  function getVercelProject() {
+    return readLocal(STORAGE_KEYS.vercelProject);
+  }
+
+  function getVercelTeamId() {
+    return readLocal(STORAGE_KEYS.vercelTeamId);
+  }
+
   function getCloudflareAccountId() {
     return (
       String(deployCfAccountIdInput?.value || "").trim() ||
@@ -1137,6 +1170,14 @@
     const runtime = window.CANARIA_IDE;
     if (!runtime || typeof runtime !== "object") return null;
     return runtime;
+  }
+
+  function normalizeEndpointMode(mode) {
+    const normalized = String(mode || "").trim().toLowerCase();
+    if (normalized === "openai" || normalized === "chat" || normalized === "both") {
+      return normalized;
+    }
+    return "both";
   }
 
   function parseEndpointParts(endpoint) {
@@ -1313,31 +1354,6 @@
     if (llmModelInput && !llmModelInput.value) {
       llmModelInput.value = cfg.model || "";
     }
-  }
-
-  function getServerApiKey() {
-    return readSession("voyager_server_api_key");
-  }
-
-  function withServerAuthHeaders(url, headers) {
-    const merged = new Headers(headers || {});
-    if (!String(url || "").startsWith("/api/")) {
-      return merged;
-    }
-
-    const apiKey = getServerApiKey();
-    if (!apiKey) return merged;
-
-    merged.set("Authorization", `Bearer ${apiKey}`);
-    merged.set("x-api-key", apiKey);
-    return merged;
-  }
-
-  function withServerAuth(url, options = {}) {
-    return {
-      ...options,
-      headers: withServerAuthHeaders(url, options.headers),
-    };
   }
 
   function formatNodePreviewValue(value) {
@@ -1558,13 +1574,15 @@
     const hoverInfo = nodeHoverInfo(def);
     const previewItems = nodePreviewItems(def, nodeData ?? def.data ?? {}).slice(0, 4);
     const previewHtml = previewGridHtml(previewItems, "Settings", "No variable setup");
+    const safeColor = sanitizeCssColor(def.color, "#666");
+    const safeLabel = escapeHtml(def.label || type || "Node");
 
     return `
       <div class="node-card" title="${escapeHtml(hoverInfo)}">
         <div class="node-top-row">
           <div class="node-title-wrap">
-            <div class="badge" style="background:${def.color}">${blockIconHtml(type, def)}</div>
-            <div class="title">${def.label}</div>
+            <div class="badge" style="background:${safeColor}">${blockIconHtml(type, def)}</div>
+            <div class="title">${safeLabel}</div>
           </div>
           <div class="node-status ${statusClass}">${statusText}</div>
         </div>
@@ -2704,7 +2722,10 @@
       setModeViewActive(viewEl, viewMode === resolvedMode);
     }
 
-    // Canvas controls are always visible across all editor modes
+    if (navCanvasControls) {
+      const showCanvasControls = resolvedMode === "canvas";
+      navCanvasControls.style.display = showCanvasControls ? "flex" : "none";
+    }
 
     // Show/hide chat pill (only in canvas mode)
     if (chatPill) {
@@ -2969,29 +2990,6 @@
     });
   }
 
-  async function requestJson(url, options = {}) {
-    const res = await fetch(url, withServerAuth(url, options));
-    let data;
-
-    try {
-      data = await res.json();
-    } catch {
-      data = null;
-    }
-
-    if (!res.ok) {
-      if (res.status === 410 && String(url || "").startsWith("/api/")) {
-        state.apiAvailable = false;
-      }
-      throw new Error(data?.error || `Request failed (${res.status})`);
-    }
-
-    if (String(url || "").startsWith("/api/")) {
-      state.apiAvailable = true;
-    }
-    return data;
-  }
-
   function listLocalFlows() {
     return readJsonArrayFromLocalStorage(STORAGE_KEYS.localFlows).sort((a, b) =>
       String(b.updatedAt || "").localeCompare(String(a.updatedAt || "")),
@@ -3019,15 +3017,7 @@
   }
 
   async function refreshFlowList() {
-    let flows = [];
-    try {
-      const data = await requestJson("/api/flows");
-      flows = Array.isArray(data?.flows) ? data.flows : [];
-      state.apiAvailable = true;
-    } catch {
-      state.apiAvailable = false;
-      flows = listLocalFlows();
-    }
+    const flows = listLocalFlows();
     const current = state.currentFlowId || flowSelect.value;
 
     flowSelect.innerHTML = "";
@@ -3052,13 +3042,7 @@
   }
 
   async function loadFlow(flowId) {
-    let flow;
-    try {
-      const data = await requestJson(`/api/flows/${flowId}`);
-      flow = data.flow;
-    } catch {
-      flow = getLocalFlowById(flowId);
-    }
+    const flow = getLocalFlowById(flowId);
     if (!flow) {
       throw new Error("Flow not found.");
     }
@@ -3082,38 +3066,19 @@
       drawflow: editor ? editor.export() : {},
     };
 
-    let flow;
-    try {
-      if (state.currentFlowId) {
-        const data = await requestJson(`/api/flows/${state.currentFlowId}`, {
-          method: "PUT",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(payload),
-        });
-        flow = data.flow;
-      } else {
-        const data = await requestJson("/api/flows", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(payload),
-        });
-        flow = data.flow;
-      }
-    } catch {
-      const now = new Date().toISOString();
-      flow = {
-        id: state.currentFlowId || `flow_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 8)}`,
-        name: payload.name,
-        drawflow: payload.drawflow,
-        createdAt: now,
-        updatedAt: now,
-      };
-      const existing = getLocalFlowById(flow.id);
-      if (existing) {
-        flow.createdAt = existing.createdAt || now;
-      }
-      saveLocalFlowRecord(flow);
+    const now = new Date().toISOString();
+    const flow = {
+      id: state.currentFlowId || `flow_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 8)}`,
+      name: payload.name,
+      drawflow: payload.drawflow,
+      createdAt: now,
+      updatedAt: now,
+    };
+    const existing = getLocalFlowById(flow.id);
+    if (existing) {
+      flow.createdAt = existing.createdAt || now;
     }
+    saveLocalFlowRecord(flow);
 
     state.currentFlowId = flow.id;
     flowNameInput.value = flow.name;
@@ -3126,13 +3091,7 @@
   async function deleteCurrentFlow() {
     if (!state.currentFlowId) return;
 
-    try {
-      await requestJson(`/api/flows/${state.currentFlowId}`, {
-        method: "DELETE",
-      });
-    } catch {
-      deleteLocalFlowById(state.currentFlowId);
-    }
+    deleteLocalFlowById(state.currentFlowId);
 
     state.currentFlowId = "";
     flowNameInput.value = "Untitled Flow";
@@ -3140,221 +3099,154 @@
     await refreshFlowList();
   }
 
-  function clearPullTimer() {
-    if (state.pullTimer) {
-      clearTimeout(state.pullTimer);
-      state.pullTimer = null;
+  function buildFlowExportPayload() {
+    const name = (flowNameInput?.value || "Untitled Flow").trim() || "Untitled Flow";
+    return {
+      id: state.currentFlowId || "",
+      name,
+      drawflow: editor ? editor.export() : {},
+      exportedAt: new Date().toISOString(),
+      version: 1,
+    };
+  }
+
+  function sanitizeFileBasename(value, fallback = "flow") {
+    const normalized = String(value || "")
+      .trim()
+      .toLowerCase()
+      .replace(/[^a-z0-9._-]+/g, "-")
+      .replace(/-+/g, "-")
+      .replace(/^-+|-+$/g, "");
+    return normalized || fallback;
+  }
+
+  function normalizeImportedDrawflow(payload) {
+    if (!payload || typeof payload !== "object") return null;
+    if (payload.drawflow && payload.drawflow.drawflow) {
+      return payload.drawflow;
     }
-  }
-
-  function hasHealthyWsForRun(runId) {
-    return Boolean(
-      runId &&
-        state.ws &&
-        state.ws.readyState === WebSocket.OPEN &&
-        state.wsSubscribedRunId === runId,
-    );
-  }
-
-  function schedulePullFallback(runId, token, delayMs = 1000) {
-    if (!runId || runId !== state.currentRunId) return;
-    if (token !== state.pullToken) return;
-    clearPullTimer();
-    state.pullTimer = window.setTimeout(() => {
-      state.pullTimer = null;
-      pullRunEvents(runId, token);
-    }, delayMs);
-  }
-
-  function subscribeRun(runId) {
-    const targetRunId = String(runId || "");
-    if (!targetRunId || !state.ws || state.ws.readyState !== WebSocket.OPEN) {
-      return;
+    if (payload.drawflow && payload.drawflow.Home && payload.drawflow.Home.data) {
+      return { drawflow: payload.drawflow };
     }
-    if (state.wsSubscribedRunId === targetRunId) return;
-    state.wsSubscribedRunId = "";
-    state.ws.send(
-      JSON.stringify({
-        type: "subscribe",
-        runId: targetRunId,
-      }),
-    );
-  }
-
-  function appendEvent(event) {
-    if (!event || typeof event.idx !== "number") return;
-    if (state.seenEventIds.has(event.idx)) return;
-
-    state.seenEventIds.add(event.idx);
-    applyRunEventToNodeRuntime(event);
-
-    const nodeLabel = event.nodeType ? ` ${event.nodeType}:${event.nodeId}` : "";
-    const detail = event.detail ? ` ${JSON.stringify(event.detail)}` : "";
-
-    eventsPane.textContent += `[${event.idx}] ${event.type}${nodeLabel}${detail}\n`;
-    eventsPane.scrollTop = eventsPane.scrollHeight;
-
-    if (event.type === "run_completed" || event.type === "run_failed") {
-      clearPullTimer();
-      if (state.currentRunId) {
-        setTimeout(() => {
-          fetchRun(state.currentRunId).catch(() => {});
-        }, 150);
-      }
+    if (payload.Home && payload.Home.data) {
+      return { drawflow: payload };
     }
+    return null;
   }
 
-  async function fetchRun(runId) {
-    const data = await requestJson(`/api/runs/${runId}`);
-    const run = data.run;
-
-    runStatus.textContent = JSON.stringify(
-      {
-        id: run.id,
-        status: run.status,
-        output: run.output,
-        error: run.error,
-        startedAt: run.startedAt,
-        finishedAt: run.finishedAt,
-      },
-      null,
-      2,
-    );
-  }
-
-  async function pullRunEvents(runId, token) {
-    if (token !== state.pullToken) return;
-    if (!runId || runId !== state.currentRunId) return;
-    clearPullTimer();
-
+  async function exportFlowToLocalFile() {
     try {
-      const data = await requestJson(`/api/runs/${runId}/pull?cursor=${state.cursor}`);
-      const events = data.events || [];
-
-      for (const event of events) {
-        appendEvent(event);
+      const snapshot = buildFlowExportPayload();
+      const base = sanitizeFileBasename(snapshot.name, "flow");
+      const filename = `${base}.flow.json`;
+      downloadTextFile(filename, JSON.stringify(snapshot, null, 2));
+      if (runStatus) {
+        runStatus.textContent = `Flow exported to ${filename}.`;
       }
-
-      state.cursor = data.nextCursor || state.cursor;
-
-      if (data.done) {
-        clearPullTimer();
-        await fetchRun(runId);
-        return;
+      if (typeof CANARIAToast !== "undefined") {
+        CANARIAToast.success({ title: "Flow exported", message: filename });
       }
     } catch (error) {
-      runStatus.textContent = `Pull error: ${error.message}`;
-      schedulePullFallback(runId, token, 1200);
-      return;
-    }
-
-    if (!hasHealthyWsForRun(runId)) {
-      schedulePullFallback(runId, token, 1000);
-    }
-  }
-
-  function wsUrl() {
-    const protocol = window.location.protocol === "https:" ? "wss" : "ws";
-    const token = getServerApiKey();
-    const suffix = token ? `?token=${encodeURIComponent(token)}` : "";
-    return `${protocol}://${window.location.host}/ws${suffix}`;
-  }
-
-  function ensureWs() {
-    if (!state.apiAvailable) {
-      return;
-    }
-    if (state.ws && (state.ws.readyState === WebSocket.OPEN || state.ws.readyState === WebSocket.CONNECTING)) {
-      return;
-    }
-
-    state.ws = new WebSocket(wsUrl());
-
-    state.ws.addEventListener("open", () => {
-      if (state.currentRunId) {
-        subscribeRun(state.currentRunId);
+      if (runStatus) {
+        runStatus.textContent = `Export error: ${error.message}`;
       }
-    });
+      if (typeof CANARIAToast !== "undefined") {
+        CANARIAToast.error({ title: "Export failed", message: error.message || "Could not export flow file." });
+      }
+    }
+  }
 
-    state.ws.addEventListener("message", (msg) => {
-      let payload;
+  async function importFlowFromLocalFile(file) {
+    const selectedFile = file || flowImportInput?.files?.[0];
+    if (!selectedFile) return;
+    const text = await selectedFile.text();
+    let payload;
+    try {
+      payload = JSON.parse(text);
+    } catch {
+      throw new Error("Invalid JSON file.");
+    }
+    const drawflow = normalizeImportedDrawflow(payload);
+    if (!drawflow) {
+      throw new Error("File does not contain a valid Drawflow export.");
+    }
+
+    const now = new Date().toISOString();
+    const id = String(payload.id || `flow_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 8)}`);
+    const name = String(payload.name || selectedFile.name.replace(/\.json$/i, "") || "Imported Flow").trim() || "Imported Flow";
+
+    clearEditor();
+    editor.import(drawflow);
+    resetNodeRuntime();
+    refreshAllNodeCards();
+
+    const existing = getLocalFlowById(id);
+    const record = {
+      id,
+      name,
+      drawflow,
+      createdAt: existing?.createdAt || now,
+      updatedAt: now,
+    };
+    saveLocalFlowRecord(record);
+
+    state.currentFlowId = record.id;
+    flowNameInput.value = record.name;
+    state.selectedNodeId = "";
+    refreshNodeInspector();
+    await refreshFlowList();
+    if (flowSelect) flowSelect.value = record.id;
+
+    if (runStatus) {
+      runStatus.textContent = `Imported flow "${record.name}".`;
+    }
+    if (typeof CANARIAToast !== "undefined") {
+      CANARIAToast.success({ title: "Flow imported", message: record.name });
+    }
+  }
+
+  function clearRunRuntimeState() {
+    if (state.pullTimer) {
+      clearTimeout(state.pullTimer);
+    }
+    state.pullTimer = null;
+    state.currentRunId = "";
+    state.cursor = 0;
+    state.pullToken = 0;
+    state.wsSubscribedRunId = "";
+    state.seenEventIds = new Set();
+    if (state.ws && typeof state.ws.close === "function") {
       try {
-        payload = JSON.parse(msg.data);
+        state.ws.close();
       } catch {
-        return;
+        // Ignore close failures.
       }
-
-      if (payload.type === "subscribed") {
-        if (payload.runId === state.currentRunId) {
-          state.wsSubscribedRunId = payload.runId;
-          clearPullTimer();
-        }
-        return;
-      }
-
-      if (payload.type !== "run.event") return;
-      if (payload.runId !== state.currentRunId) return;
-
-      appendEvent(payload.payload);
-    });
-
-    state.ws.addEventListener("close", () => {
-      state.wsSubscribedRunId = "";
-      if (state.currentRunId) {
-        schedulePullFallback(state.currentRunId, state.pullToken, 250);
-      }
-      setTimeout(() => ensureWs(), 1200);
-    });
-
-    state.ws.addEventListener("error", () => {
-      state.wsSubscribedRunId = "";
-      if (state.currentRunId) {
-        schedulePullFallback(state.currentRunId, state.pullToken, 250);
-      }
-    });
+    }
+    state.ws = null;
   }
 
   async function runCurrentFlow() {
     try {
-      if (!state.apiAvailable) {
-        throw new Error("Run requires backend runtime API. Deploy your worker or start an API server to execute flows.");
+      clearRunRuntimeState();
+      if (eventsPane) {
+        eventsPane.textContent = "";
       }
-
-      if (!state.currentFlowId) {
-        await saveFlow();
-      }
+      resetNodeRuntime();
 
       let parsedInput = {};
       const raw = runInput.value.trim();
       if (raw) {
         parsedInput = JSON.parse(raw);
       }
-
-      eventsPane.textContent = "";
-      state.seenEventIds = new Set();
-      state.cursor = 0;
-      state.pullToken += 1;
-      clearPullTimer();
-      resetNodeRuntime();
-
-      const data = await requestJson(`/api/flows/${state.currentFlowId}/run`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({ input: parsedInput }),
-      });
-
-      state.currentRunId = data.runId;
-      state.wsSubscribedRunId = "";
-      runStatus.textContent = `Run queued: ${state.currentRunId}`;
-
-      ensureWs();
-      if (state.ws && state.ws.readyState === WebSocket.OPEN) {
-        subscribeRun(state.currentRunId);
+      if (!state.currentFlowId) {
+        await saveFlow();
       }
-
-      pullRunEvents(state.currentRunId, state.pullToken);
+      const inputSummary = Object.keys(parsedInput || {}).length
+        ? `Input keys: ${Object.keys(parsedInput).join(", ")}.`
+        : "No input payload provided.";
+      runStatus.textContent =
+        `Static mode: local execution API is disabled. ${inputSummary} ` +
+        "Deploy the generated target (Cloudflare/GitHub) to execute runtime requests.";
     } catch (error) {
       runStatus.textContent = `Run error: ${error.message}`;
     }
@@ -3602,25 +3494,8 @@
   }
 
   async function generateFlowPayload(prompt) {
-    try {
-      const generated = await generateFlowViaLlm(prompt);
-      return generated;
-    } catch (primaryError) {
-      if (!state.apiAvailable) {
-        throw primaryError;
-      }
-      try {
-        const fallbackApi = await requestJson("/api/flows/generate", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ prompt }),
-        });
-        return normalizeGeneratedPayload(fallbackApi, prompt);
-      } catch {
-        // Keep the original message when both strategies fail.
-        throw primaryError;
-      }
-    }
+    const generated = await generateFlowViaLlm(prompt);
+    return generated;
   }
 
   function applyGeneratedFlow(data) {
@@ -3668,6 +3543,9 @@
     }
     if (modeDeployTab) {
       modeDeployTab.addEventListener("click", () => switchMode("deploy"));
+    }
+    if (modeSettingsTab) {
+      modeSettingsTab.addEventListener("click", () => switchMode("settings"));
     }
   }
 
@@ -4025,8 +3903,9 @@
 
     deployLogList.innerHTML = deps
       .map((d) => {
-        const link = d.url
-          ? `<div class="deploy-log-item-meta"><a href="${escapeHtml(d.url)}" target="_blank" rel="noopener noreferrer">${escapeHtml(d.url)}</a></div>`
+        const safeUrl = normalizeSafeExternalUrl(d.url);
+        const link = safeUrl
+          ? `<div class="deploy-log-item-meta"><a href="${escapeHtml(safeUrl)}" target="_blank" rel="noopener noreferrer">${escapeHtml(safeUrl)}</a></div>`
           : "";
 
         return `
@@ -4048,7 +3927,7 @@
       target: entry.target || "unknown",
       status: entry.status || "generated",
       updatedAt: entry.updatedAt || new Date().toISOString(),
-      url: entry.url || "",
+      url: normalizeSafeExternalUrl(entry.url || ""),
     });
     writeJsonArrayToLocalStorage(STORAGE_KEYS.localDeployments, rows.slice(0, 100));
   }
@@ -4066,6 +3945,9 @@
     try {
       const drawflowData = editor ? editor.export() : {};
       const deployTarget = String(document.getElementById("deployCfTarget")?.value || "cloudflare_workers_elysia_bun").trim();
+      const endpointMode = normalizeEndpointMode(
+        deployEndpointModeInput?.value || readLocal(STORAGE_KEYS.deployEndpointMode) || "both",
+      );
       const llmConfig = getLlmConfig();
       const agents = readJsonArrayFromLocalStorage(STORAGE_KEYS.localAgents);
       const agent = {
@@ -4081,6 +3963,7 @@
         },
         deploy: {
           preferredTarget: deployTarget,
+          preferredEndpointMode: endpointMode,
         },
         createdAt: new Date().toISOString(),
         updatedAt: new Date().toISOString(),
@@ -4111,16 +3994,28 @@
   function refreshDeployConnectionState() {
     const hasGh = Boolean(getGithubToken());
     const hasCf = Boolean(getCloudflareToken());
+    const hasVercel = Boolean(getVercelToken());
     const accountId = getCloudflareAccountId();
     const targetId = getSelectedDeployTarget();
-    const needsCloudflare = String(targetId || "").startsWith("cloudflare");
+    const targetDef = getDeployTargetDefinition(targetId);
+    const targetPlatform = String(targetDef?.platform || "").trim();
 
     setConnectionBadge(githubConnectionState, hasGh, "Connected");
     setConnectionBadge(cloudflareConnectionState, hasCf, accountId ? "Connected" : "Connected (set account)");
 
     const cfMissing = document.getElementById("deployCfMissing");
+    const cfMissingText = document.getElementById("deployCfMissingText");
     if (cfMissing) {
-      cfMissing.style.display = needsCloudflare && !(hasCf && accountId) ? "" : "none";
+      let message = "";
+      if (targetPlatform === "cloudflare" && !(hasCf && accountId)) {
+        message = "Set Cloudflare token and account id in Settings to deploy directly.";
+      } else if (targetPlatform === "vercel" && !hasVercel) {
+        message = "Set a Vercel token in Settings to deploy directly.";
+      }
+      cfMissing.style.display = message ? "" : "none";
+      if (message && cfMissingText) {
+        cfMissingText.textContent = message;
+      }
     }
 
     const ghMissing = document.getElementById("deployGhMissing");
@@ -4229,6 +4124,9 @@
     if (deployCfAccountIdInput) {
       writeLocal(STORAGE_KEYS.cloudflareAccountId, deployCfAccountIdInput.value);
     }
+    if (deployEndpointModeInput) {
+      writeLocal(STORAGE_KEYS.deployEndpointMode, normalizeEndpointMode(deployEndpointModeInput.value));
+    }
   }
 
   function loadDeployConnectionInputs() {
@@ -4240,6 +4138,11 @@
     }
     if (deployCfAccountIdInput) {
       deployCfAccountIdInput.value = getCloudflareAccountId();
+    }
+    if (deployEndpointModeInput) {
+      deployEndpointModeInput.value = normalizeEndpointMode(
+        readLocal(STORAGE_KEYS.deployEndpointMode) || deployEndpointModeInput.value || "both",
+      );
     }
   }
 
@@ -4342,6 +4245,25 @@
     return text || fallback;
   }
 
+  function delay(ms) {
+    const waitMs = Number.isFinite(ms) ? Math.max(0, Math.floor(ms)) : 0;
+    return new Promise((resolve) => setTimeout(resolve, waitMs));
+  }
+
+  function normalizeSafeExternalUrl(value) {
+    const text = String(value || "").trim();
+    if (!text) return "";
+    try {
+      const parsed = new URL(text);
+      if (parsed.protocol !== "https:" && parsed.protocol !== "http:") {
+        return "";
+      }
+      return parsed.toString();
+    } catch {
+      return "";
+    }
+  }
+
   function extractCloudflareErrorMessage(data, status) {
     if (data && typeof data === "object") {
       if (Array.isArray(data.errors) && data.errors.length) {
@@ -4421,6 +4343,94 @@
     return { response, data };
   }
 
+  async function vercelApiRequest(pathname, apiToken, options = {}) {
+    const token = String(apiToken || "").trim();
+    if (!token) {
+      throw new Error("Vercel access token is required.");
+    }
+    const path = String(pathname || "").trim() || "/v13/deployments";
+    const teamId = getVercelTeamId();
+    const endpoint = `https://api.vercel.com${path}${teamId ? `${path.includes("?") ? "&" : "?"}teamId=${encodeURIComponent(teamId)}` : ""}`;
+
+    const init = options && typeof options === "object" ? options : {};
+    const response = await withRequestTimeout((signal) =>
+      fetch(endpoint, {
+        ...init,
+        headers: {
+          Authorization: `Bearer ${token}`,
+          ...(init.headers || {}),
+        },
+        signal,
+      }),
+    );
+
+    let data = null;
+    try {
+      data = await response.json();
+    } catch {
+      data = null;
+    }
+
+    if (!response.ok) {
+      const message =
+        String(data?.error?.message || "").trim() ||
+        String(data?.error?.code || "").trim() ||
+        String(data?.message || "").trim() ||
+        `Vercel API request failed (${response.status})`;
+      throw new Error(message);
+    }
+
+    return data;
+  }
+
+  async function createVercelDeployment(params) {
+    const token = String(params?.token || "").trim();
+    const deployObject = params?.deployObject;
+    const deployName = sanitizeWorkerName(String(params?.name || deployObject?.rootDir || "canaria-app"));
+    const files = (Array.isArray(deployObject?.files) ? deployObject.files : [])
+      .map((row) => ({
+        file: String(row?.path || "").replace(/^\/+/, ""),
+        data: String(row?.content || ""),
+      }))
+      .filter((row) => row.file && row.data);
+
+    if (!files.length) {
+      throw new Error("Deploy object has no files for Vercel deployment.");
+    }
+
+    const payload = {
+      name: deployName,
+      target: "production",
+      files,
+      meta: {
+        source: "canaria-static-ide",
+      },
+    };
+    const project = String(params?.project || "").trim();
+    if (project) {
+      payload.project = project;
+    }
+
+    const data = await vercelApiRequest("/v13/deployments", token, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(payload),
+    });
+
+    const rawUrl = String(data?.inspectorUrl || data?.url || "").trim();
+    const normalizedUrl = normalizeSafeExternalUrl(
+      rawUrl && !/^https?:\/\//i.test(rawUrl) ? `https://${rawUrl.replace(/^\/+/, "")}` : rawUrl,
+    );
+
+    return {
+      id: String(data?.id || ""),
+      url: normalizedUrl,
+      raw: data,
+    };
+  }
+
   async function uploadCloudflareWorkerScript(params) {
     const deployUrl = String(params?.deployUrl || "").trim();
     const apiToken = String(params?.apiToken || "").trim();
@@ -4433,45 +4443,37 @@
     if (!script.trim()) {
       throw new Error("Generated worker script is empty.");
     }
+    if (typeof FormData === "undefined" || typeof Blob === "undefined") {
+      throw new Error("Browser does not support required upload APIs (FormData/Blob).");
+    }
+    if (script.length > 2_500_000) {
+      throw new Error("Generated worker script is too large for direct browser deploy.");
+    }
 
     const moduleFilename = "index.js";
-    const moduleForm = new FormData();
-    moduleForm.append(
-      "metadata",
-      new Blob(
-        [
-          JSON.stringify({
-            main_module: moduleFilename,
-            compatibility_date: compatibilityDate,
-          }),
-        ],
-        { type: "application/json" },
-      ),
-    );
-    moduleForm.append(moduleFilename, new Blob([script], { type: "application/javascript+module" }), moduleFilename);
-
-    const serviceWorkerForm = new FormData();
-    serviceWorkerForm.append(
-      "metadata",
-      new Blob(
-        [
-          JSON.stringify({
-            body_part: "script",
-            compatibility_date: compatibilityDate,
-          }),
-        ],
-        { type: "application/json" },
-      ),
-    );
-    serviceWorkerForm.append("script", new Blob([script], { type: "application/javascript" }), "script.js");
-
     const attempts = [
       {
         id: "module_multipart",
         run: () =>
           cloudflareApiRequest(deployUrl, apiToken, {
             method: "PUT",
-            body: moduleForm,
+            body: (() => {
+              const body = new FormData();
+              body.append(
+                "metadata",
+                new Blob(
+                  [
+                    JSON.stringify({
+                      main_module: moduleFilename,
+                      compatibility_date: compatibilityDate,
+                    }),
+                  ],
+                  { type: "application/json" },
+                ),
+              );
+              body.append(moduleFilename, new Blob([script], { type: "application/javascript+module" }), moduleFilename);
+              return body;
+            })(),
           }),
       },
       {
@@ -4479,7 +4481,23 @@
         run: () =>
           cloudflareApiRequest(deployUrl, apiToken, {
             method: "PUT",
-            body: serviceWorkerForm,
+            body: (() => {
+              const body = new FormData();
+              body.append(
+                "metadata",
+                new Blob(
+                  [
+                    JSON.stringify({
+                      body_part: "script",
+                      compatibility_date: compatibilityDate,
+                    }),
+                  ],
+                  { type: "application/json" },
+                ),
+              );
+              body.append("script", new Blob([script], { type: "application/javascript" }), "script.js");
+              return body;
+            })(),
           }),
       },
       {
@@ -4509,7 +4527,7 @@
     let lastError = null;
     for (const attempt of attempts) {
       const { response, data } = await attempt.run();
-      if (response.ok && data?.success) {
+      if (response.ok && (data?.success === true || data === null)) {
         return {
           strategy: attempt.id,
           data,
@@ -4539,7 +4557,7 @@
     return { id: targetId, label: targetId, platform: targetId.startsWith("cloudflare") ? "cloudflare" : "unknown" };
   }
 
-  function generateWorkerScript(name, description, targetId = "cloudflare_workers") {
+  function generateWorkerScript(name, description, targetId = "cloudflare_workers", endpointMode = "both") {
     const drawflowData = editor ? editor.export() : {};
     const runtime = getIdeRuntime();
     if (runtime?.buildCloudflareWorkerModule) {
@@ -4549,16 +4567,18 @@
         drawflow: drawflowData,
         providerConfig: getLlmConfig(),
         target: targetId,
+        endpointMode: normalizeEndpointMode(endpointMode),
       });
     }
 
     return `export default { fetch() { return new Response("Generated runtime unavailable", { status: 501 }); } };`;
   }
 
-  function buildDeployObjectForCurrentFlow(name, description, targetId) {
+  function buildDeployObjectForCurrentFlow(name, description, targetId, endpointMode = "both") {
     const drawflowData = editor ? editor.export() : {};
     const runtime = getIdeRuntime();
     const workerName = sanitizeWorkerName(name || "canaria-agent");
+    const resolvedEndpointMode = normalizeEndpointMode(endpointMode);
     if (runtime?.buildDeployObject) {
       return runtime.buildDeployObject({
         target: targetId,
@@ -4567,6 +4587,7 @@
         description,
         drawflow: drawflowData,
         providerConfig: getLlmConfig(),
+        endpointMode: resolvedEndpointMode,
       });
     }
 
@@ -4578,7 +4599,7 @@
       files: [
         {
           path: "src/worker.js",
-          content: generateWorkerScript(name, description, targetId),
+          content: generateWorkerScript(name, description, targetId, resolvedEndpointMode),
         },
       ],
       summary: {
@@ -4605,7 +4626,7 @@
     const fileCount = Number(deployObject?.summary?.fileCount || deployObject?.files?.length || 0);
     const target = escapeHtml(String(deployObject.targetLabel || deployObject.target || ""));
     const rootDir = escapeHtml(String(deployObject.rootDir || ""));
-    const deployUrl = String(opts.url || "").trim();
+    const deployUrl = normalizeSafeExternalUrl(opts.url);
     const safeDeployUrl = escapeHtml(deployUrl);
 
     resultEl.className = "deploy-result success";
@@ -4622,7 +4643,18 @@
       <div class="result-url"><button class="copy-url" data-action="downloadDeployObject">Download deploy object JSON</button></div>
     `;
     resultEl.querySelector('[data-action="copyDeployUrl"]')?.addEventListener("click", () => {
-      navigator.clipboard.writeText(deployUrl);
+      navigator.clipboard
+        .writeText(deployUrl)
+        .then(() => {
+          if (typeof CANARIAToast !== "undefined") {
+            CANARIAToast.success({ title: "Copied", message: "Deployment URL copied to clipboard." });
+          }
+        })
+        .catch(() => {
+          if (typeof CANARIAToast !== "undefined") {
+            CANARIAToast.warning({ title: "Copy failed", message: "Clipboard access is not available in this browser context." });
+          }
+        });
     });
     resultEl.querySelector('[data-action="downloadDeployObject"]')?.addEventListener("click", () => {
       const filename = `${deployObject.rootDir || "deploy-object"}.json`;
@@ -4651,11 +4683,18 @@
 
     const targetId = String(targetSelect?.value || "cloudflare_workers_elysia_bun").trim();
     const targetDef = getDeployTargetDefinition(targetId);
-    const deployObject = buildDeployObjectForCurrentFlow(name, description, targetId);
+    const endpointMode = normalizeEndpointMode(
+      deployEndpointModeInput?.value || readLocal(STORAGE_KEYS.deployEndpointMode) || "both",
+    );
+    const deployObject = buildDeployObjectForCurrentFlow(name, description, targetId, endpointMode);
 
+    const targetPlatform = String(targetDef?.platform || "").trim();
+    const canDirectCloudflare = Boolean(targetPlatform === "cloudflare" && targetDef?.canDirectDeploy !== false);
+    const canDirectVercel = Boolean(targetPlatform === "vercel");
     const apiToken = getCloudflareToken();
-    const accountId = getCloudflareAccountId();
-    const canDirectDeploy = Boolean(targetDef?.platform === "cloudflare");
+    const accountId = String(getCloudflareAccountId() || "").trim().toLowerCase();
+    const vercelToken = getVercelToken();
+    const vercelProject = getVercelProject();
     const hasCloudflareCreds = Boolean(apiToken && accountId);
     if (hasCloudflareCreds && isLikelyCloudflareAccountId(accountId)) {
       writeLocal(STORAGE_KEYS.cloudflareAccountId, accountId);
@@ -4671,16 +4710,80 @@
     if (steps) steps.innerHTML = '<div class="deploy-step active"><span class="deploy-step-icon"><svg class="spin" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83"/></svg></span><span>Generating deploy object...</span></div>';
 
     try {
-      if (!canDirectDeploy || !hasCloudflareCreds) {
-        if (steps) {
-          steps.innerHTML = '<div class="deploy-step completed"><span class="deploy-step-icon">&#x2713;</span><span>Deploy object generated</span></div>';
+      if (canDirectVercel) {
+        if (!vercelToken) {
+          if (steps) {
+            steps.innerHTML = '<div class="deploy-step completed"><span class="deploy-step-icon">&#x2713;</span><span>Deploy object generated</span></div>';
+          }
+          renderDeployObjectResult(
+            result,
+            deployObject,
+            "Vercel token missing. Generated deploy object for Vercel CLI/API path.",
+          );
+          appendDeploymentLog({
+            id: `obj_${Date.now().toString(36)}`,
+            name,
+            target: targetId,
+            status: "generated",
+            updatedAt: new Date().toISOString(),
+            url: "",
+            deployObject,
+          });
+          loadDeployments();
+          if (typeof CANARIAToast !== "undefined") {
+            CANARIAToast.info({ title: "Deploy object ready", message: "Add Vercel token in Settings for direct browser deploy." });
+          }
+          return;
         }
+
+        if (steps) {
+          steps.innerHTML = '<div class="deploy-step active"><span class="deploy-step-icon"><svg class="spin" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83"/></svg></span><span>Uploading deployment to Vercel...</span></div>';
+        }
+
+        const deployResult = await createVercelDeployment({
+          token: vercelToken,
+          project: vercelProject,
+          name: workerName,
+          deployObject,
+        });
+        const url = deployResult.url || "";
         renderDeployObjectResult(
           result,
           deployObject,
-          !canDirectDeploy
-            ? "Target object generated (no direct deploy for this platform in browser mode)."
-            : "Cloudflare credentials missing. Generated deploy object for Wrangler/Bun path.",
+          "Vercel deploy submitted. Deploy object also generated.",
+          { url },
+        );
+        if (steps) steps.innerHTML = '<div class="deploy-step completed"><span class="deploy-step-icon">&#x2713;</span><span>Deployed + object generated</span></div>';
+        appendDeploymentLog({
+          id: `vercel_${Date.now().toString(36)}`,
+          name,
+          target: targetId,
+          status: "deployed",
+          updatedAt: new Date().toISOString(),
+          url,
+          deployObject,
+        });
+        loadDeployments();
+        if (typeof CANARIAToast !== "undefined") {
+          CANARIAToast.success({
+            title: "Vercel deploy started",
+            message: url || `Deployment ${deployResult.id || "created"}`,
+          });
+        }
+        return;
+      }
+
+      if (!canDirectCloudflare || !hasCloudflareCreds) {
+        if (steps) {
+          steps.innerHTML = '<div class="deploy-step completed"><span class="deploy-step-icon">&#x2713;</span><span>Deploy object generated</span></div>';
+        }
+        const generatedHeadline = !canDirectCloudflare
+          ? "Target object generated (no direct deploy for this platform in browser mode)."
+          : "Cloudflare credentials missing. Generated deploy object for Wrangler/Bun path.";
+        renderDeployObjectResult(
+          result,
+          deployObject,
+          generatedHeadline,
         );
         appendDeploymentLog({
           id: `obj_${Date.now().toString(36)}`,
@@ -4706,15 +4809,41 @@
         steps.innerHTML = '<div class="deploy-step active"><span class="deploy-step-icon"><svg class="spin" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83"/></svg></span><span>Uploading worker script to Cloudflare...</span></div>';
       }
 
-      const script = generateWorkerScript(name, description, targetId);
+      const script = generateWorkerScript(name, description, targetId, endpointMode);
       const deployUrl = `https://api.cloudflare.com/client/v4/accounts/${encodeURIComponent(accountId)}/workers/scripts/${encodeURIComponent(workerName)}`;
       const compatibilityDate = getDeployObjectCompatibilityDate(deployObject);
-      const uploadResult = await uploadCloudflareWorkerScript({
-        deployUrl,
-        apiToken,
-        script,
-        compatibilityDate,
-      });
+      let uploadResult = null;
+      let uploadError = null;
+      for (let attempt = 0; attempt < 3; attempt += 1) {
+        try {
+          uploadResult = await uploadCloudflareWorkerScript({
+            deployUrl,
+            apiToken,
+            script,
+            compatibilityDate,
+          });
+          uploadError = null;
+          break;
+        } catch (error) {
+          uploadError = error;
+          const message = toErrorMessage(error).toLowerCase();
+          const isRetryable =
+            message.includes("timed out") ||
+            message.includes("network") ||
+            message.includes("(500)") ||
+            message.includes("(502)") ||
+            message.includes("(503)") ||
+            message.includes("(504)") ||
+            message.includes("(429)");
+          if (!isRetryable || attempt >= 2) {
+            break;
+          }
+          await delay(450 * (attempt + 1));
+        }
+      }
+      if (uploadError || !uploadResult) {
+        throw uploadError || new Error("Cloudflare deploy failed.");
+      }
 
       let workerUrl = "";
       try {
@@ -4752,40 +4881,72 @@
       });
       loadDeployments();
       if (typeof CANARIAToast !== "undefined") {
-        CANARIAToast.success({
-          title: "Deployed",
-          message: `${url} (${uploadResult.strategy})`,
-        });
-      }
+          CANARIAToast.success({
+            title: "Deployed",
+            message: `${url} (${uploadResult.strategy})`,
+          });
+        }
     } catch (err) {
       const message = toErrorMessage(err, "Cloudflare deploy failed.");
+      const likelyCorsOrNetwork = /(cors|network|failed to fetch|fetch failed|blocked|timeout)/i.test(message);
+      const headline = likelyCorsOrNetwork
+        ? "Direct Cloudflare deploy blocked (likely CORS/network). Generated deploy object for Wrangler/Bun path."
+        : "Cloudflare deploy failed. Generated deploy object for Wrangler/Bun path.";
+
       if (result) {
-        result.className = "deploy-result error";
-        result.textContent = message;
-        result.style.display = "";
+        renderDeployObjectResult(result, deployObject, headline);
       }
-      if (steps) steps.innerHTML = '<div class="deploy-step error"><span class="deploy-step-icon">&#x2717;</span><span>Failed</span></div>';
-      if (typeof CANARIAToast !== "undefined") CANARIAToast.error({ title: "Deploy failed", message });
+      if (steps) {
+        steps.innerHTML = '<div class="deploy-step completed"><span class="deploy-step-icon">&#x2713;</span><span>Deploy object generated</span></div>';
+      }
+      appendDeploymentLog({
+        id: `obj_${Date.now().toString(36)}`,
+        name,
+        target: targetId,
+        status: "generated",
+        updatedAt: new Date().toISOString(),
+        url: "",
+        deployObject,
+      });
+      loadDeployments();
+      if (typeof CANARIAToast !== "undefined") {
+        CANARIAToast.warning({
+          title: "Direct deploy failed",
+          message,
+        });
+      }
     } finally {
-      if (progress) { const bar = progress.querySelector(".progress-bar"); if (bar) bar.style.display = "none"; }
+      if (progress) {
+        const bar = progress.querySelector(".progress-bar");
+        if (bar) bar.style.display = "";
+      }
       if (btn) { btn.disabled = false; btn.textContent = "Deploy / Generate Target Object"; }
     }
   }
 
   function toBase64Utf8(value) {
-    return btoa(unescape(encodeURIComponent(value)));
+    const text = String(value || "");
+    const bytes = new TextEncoder().encode(text);
+    let binary = "";
+    for (const byte of bytes) {
+      binary += String.fromCharCode(byte);
+    }
+    return btoa(binary);
   }
 
   async function githubApi(pathname, token, options = {}) {
-    const response = await fetch(`https://api.github.com${pathname}`, {
-      ...options,
-      headers: {
-        Accept: "application/vnd.github+json",
-        Authorization: `Bearer ${token}`,
-        "X-GitHub-Api-Version": "2022-11-28",
-        ...(options.headers || {}),
-      },
-    });
+    const response = await withRequestTimeout((signal) =>
+      fetch(`https://api.github.com${pathname}`, {
+        ...options,
+        headers: {
+          Accept: "application/vnd.github+json",
+          Authorization: `Bearer ${token}`,
+          "X-GitHub-Api-Version": "2022-11-28",
+          ...(options.headers || {}),
+        },
+        signal,
+      }),
+    );
     let data;
     try {
       data = await response.json();
@@ -4900,7 +5061,10 @@
 
     const [owner, repo] = repoFullName.split("/");
     try {
-      const deployObject = buildDeployObjectForCurrentFlow(name, description, targetId);
+      const endpointMode = normalizeEndpointMode(
+        deployEndpointModeInput?.value || readLocal(STORAGE_KEYS.deployEndpointMode) || "both",
+      );
+      const deployObject = buildDeployObjectForCurrentFlow(name, description, targetId, endpointMode);
       const prefix = String(deployObject.rootDir || sanitizeWorkerName(name)).replace(/^\/+|\/+$/g, "");
       let lastCommit = null;
 
@@ -4920,7 +5084,7 @@
         message,
       );
 
-      const commitUrl = String(lastCommit?.commit?.html_url || "");
+      const commitUrl = normalizeSafeExternalUrl(lastCommit?.commit?.html_url || "");
       const fileCount = Number(deployObject?.files?.length || 0) + 1;
       if (result) {
         result.className = "deploy-result success";
@@ -4971,6 +5135,11 @@
       deployCfAccountIdInput.addEventListener("change", () => {
         persistDeployConnectionInputs();
         refreshDeployConnectionState();
+      });
+    }
+    if (deployEndpointModeInput) {
+      deployEndpointModeInput.addEventListener("change", () => {
+        persistDeployConnectionInputs();
       });
     }
     if (connectGithubBtn) connectGithubBtn.addEventListener("click", () => connectGithub());
@@ -5471,6 +5640,31 @@
       });
     }
 
+    if (exportFlowBtn) {
+      exportFlowBtn.addEventListener("click", async () => {
+        await exportFlowToLocalFile();
+      });
+    }
+
+    if (importFlowBtn && flowImportInput) {
+      importFlowBtn.addEventListener("click", () => {
+        flowImportInput.value = "";
+        flowImportInput.click();
+      });
+      flowImportInput.addEventListener("change", async () => {
+        try {
+          await importFlowFromLocalFile(flowImportInput.files?.[0]);
+        } catch (error) {
+          if (runStatus) {
+            runStatus.textContent = `Import error: ${error.message}`;
+          }
+          if (typeof CANARIAToast !== "undefined") {
+            CANARIAToast.error({ title: "Import failed", message: error.message || "Could not import flow." });
+          }
+        }
+      });
+    }
+
     if (runFlowBtn) {
       runFlowBtn.addEventListener("click", () => {
         runCurrentFlow();
@@ -5513,27 +5707,17 @@
       switchMode(state.editorMode);
       renderPalette();
       bindEvents();
-      try {
-        await refreshFlowList();
-      } catch {
-        state.apiAvailable = false;
-        if (runStatus) {
-          runStatus.textContent = "Static mode: API server unavailable. Using local browser storage.";
-        }
-      }
+      await refreshFlowList();
       flowNameInput.value = "Untitled Flow";
       createStarterFlow();
-      if (state.apiAvailable) {
-        ensureWs();
-      }
       try {
-        loadEditorChatAgents();
+        await loadEditorChatAgents();
       } catch {
-        // Optional API-backed editor chat list.
+        // Optional local editor chat list bootstrap.
       }
       loadDeployments();
       if (runStatus && !runStatus.textContent) {
-        runStatus.textContent = "Ready.";
+        runStatus.textContent = "Static mode ready. Flows save locally in this browser.";
       }
     } catch (error) {
       runStatus.textContent = `Boot error: ${error.message}`;

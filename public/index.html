@@ -8,9 +8,9 @@
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
-  <link rel="stylesheet" href="/design-system.css" />
-  <link rel="stylesheet" href="/landing.css" />
-  <link rel="manifest" href="/manifest.json" />
+  <link rel="stylesheet" href="./design-system.css" />
+  <link rel="stylesheet" href="./landing.css" />
+  <link rel="manifest" href="./manifest.json" />
   <script>(function () { var t = localStorage.getItem('voyager-theme'); if (!t) t = matchMedia('(prefers-color-scheme:dark)').matches ? 'dark' : 'light'; document.documentElement.setAttribute('data-theme', t) })()</script>
 </head>
 
@@ -19,13 +19,13 @@
   <nav class="top-nav landing-nav">
     <div class="top-nav-inner">
       <div class="nav-links">
-        <a href="/editor?mode=canvas" class="nav-link">Flow Editor</a>
+        <a href="./app/?mode=canvas" class="nav-link">Flow Editor</a>
         <a href="https://docs.voyager.dev" target="_blank" rel="noopener noreferrer" class="nav-link">Docs</a>
       </div>
       <div class="nav-actions">
-        <a href="/editor?mode=chat" class="btn btn-ghost btn-sm">Chat</a>
-        <a href="/editor?mode=deploy" class="btn btn-ghost btn-sm">Deploy</a>
-        <a href="/settings" class="btn btn-ghost btn-icon btn-sm" title="Open settings" aria-label="Open settings">
+        <a href="./app/?mode=chat" class="btn btn-ghost btn-sm">Chat</a>
+        <a href="./app/?mode=deploy" class="btn btn-ghost btn-sm">Deploy</a>
+        <a href="./app/?mode=settings" class="btn btn-ghost btn-icon btn-sm" title="Open settings" aria-label="Open settings">
           <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor"
             stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
             <line x1="4" y1="21" x2="4" y2="14" />
@@ -74,16 +74,16 @@
     <div class="container">
       <div class="hero-content">
         <h1 class="hero-title">
-          <a href="/editor?mode=canvas" class="hero-word"><span class="hero-word-text">Build</span><span
+          <a href="./app/?mode=canvas" class="hero-word"><span class="hero-word-text">Build</span><span
               class="hero-word-label">Flow Editor</span></a><span class="hero-punct">,</span>
-          <a href="/editor?mode=chat" class="hero-word"><span class="hero-word-text">run</span><span class="hero-word-label">Chat
+          <a href="./app/?mode=chat" class="hero-word"><span class="hero-word-text">run</span><span class="hero-word-label">Chat
               Console</span></a><span class="hero-punct">,</span>
-          <a href="/editor?mode=deploy" class="hero-word"><span class="hero-word-text">deploy</span><span class="hero-word-label">Ops
+          <a href="./app/?mode=deploy" class="hero-word"><span class="hero-word-text">deploy</span><span class="hero-word-label">Ops
               Console</span></a><span class="hero-punct">.</span>
           <br /><span class="hero-tagline">Build the Frontier.</span>
         </h1>
         <div class="hero-actions">
-          <a href="/editor?mode=chat" class="btn btn-primary btn-lg press-feedback">Get Started</a>
+          <a href="./app/?mode=chat" class="btn btn-primary btn-lg press-feedback">Get Started</a>
           <a href="https://docs.voyager.dev" target="_blank" rel="noopener noreferrer" class="btn btn-secondary btn-lg">Documentation</a>
         </div>
       </div>
@@ -362,9 +362,9 @@
     <div class="container">
       <div class="quickstart reveal">
         <div class="code-block">
-          <code>git clone https://github.com/your-org/canaria.git && cd canaria && bun install && bun run dev</code>
+          <code>git clone https://github.com/your-org/canaria.git && cd canaria && npm install && npm run dev</code>
           <button class="code-copy"
-            onclick="navigator.clipboard.writeText('git clone https://github.com/your-org/canaria.git && cd canaria && bun install && bun run dev')">
+            onclick="navigator.clipboard.writeText('git clone https://github.com/your-org/canaria.git && cd canaria && npm install && npm run dev')">
             <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none"
               stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
               <rect x="9" y="9" width="13" height="13" rx="2" ry="2" />
@@ -403,7 +403,7 @@
         <div class="cta-body">
           <h2 class="cta-title">Chat with agents you've built</h2>
           <p class="cta-desc">Test your agents in a real conversation. Select any finalized agent and start chatting — see how it handles real inputs, iterates on responses, and uses your configured tools.</p>
-          <a href="/editor?mode=chat" class="btn btn-primary btn-lg press-feedback">Open Chat Console</a>
+          <a href="./app/?mode=chat" class="btn btn-primary btn-lg press-feedback">Open Chat Console</a>
         </div>
       </div>
     </div>
@@ -415,9 +415,9 @@
       <div class="footer-inner">
         <p class="footer-copy">CANARIA</p>
         <div class="footer-links">
-          <a href="/editor?mode=canvas">Editor</a>
-          <a href="/editor?mode=chat">Chat</a>
-          <a href="/editor?mode=deploy">Ops</a>
+          <a href="./app/?mode=canvas">Editor</a>
+          <a href="./app/?mode=chat">Chat</a>
+          <a href="./app/?mode=deploy">Ops</a>
           <a href="https://docs.voyager.dev" target="_blank" rel="noopener noreferrer">Docs</a>
           <a href="https://github.com" target="_blank" rel="noopener noreferrer">GitHub</a>
         </div>
@@ -425,9 +425,9 @@
     </div>
   </footer>
 
-  <script src="/toast.js"></script>
-  <script src="/auth-ui.js"></script>
-  <script>if('serviceWorker' in navigator){navigator.serviceWorker.register('/sw.js')}</script>
+  <script src="./toast.js"></script>
+  <script src="./auth-ui.js"></script>
+  <script src="./sw-register.js?v=20260211-03"></script>
   <script>
     // Scroll reveal
     const reveals = document.querySelectorAll('.reveal');

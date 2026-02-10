@@ -890,7 +890,10 @@
     }
 
     agentBadge.classList.add("active");
-    agentBadge.innerHTML = `<span class=\"badge-dot\"></span>${finalized ? "Finalized" : "Needs finalization"} · runtime ${runtimeInfo.mode}`;
+    agentBadge.textContent = `${finalized ? "Finalized" : "Needs finalization"} · runtime ${runtimeInfo.mode}`;
+    const dot = document.createElement("span");
+    dot.className = "badge-dot";
+    agentBadge.prepend(dot);
     chatTitle.textContent = agent.name || agent.id;
     threadBadge.textContent = thread ? `Thread: ${thread.title || "Untitled thread"}` : "No thread selected";
 

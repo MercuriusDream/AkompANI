@@ -357,7 +357,145 @@
       .replace(/[^a-z0-9-]+/g, "-")
       .replace(/--+/g, "-")
       .replace(/^-+|-+$/g, "");
-    return normalized || fallback;
+    const limited = normalized.slice(0, 63).replace(/^-+|-+$/g, "");
+    return limited || fallback;
+  }
+
+  function delay(ms) {
+    const value = Number.isFinite(ms) ? Math.max(0, Math.floor(ms)) : 0;
+    return new Promise((resolve) => setTimeout(resolve, value));
+  }
+
+  function toErrorMessage(error, fallback = "Unexpected error.") {
+    if (error instanceof Error && error.message) return error.message;
+    const text = String(error || "").trim();
+    return text || fallback;
+  }
+
+  function extractCloudflareErrorMessage(data, status) {
+    if (data && typeof data === "object") {
+      if (Array.isArray(data.errors) && data.errors.length) {
+        const lines = data.errors
+          .map((item) => {
+            if (!item) return "";
+            const code = item.code ? `[${item.code}] ` : "";
+            const message = String(item.message || "").trim();
+            return `${code}${message}`.trim();
+          })
+          .filter(Boolean);
+        if (lines.length) return lines.join("; ");
+      }
+      const topLevel = String(data.message || "").trim() || String(data.error || "").trim();
+      if (topLevel) return topLevel;
+    }
+    return `Cloudflare API request failed (${status})`;
+  }
+
+  async function withRequestTimeout(requestFactory, timeoutMs = 30000) {
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), timeoutMs);
+    try {
+      return await requestFactory(controller.signal);
+    } catch (error) {
+      if (error && error.name === "AbortError") {
+        throw new Error("Request timed out.");
+      }
+      throw error;
+    } finally {
+      clearTimeout(timer);
+    }
+  }
+
+  async function cloudflareApiRequest(url, token, options = {}) {
+    const init = options && typeof options === "object" ? options : {};
+    const response = await withRequestTimeout((signal) =>
+      fetch(url, {
+        ...init,
+        headers: {
+          Authorization: `Bearer ${token}`,
+          ...(init.headers || {}),
+        },
+        signal,
+      }),
+    );
+
+    const raw = await response.text().catch(() => "");
+    let data = null;
+    if (raw) {
+      try {
+        data = JSON.parse(raw);
+      } catch {
+        data = { error: raw };
+      }
+    }
+    return { response, data };
+  }
+
+  async function uploadCloudflareWorkerScript({ deployUrl, token, script }) {
+    const compatibilityDate = new Date().toISOString().slice(0, 10);
+    const moduleFilename = "index.js";
+    const attempts = [
+      {
+        id: "module_multipart",
+        run: () =>
+          cloudflareApiRequest(deployUrl, token, {
+            method: "PUT",
+            body: (() => {
+              const body = new FormData();
+              body.append(
+                "metadata",
+                new Blob(
+                  [
+                    JSON.stringify({
+                      main_module: moduleFilename,
+                      compatibility_date: compatibilityDate,
+                    }),
+                  ],
+                  { type: "application/json" },
+                ),
+              );
+              body.append(moduleFilename, new Blob([script], { type: "application/javascript+module" }), moduleFilename);
+              return body;
+            })(),
+          }),
+      },
+      {
+        id: "module_content_type",
+        run: () =>
+          cloudflareApiRequest(deployUrl, token, {
+            method: "PUT",
+            headers: {
+              "Content-Type": "application/javascript+module",
+            },
+            body: script,
+          }),
+      },
+      {
+        id: "plain_javascript",
+        run: () =>
+          cloudflareApiRequest(deployUrl, token, {
+            method: "PUT",
+            headers: {
+              "Content-Type": "application/javascript",
+            },
+            body: script,
+          }),
+      },
+    ];
+
+    let lastError = null;
+    for (const attempt of attempts) {
+      const { response, data } = await attempt.run();
+      if (response.ok && (data?.success === true || data === null)) {
+        return { strategy: attempt.id, data };
+      }
+      const message = extractCloudflareErrorMessage(data, response.status);
+      if (response.status === 401 || response.status === 403 || response.status === 404 || response.status === 429) {
+        throw new Error(message);
+      }
+      lastError = new Error(message);
+    }
+    throw lastError || new Error("Cloudflare deploy failed.");
   }
 
   function generateWorkerScript(name, description, flow) {
@@ -381,31 +519,49 @@
     const workerName = sanitizeWorkerName(payload.workerName || agent?.name || "canaria-agent");
     const target = String(payload.target || "cloudflare_workers").trim() || "cloudflare_workers";
     const script = generateWorkerScript(agent?.name || workerName, payload.description || agent?.description || "", flow);
+    if (!script.trim()) {
+      throw new Error("Generated worker script is empty.");
+    }
+    if (typeof FormData === "undefined" || typeof Blob === "undefined") {
+      throw new Error("Browser does not support required upload APIs (FormData/Blob).");
+    }
+    if (script.length > 2_500_000) {
+      throw new Error("Generated worker script is too large for direct browser deploy.");
+    }
 
     const deployUrl = `https://api.cloudflare.com/client/v4/accounts/${encodeURIComponent(accountId)}/workers/scripts/${encodeURIComponent(workerName)}`;
-    const response = await fetch(deployUrl, {
-      method: "PUT",
-      headers: {
-        Authorization: `Bearer ${token}`,
-        "Content-Type": "application/javascript",
-      },
-      body: script,
-    });
-
-    const data = await response.json().catch(() => null);
-    if (!(response.ok && data?.success)) {
-      const firstError = Array.isArray(data?.errors) && data.errors[0] ? data.errors[0].message : "";
-      throw new Error(firstError || data?.error || `Cloudflare deploy failed (${response.status})`);
+    let deployData = null;
+    let deployError = null;
+    for (let attempt = 0; attempt < 3; attempt += 1) {
+      try {
+        const uploaded = await uploadCloudflareWorkerScript({ deployUrl, token, script });
+        deployData = uploaded.data;
+        deployError = null;
+        break;
+      } catch (error) {
+        deployError = error;
+        const message = toErrorMessage(error).toLowerCase();
+        const isRetryable =
+          message.includes("timed out") ||
+          message.includes("network") ||
+          message.includes("(500)") ||
+          message.includes("(502)") ||
+          message.includes("(503)") ||
+          message.includes("(504)") ||
+          message.includes("(429)");
+        if (!isRetryable || attempt >= 2) break;
+        await delay(450 * (attempt + 1));
+      }
     }
+    if (deployError) throw deployError;
 
     let workerUrl = "";
     try {
-      const subdomainRes = await fetch(`https://api.cloudflare.com/client/v4/accounts/${encodeURIComponent(accountId)}/workers/subdomain`, {
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
-      });
-      const subdomainData = await subdomainRes.json().catch(() => null);
+      const { response: subdomainRes, data: subdomainData } = await cloudflareApiRequest(
+        `https://api.cloudflare.com/client/v4/accounts/${encodeURIComponent(accountId)}/workers/subdomain`,
+        token,
+        { method: "GET" },
+      );
       if (subdomainRes.ok && subdomainData?.success && subdomainData?.result?.subdomain) {
         workerUrl = `https://${workerName}.${subdomainData.result.subdomain}.workers.dev`;
       }
@@ -434,12 +590,18 @@
       accountId,
       target,
       url: finalUrl,
-      cloudflare: data,
+      cloudflare: deployData,
     };
   }
 
   function toBase64Utf8(value) {
-    return btoa(unescape(encodeURIComponent(value)));
+    const text = String(value || "");
+    const bytes = new TextEncoder().encode(text);
+    let binary = "";
+    for (const byte of bytes) {
+      binary += String.fromCharCode(byte);
+    }
+    return btoa(binary);
   }
 
   async function githubApi(pathname, token, options = {}) {

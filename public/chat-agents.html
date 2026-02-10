@@ -7,16 +7,16 @@
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
-    <link rel="stylesheet" href="/design-system.css" />
-    <link rel="stylesheet" href="/chat/chat.css" />
-    <link rel="manifest" href="/manifest.json" />
+    <link rel="stylesheet" href="./design-system.css" />
+    <link rel="stylesheet" href="./chat/chat.css" />
+    <link rel="manifest" href="./manifest.json" />
     <script>(function(){var t=localStorage.getItem('voyager-theme');if(!t)t=matchMedia('(prefers-color-scheme:dark)').matches?'dark':'light';document.documentElement.setAttribute('data-theme',t)})()</script>
   </head>
   <body>
     <!-- Navigation -->
     <nav class="top-nav">
       <div class="top-nav-inner">
-        <a href="/" class="nav-brand">
+        <a href="./" class="nav-brand">
           <div class="nav-brand-icon">
             <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2L2 7l10 5 10-5-10-5z"/><path d="M2 17l10 5 10-5"/><path d="M2 12l10 5 10-5"/></svg>
           </div>
@@ -24,15 +24,15 @@
         </a>
         
         <div class="nav-links">
-          <a href="/editor" class="nav-link">
+          <a href="./app" class="nav-link">
             <svg class="nav-link-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 19l7-7 3 3-7 7-3-3z"/><path d="M18 13l-1.5-7.5L2 2l3.5 14.5L13 18l5-5z"/><path d="M2 2l7.586 7.586"/><circle cx="11" cy="11" r="2"/></svg>
             Flow Editor
           </a>
-          <a href="/chat-agents" class="nav-link active">
+          <a href="./chat-agents" class="nav-link active">
             <svg class="nav-link-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
             Chat Console
           </a>
-          <a href="/ops" class="nav-link">
+          <a href="./ops" class="nav-link">
             <svg class="nav-link-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
             Ops Console
           </a>
@@ -180,11 +180,11 @@
       </aside>
     </main>
 
-    <script src="/toast.js"></script>
-    <script src="/auth-ui.js"></script>
-    <script src="/ide-runtime.js"></script>
-    <script>if('serviceWorker' in navigator){navigator.serviceWorker.register('/sw.js')}</script>
-    <script src="/chat-agents.js"></script>
+    <script src="./toast.js"></script>
+    <script src="./auth-ui.js"></script>
+    <script src="./ide-runtime.js"></script>
+    <script src="./sw-register.js?v=20260211-03"></script>
+    <script src="./chat-agents.js"></script>
     <script>
       var toggle = document.getElementById('themeToggle');
       if (toggle) {

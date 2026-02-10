@@ -1,0 +1,726 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>CANARIA App</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/drawflow/dist/drawflow.min.css" />
+    <link rel="stylesheet" href="../design-system.css" />
+    <link rel="stylesheet" href="../settings/settings.css" />
+    <link rel="stylesheet" href="../editor/editor.css" />
+    <link rel="manifest" href="../manifest.json" />
+    <script>(function(){var t=localStorage.getItem('voyager-theme');if(!t)t=matchMedia('(prefers-color-scheme:dark)').matches?'dark':'light';document.documentElement.setAttribute('data-theme',t)})()</script>
+  </head>
+  <body>
+    <!-- Navigation -->
+    <nav class="top-nav editor-nav">
+      <div class="top-nav-inner">
+        <div class="nav-links editor-nav-links" role="tablist" aria-label="Editor modes">
+          <button class="nav-link mode-tab active" data-mode="chat" id="modeChatTab" type="button" aria-controls="chatFullView" aria-selected="true">
+            <svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+            <span>Chat</span>
+          </button>
+          <button class="nav-link mode-tab" data-mode="canvas" id="modeCanvasTab" type="button" aria-controls="canvasView" aria-selected="false">
+            <svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>
+            <span>Canvas</span>
+          </button>
+          <button class="nav-link mode-tab" data-mode="deploy" id="modeDeployTab" type="button" aria-controls="deployView" aria-selected="false">
+            <svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 2L11 13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
+            <span>Deploy</span>
+          </button>
+          <button class="nav-link mode-tab" data-mode="settings" id="modeSettingsTab" type="button" aria-controls="settingsView" aria-selected="false">
+            <svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="4" y1="21" x2="4" y2="14" /><line x1="4" y1="10" x2="4" y2="3" /><line x1="12" y1="21" x2="12" y2="12" /><line x1="12" y1="8" x2="12" y2="3" /><line x1="20" y1="21" x2="20" y2="16" /><line x1="20" y1="12" x2="20" y2="3" /><line x1="1" y1="14" x2="7" y2="14" /><line x1="9" y1="8" x2="15" y2="8" /><line x1="17" y1="16" x2="23" y2="16" /></svg>
+            <span>Settings</span>
+          </button>
+        </div>
+
+        <!-- Editor controls (visible across all modes) -->
+        <div class="nav-canvas-controls" id="navCanvasControls">
+          <div class="flow-selector">
+            <select id="flowSelect" class="form-select form-select-sm">
+              <option value="">Select a flow...</option>
+            </select>
+            <input id="flowName" type="text" class="form-input form-input-sm" placeholder="Flow name" />
+          </div>
+          <button id="saveFlowBtn" class="btn btn-primary btn-sm">
+            <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>
+            Save
+          </button>
+          <button id="newFlowBtn" class="btn btn-secondary btn-sm">
+            <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+          </button>
+          <button id="deleteFlowBtn" class="btn btn-danger btn-sm">
+            <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
+          </button>
+          <button id="importFlowBtn" class="btn btn-secondary btn-sm" title="Import flow JSON">Import</button>
+          <button id="exportFlowBtn" class="btn btn-secondary btn-sm" title="Export flow JSON">Export</button>
+          <input id="flowImportInput" type="file" accept="application/json,.json" style="display:none" />
+        </div>
+
+        <div class="nav-actions">
+          <a href="?mode=chat" class="btn btn-ghost btn-sm editor-nav-link" data-editor-nav-mode="chat">Chat</a>
+          <a href="?mode=deploy" class="btn btn-ghost btn-sm editor-nav-link" data-editor-nav-mode="deploy">Deploy</a>
+          <a href="?mode=settings" class="btn btn-ghost btn-icon btn-sm editor-nav-link" data-editor-nav-mode="settings" title="Open settings" aria-label="Open settings">
+            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <line x1="4" y1="21" x2="4" y2="14" /><line x1="4" y1="10" x2="4" y2="3" /><line x1="12" y1="21" x2="12" y2="12" /><line x1="12" y1="8" x2="12" y2="3" /><line x1="20" y1="21" x2="20" y2="16" /><line x1="20" y1="12" x2="20" y2="3" /><line x1="1" y1="14" x2="7" y2="14" /><line x1="9" y1="8" x2="15" y2="8" /><line x1="17" y1="16" x2="23" y2="16" />
+            </svg>
+          </a>
+          <button id="themeToggle" class="btn btn-ghost btn-icon btn-sm" title="Toggle theme">
+            <svg class="theme-icon-light" xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/></svg>
+            <svg class="theme-icon-dark" xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>
+          </button>
+        </div>
+      </div>
+    </nav>
+
+    <!-- Editor Main -->
+    <main class="editor-main" id="editorMain">
+
+      <!-- ====== FULL-SCREEN CHAT VIEW ====== -->
+      <div id="chatFullView" class="chat-full editor-view is-active" aria-hidden="false">
+        <div class="chat-full-center">
+          <div class="chat-full-scroll" id="chatFullScroll">
+            <div id="buildChatMessages" class="chat-full-messages">
+              <div class="chat-full-welcome" id="chatWelcome">
+                <h1 class="anim-in anim-d1">What would you like to build?</h1>
+                <p class="anim-in anim-d2">Describe your agent in plain English and I'll generate the flow.</p>
+                <div class="chat-welcome-chips anim-in anim-d3">
+                  <button class="welcome-chip" data-prompt="Vibe Agent Maker: Build an autonomous product ideation agent with planning, scoring, and deployment notes">Vibe Agent Maker</button>
+                  <button class="welcome-chip" data-prompt="Agent Flow Maker: Create an end-to-end support triage flow with validation, branch routing, and API escalation">Agent Flow Maker</button>
+                  <button class="welcome-chip" data-prompt="Agent Block Maker: Add reusable blocks for classify, tool call, summarize, and post-process in one chain">Agent Block Maker</button>
+                  <button class="welcome-chip" data-prompt="Build a weather agent that calls a weather API for a city and returns structured forecast insights">Weather agent</button>
+                  <button class="welcome-chip" data-prompt="Convert this chat idea into Elysia+Bun deployable agent runtime for Cloudflare, Vercel, and local">Chat to Elysia runtime</button>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div class="chat-full-composer anim-in anim-d4">
+            <div class="chat-composer-wrap">
+              <textarea id="buildChatInput" class="chat-composer-input" placeholder="Describe your agent..." rows="1"></textarea>
+              <button id="buildChatSend" class="chat-composer-send" title="Send">
+                <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="19" x2="12" y2="5"/><polyline points="5 12 12 5 19 12"/></svg>
+              </button>
+            </div>
+            <p class="chat-composer-hint">Press Enter to send, Shift+Enter for new line</p>
+          </div>
+        </div>
+        <aside class="chat-full-log" id="chatFullLog">
+          <div class="chat-log-header">
+            <span class="chat-log-title">History</span>
+          </div>
+          <div class="chat-log-list" id="chatLogList">
+            <div class="chat-log-empty">Your conversations will appear here.</div>
+          </div>
+        </aside>
+      </div>
+
+      <!-- ====== CANVAS VIEW ====== -->
+      <div id="canvasView" class="canvas-layout editor-view" aria-hidden="true">
+        <!-- Blocks Palette -->
+        <aside class="blocks-panel" id="palettePanel">
+          <div class="panel-search">
+            <input id="blockSearch" type="text" class="form-input" placeholder="Search blocks..." />
+            <svg class="search-icon" xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/></svg>
+          </div>
+          <div id="paletteSections" class="palette-content"></div>
+        </aside>
+
+        <!-- Resize handle: blocks ↔ canvas -->
+        <div class="panel-resize-handle" id="resizeHandleLeft" data-panel="left"></div>
+
+        <!-- Canvas -->
+        <section class="editor-canvas">
+          <div class="canvas-toolbar">
+            <div class="canvas-hints">
+              <span class="hint"><kbd>⌘</kbd><kbd>S</kbd> Save</span>
+              <span class="hint"><kbd>⌘</kbd><kbd>Enter</kbd> Run</span>
+            </div>
+            <div class="canvas-actions">
+              <button id="generateBtn" class="btn btn-secondary btn-sm">
+                <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9.937 15.5A2 2 0 0 0 8.5 14.063l-6.135-1.582a.5.5 0 0 1 0-.962L8.5 9.936A2 2 0 0 0 9.937 8.5l1.582-6.135a.5.5 0 0 1 .963 0L14.063 8.5A2 2 0 0 0 15.5 9.937l6.135 1.581a.5.5 0 0 1 0 .964L15.5 14.063a2 2 0 0 0-1.437 1.437l-1.582 6.135a.5.5 0 0 1-.963 0z"/><path d="M20 3v4"/><path d="M22 5h-4"/></svg>
+                Generate
+              </button>
+              <button id="runFlowBtn" class="btn btn-secondary btn-sm">
+                <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="5 3 19 12 5 21 5 3"/></svg>
+                Run
+              </button>
+            </div>
+          </div>
+          <div id="drawflow" class="drawflow-canvas"></div>
+
+          <!-- Generate Overlay -->
+          <div id="generateOverlay" class="generate-overlay" style="display:none">
+            <div class="generate-card">
+              <h2 class="generate-title">What should this agent do?</h2>
+              <p class="generate-subtitle">Describe your agent in plain English</p>
+              <textarea id="generatePrompt" class="generate-textarea" placeholder="Build an agent that calls a weather API and summarizes the result..." rows="4"></textarea>
+              <button id="generateFlowBtn" class="btn btn-primary generate-submit">
+                <span class="generate-btn-text">Generate Flow</span>
+                <span class="generate-btn-loading" style="display:none">
+                  <svg class="generate-spinner" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83"/></svg>
+                  Generating...
+                </span>
+              </button>
+              <div class="generate-examples">
+                <span class="generate-examples-label">Try:</span>
+                <button class="generate-example-chip" data-prompt="Vibe Agent Maker: Build an autonomous product ideation agent with planning, scoring, and deployment notes">Vibe Agent</button>
+                <button class="generate-example-chip" data-prompt="Agent Flow Maker: Create an end-to-end support triage flow with validation, branch routing, and API escalation">Flow Maker</button>
+                <button class="generate-example-chip" data-prompt="Agent Block Maker: Add reusable blocks for classify, tool call, summarize, and post-process in one chain">Block Maker</button>
+                <button class="generate-example-chip" data-prompt="Convert this chat idea into Elysia+Bun deployable agent runtime for Cloudflare, Vercel, and local">Elysia deploy runtime</button>
+              </div>
+              <div id="generateError" class="generate-error" style="display:none"></div>
+            </div>
+          </div>
+        </section>
+
+        <!-- Resize handle: canvas ↔ inspector -->
+        <div class="panel-resize-handle" id="resizeHandleRight" data-panel="right"></div>
+
+        <!-- Right Panel: Inspector -->
+        <aside class="editor-panel panel-right" id="inspectorPanel">
+          <div class="panel-header">
+            <h3 class="panel-title">Inspector</h3>
+            <div class="panel-header-actions">
+              <button id="floatInspectorBtn" class="btn btn-ghost btn-icon btn-sm" title="Float inspector">&#x26F6;</button>
+              <button id="toggleInspectorBtn" class="btn btn-ghost btn-icon btn-sm" title="Collapse panel">
+                <svg class="panel-toggle-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M13 17l5-5-5-5M6 17l5-5-5-5"/></svg>
+              </button>
+            </div>
+          </div>
+          <div id="inspectorBody" class="inspector-body-wrap">
+            <div class="inspector-content">
+              <div id="inspectorEmpty" class="inspector-empty">
+                <div class="empty-icon">
+                  <svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 19l7-7 3 3-7 7-3-3z"/><path d="M18 13l-1.5-7.5L2 2l3.5 14.5L13 18l5-5z"/><path d="M2 2l7.586 7.586"/><circle cx="11" cy="11" r="2"/></svg>
+                </div>
+                <p>Select a block to inspect</p>
+              </div>
+              <div id="inspectorForm" class="inspector-form" style="display: none;">
+                <div class="node-header">
+                  <span id="nodeTypeTag" class="node-tag">Block Type</span>
+                  <div class="node-actions">
+                    <button id="duplicateNodeBtn" class="btn btn-ghost btn-icon btn-sm" title="Duplicate">
+                      <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
+                    </button>
+                    <button id="deleteNodeBtn" class="btn btn-danger btn-icon btn-sm" title="Delete">
+                      <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
+                    </button>
+                  </div>
+                </div>
+                <div class="inspector-tabs">
+                  <button class="inspector-tab active" data-inspector-tab="config">Config</button>
+                  <button class="inspector-tab" data-inspector-tab="variables">Variables</button>
+                  <button class="inspector-tab" data-inspector-tab="runtime">Runtime</button>
+                  <button class="inspector-tab" data-inspector-tab="json">JSON</button>
+                </div>
+                <div id="inspectorTabConfig" class="inspector-tab-content" data-inspector-tab-id="config">
+                  <div class="accordion-section open">
+                    <button class="accordion-header"><span class="accordion-caret">&#x25B8;</span><span class="accordion-title">Summary</span></button>
+                    <div class="accordion-body"><div id="nodeSummary" class="node-summary"></div></div>
+                  </div>
+                  <div id="nodeFormAccordions" class="form-sections"></div>
+                  <div class="accordion-section">
+                    <button class="accordion-header"><span class="accordion-caret">&#x25B8;</span><span class="accordion-title">Extra Variables</span></button>
+                    <div class="accordion-body"><div id="nodeFormCustomVars"></div></div>
+                  </div>
+                </div>
+                <div id="inspectorTabVariables" class="inspector-tab-content" data-inspector-tab-id="variables" style="display:none">
+                  <div class="accordion-section open">
+                    <button class="accordion-header"><span class="accordion-caret">&#x25B8;</span><span class="accordion-title">Connected Variables</span></button>
+                    <div class="accordion-body"><div id="variableHints" class="shortcuts-list"></div></div>
+                  </div>
+                  <div class="accordion-section open">
+                    <button class="accordion-header"><span class="accordion-caret">&#x25B8;</span><span class="accordion-title">Runtime State</span></button>
+                    <div class="accordion-body"><div id="runtimeStateDisplay" class="runtime-state-display"><div class="hint-empty">Run a flow to see runtime variables.</div></div></div>
+                  </div>
+                </div>
+                <div id="inspectorTabRuntime" class="inspector-tab-content" data-inspector-tab-id="runtime" style="display:none">
+                  <div class="accordion-section open">
+                    <button class="accordion-header"><span class="accordion-caret">&#x25B8;</span><span class="accordion-title">Test Input</span></button>
+                    <div class="accordion-body">
+                      <textarea id="runInput" class="form-textarea form-textarea-sm" spellcheck="false">{ "items": [1, 2, 3], "message": "hello" }</textarea>
+                      <div id="runStatus" class="run-status"></div>
+                    </div>
+                  </div>
+                  <div class="accordion-section open">
+                    <button class="accordion-header"><span class="accordion-caret">&#x25B8;</span><span class="accordion-title">Run Events</span></button>
+                    <div class="accordion-body"><pre id="events" class="events-output"></pre></div>
+                  </div>
+                </div>
+                <div id="inspectorTabJson" class="inspector-tab-content" data-inspector-tab-id="json" style="display:none">
+                  <textarea id="nodeJson" class="form-textarea" spellcheck="false"></textarea>
+                  <button id="applyNodeJsonBtn" class="btn btn-secondary btn-sm" style="margin-top:8px">Apply JSON</button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </aside>
+      </div>
+
+      <!-- ====== DEPLOY VIEW ====== -->
+      <div id="deployView" class="deploy-view editor-view" aria-hidden="true">
+        <div class="deploy-main">
+          <div class="deploy-inner">
+            <h1 class="deploy-title anim-in">Deploy Agent</h1>
+            <p class="deploy-subtitle anim-in anim-d1">Configure and deploy your agent to production.</p>
+
+            <div class="deploy-section anim-in anim-d2">
+              <h3 class="deploy-section-title">Agent Configuration</h3>
+              <div class="deploy-card">
+                <div class="deploy-field">
+                  <label class="deploy-label" for="deployAgentName">Agent Name</label>
+                  <input id="deployAgentName" type="text" class="form-input" placeholder="My Agent" />
+                </div>
+                <div class="deploy-field">
+                  <label class="deploy-label" for="deployAgentDesc">Description</label>
+                  <textarea id="deployAgentDesc" class="form-textarea" rows="2" placeholder="What does this agent do?"></textarea>
+                </div>
+              </div>
+            </div>
+
+            <div class="deploy-section anim-in anim-d3" id="llm-provider-section">
+              <h3 class="deploy-section-title">LLM Providers and Models</h3>
+              <div class="deploy-card">
+                <div class="deploy-field">
+                  <label class="deploy-label" for="llmProvider">Provider</label>
+                  <select id="llmProvider" class="form-select">
+                    <option value="">Select provider...</option>
+                  </select>
+                </div>
+                <div class="deploy-field">
+                  <label class="deploy-label" for="llmEndpoint">Chat Completions Endpoint</label>
+                  <input id="llmEndpoint" type="text" class="form-input" placeholder="https://api.openai.com/v1/chat/completions" />
+                </div>
+                <div class="deploy-field">
+                  <label class="deploy-label" for="llmModelSelect">Model (saved per provider)</label>
+                  <select id="llmModelSelect" class="form-select">
+                    <option value="">Select model...</option>
+                  </select>
+                </div>
+                <div class="deploy-field">
+                  <label class="deploy-label" for="llmApiKey">API Key</label>
+                  <input id="llmApiKey" type="password" class="form-input" placeholder="sk-..." />
+                </div>
+                <div class="deploy-field">
+                  <label class="deploy-label" for="llmModel">Custom model override</label>
+                  <input id="llmModel" type="text" class="form-input" placeholder="Optional: custom model id" />
+                </div>
+                <div class="deploy-inline-actions">
+                  <button id="saveLlmConfigBtn" class="btn btn-secondary btn-sm">Save Provider + Model</button>
+                  <a href="?mode=settings" class="btn btn-ghost btn-sm editor-nav-link" data-editor-nav-mode="settings">Manage providers in Settings</a>
+                </div>
+                <div id="llmConfigStatus" class="deploy-status"></div>
+              </div>
+            </div>
+
+            <div class="deploy-section anim-in anim-d4">
+              <h3 class="deploy-section-title">Deployment Method</h3>
+              <div class="deploy-method-tabs">
+                <button class="deploy-method-tab active" data-method="cloudflare" id="deployCfTab">
+                  <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M16.5088 16.8447c.1475-.5068.0908-.9707-.1553-1.2705-.2278-.2813-.6035-.4346-1.0615-.4551l-9.1572-.1182c-.0537-.0029-.1045-.0283-.1377-.0703-.0342-.041-.043-.0967-.0283-.1484.0215-.0684.084-.1182.1543-.127l9.2207-.1211c.9648-.042 2.0117-.8467 2.3555-1.8105l.4336-1.2178c.0166-.0489.0264-.0996.0264-.1524 0-.0733-.0186-.1436-.0449-.2109C17.5127 8.8437 14.9814 7 12.0264 7 9.4072 7 7.1279 8.4043 6.0713 10.4639c-.5537-.4053-1.2568-.6211-1.999-.5557-1.3262.1172-2.3935 1.1846-2.5107 2.5098-.0362.415.0176.8125.1367 1.1748C.7002 13.6875.001 14.6563.001 15.7891c0 .1807.0146.3584.0371.5342.0146.1094.1074.1904.2178.1904h15.9922c.0908 0 .1709-.0586.2002-.1455l.0605-.209z"/></svg>
+                  Direct to Cloudflare
+                </button>
+                <button class="deploy-method-tab" data-method="github" id="deployGhTab">
+                  <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M12 0c-6.626 0-12 5.373-12 12 0 5.302 3.438 9.8 8.207 11.387.599.111.793-.261.793-.577v-2.234c-3.338.726-4.033-1.416-4.033-1.416-.546-1.387-1.333-1.756-1.333-1.756-1.089-.745.083-.729.083-.729 1.205.084 1.839 1.237 1.839 1.237 1.07 1.834 2.807 1.304 3.492.997.107-.775.418-1.305.762-1.604-2.665-.305-5.467-1.334-5.467-5.931 0-1.311.469-2.381 1.236-3.221-.124-.303-.535-1.524.117-3.176 0 0 1.008-.322 3.301 1.23.957-.266 1.983-.399 3.003-.404 1.02.005 2.047.138 3.006.404 2.291-1.552 3.297-1.23 3.297-1.23.653 1.653.242 2.874.118 3.176.77.84 1.235 1.911 1.235 3.221 0 4.609-2.807 5.624-5.479 5.921.43.372.823 1.102.823 2.222v3.293c0 .319.192.694.801.576 4.765-1.589 8.199-6.086 8.199-11.386 0-6.627-5.373-12-12-12z"/></svg>
+                  Push to GitHub
+                </button>
+              </div>
+
+              <!-- Cloudflare Deploy -->
+              <div class="deploy-card deploy-method-panel" id="deployCfPanel">
+                <div class="deploy-field">
+                  <label class="deploy-label" for="deployCfTarget">Deploy Target</label>
+                  <select id="deployCfTarget" class="form-select">
+                    <option value="cloudflare_workers_elysia_bun">Cloudflare Workers (Elysia + Wrangler + Bun)</option>
+                    <option value="vercel_elysia_bun">Vercel (Elysia + Bun)</option>
+                    <option value="local_elysia_bun">Local Environment (Elysia + Bun)</option>
+                    <option value="cloudflare_workers">Cloudflare Workers (Module fallback)</option>
+                  </select>
+                </div>
+                <div class="deploy-field">
+                  <label class="deploy-label" for="deployEndpointMode">Agent Endpoint Mode</label>
+                  <select id="deployEndpointMode" class="form-select">
+                    <option value="both">Both: OpenAI API + Chat Web UI</option>
+                    <option value="openai">OpenAI-style API only</option>
+                    <option value="chat">Chat Web UI only</option>
+                  </select>
+                  <span class="field-hint">Controls generated runtime endpoints: <code>/v1/chat/completions</code> and/or <code>/chat</code>.</span>
+                </div>
+                <div class="deploy-field">
+                  <label class="deploy-label" for="deployCfWorkerName">Worker Name</label>
+                  <input id="deployCfWorkerName" type="text" class="form-input" placeholder="my-agent-worker" />
+                </div>
+                <div class="deploy-field">
+                  <label class="deploy-label" for="deployCfAccountId">Cloudflare Account ID</label>
+                  <input id="deployCfAccountId" type="text" class="form-input" placeholder="account id" />
+                </div>
+                <div id="deployCfMissing" class="deploy-missing" style="display:none">
+                  <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+                  <span id="deployCfMissingText">Set Cloudflare token and account id in Settings to deploy directly.</span>
+                </div>
+                <button id="deployCfBtn" class="btn btn-primary press-feedback">Deploy / Generate Target Object</button>
+                <div id="deployCfProgress" class="deploy-progress" style="display:none">
+                  <div class="progress-bar"><div class="progress-bar-fill progress-bar-indeterminate"></div></div>
+                  <div class="deploy-steps" id="deployCfSteps"></div>
+                </div>
+                <div id="deployCfResult" class="deploy-result" style="display:none"></div>
+              </div>
+
+              <!-- GitHub Push -->
+              <div class="deploy-card deploy-method-panel" id="deployGhPanel" style="display:none">
+                <div class="deploy-field">
+                  <label class="deploy-label" for="deployGhRepo">Repository</label>
+                  <select id="deployGhRepo" class="form-select">
+                    <option value="">Select a repository...</option>
+                  </select>
+                  <button id="deployGhRefresh" class="btn btn-ghost btn-sm" style="margin-top:var(--space-1)">Refresh repos</button>
+                </div>
+                <div class="deploy-field">
+                  <label class="deploy-label" for="deployGhBranch">Branch</label>
+                  <input id="deployGhBranch" type="text" class="form-input" placeholder="main" value="main" />
+                </div>
+                <div class="deploy-field">
+                  <label class="deploy-label" for="deployGhMessage">Commit Message</label>
+                  <input id="deployGhMessage" type="text" class="form-input" placeholder="Deploy agent via CANARIA" value="Deploy agent via CANARIA" />
+                </div>
+                <div id="deployGhMissing" class="deploy-missing" style="display:none">
+                  <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+                  <span>Set a GitHub token in Settings to list repos and push worker code.</span>
+                </div>
+                <button id="deployGhBtn" class="btn btn-primary press-feedback">Push to GitHub</button>
+                <div id="deployGhProgress" class="deploy-progress" style="display:none">
+                  <div class="progress-bar"><div class="progress-bar-fill progress-bar-indeterminate"></div></div>
+                </div>
+                <div id="deployGhResult" class="deploy-result" style="display:none"></div>
+              </div>
+            </div>
+
+            <div class="deploy-actions anim-in anim-d5">
+              <button id="deploySaveBtn" class="btn btn-secondary">Save as Agent</button>
+            </div>
+            <div id="deployStatus" class="deploy-status"></div>
+          </div>
+        </div>
+        <aside class="deploy-sidebar">
+          <div class="deploy-sidebar-header">
+            <span class="deploy-sidebar-title">Deployments</span>
+          </div>
+          <div class="deploy-sidebar-body" id="deployLogList">
+            <div class="deploy-log-empty">No deployments yet.</div>
+          </div>
+        </aside>
+      </div>
+
+      <!-- ====== SETTINGS VIEW ====== -->
+      <div id="settingsView" class="settings-view editor-view" aria-hidden="true">
+        <section class="settings-main">
+          <div class="settings-container">
+            <div class="settings-header anim-in">
+              <h1>Settings</h1>
+              <p class="text-secondary">Configure your CANARIA IDE connections and preferences.</p>
+            </div>
+
+            <section class="settings-section anim-in anim-d1">
+              <div class="settings-section-header">
+                <h2>Integrations</h2>
+                <p class="text-muted">Connect to external services for deployment and version control.</p>
+              </div>
+
+              <div class="settings-card">
+                <div class="settings-card-header">
+                  <div class="settings-card-icon">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M12 0c-6.626 0-12 5.373-12 12 0 5.302 3.438 9.8 8.207 11.387.599.111.793-.261.793-.577v-2.234c-3.338.726-4.033-1.416-4.033-1.416-.546-1.387-1.333-1.756-1.333-1.756-1.089-.745.083-.729.083-.729 1.205.084 1.839 1.237 1.839 1.237 1.07 1.834 2.807 1.304 3.492.997.107-.775.418-1.305.762-1.604-2.665-.305-5.467-1.334-5.467-5.931 0-1.311.469-2.381 1.236-3.221-.124-.303-.535-1.524.117-3.176 0 0 1.008-.322 3.301 1.23.957-.266 1.983-.399 3.003-.404 1.02.005 2.047.138 3.006.404 2.291-1.552 3.297-1.23 3.297-1.23.653 1.653.242 2.874.118 3.176.77.84 1.235 1.911 1.235 3.221 0 4.609-2.807 5.624-5.479 5.921.43.372.823 1.102.823 2.222v3.293c0 .319.192.694.801.576 4.765-1.589 8.199-6.086 8.199-11.386 0-6.627-5.373-12-12-12z"/></svg>
+                  </div>
+                  <div class="settings-card-info">
+                    <h3>GitHub</h3>
+                    <p class="text-muted">Push agent code to repositories</p>
+                  </div>
+                  <div class="settings-card-status" id="githubStatus">
+                    <span class="connection-dot"></span>
+                    <span class="status-label">Not connected</span>
+                  </div>
+                </div>
+                <div class="settings-card-body">
+                  <div class="settings-field">
+                    <label for="githubPat">Personal Access Token</label>
+                    <div class="input-reveal">
+                      <input id="githubPat" type="password" class="form-input" placeholder="ghp_xxxxxxxxxxxxxxxxxxxx" autocomplete="off" />
+                      <button class="reveal-btn" data-target="githubPat" title="Show/hide">
+                        <svg class="eye-open" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+                        <svg class="eye-closed" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:none"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"/><line x1="1" y1="1" x2="23" y2="23"/></svg>
+                      </button>
+                    </div>
+                    <span class="field-hint">Needs <code>repo</code> scope. <a href="https://github.com/settings/tokens/new?scopes=repo&description=CANARIA+IDE" target="_blank" rel="noopener noreferrer">Create token</a></span>
+                  </div>
+                  <button id="testGithub" class="btn btn-secondary btn-sm press-feedback">Test Connection</button>
+                </div>
+              </div>
+
+              <div class="settings-card">
+                <div class="settings-card-header">
+                  <div class="settings-card-icon settings-card-icon--cf">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M16.5088 16.8447c.1475-.5068.0908-.9707-.1553-1.2705-.2278-.2813-.6035-.4346-1.0615-.4551l-9.1572-.1182c-.0537-.0029-.1045-.0283-.1377-.0703-.0342-.041-.043-.0967-.0283-.1484.0215-.0684.084-.1182.1543-.127l9.2207-.1211c.9648-.042 2.0117-.8467 2.3555-1.8105l.4336-1.2178c.0166-.0489.0264-.0996.0264-.1524 0-.0733-.0186-.1436-.0449-.2109C17.5127 8.8437 14.9814 7 12.0264 7 9.4072 7 7.1279 8.4043 6.0713 10.4639c-.5537-.4053-1.2568-.6211-1.999-.5557-1.3262.1172-2.3935 1.1846-2.5107 2.5098-.0362.415.0176.8125.1367 1.1748C.7002 13.6875.001 14.6563.001 15.7891c0 .1807.0146.3584.0371.5342.0146.1094.1074.1904.2178.1904h15.9922c.0908 0 .1709-.0586.2002-.1455l.0605-.209z"/><path d="M18.4961 11.0039c-.1924 0-.3818.0146-.5654.042-.1943-2.0713-1.9463-3.6934-4.0869-3.6934-.5527 0-1.084.1094-1.5713.3135-.084.0352-.1182.1318-.0771.2139l.2832.5791c.0342.0674.1016.1084.1768.1084.0244 0 .0488-.0049.0713-.0146.3721-.1602.7715-.2422 1.1182-.2422 1.5039 0 2.7568 1.1279 2.9336 2.584.0078.0898.083.1562.1729.1562h.5449c1.3711 0 2.4863 1.1133 2.4863 2.4844 0 1.3711-1.1152 2.4844-2.4863 2.4844h-.3262c-.1104 0-.1992.0898-.1992.2002v.7988c0 .1104.0889.2002.1992.2002h.3262c2.1416 0 3.8828-1.7422 3.8828-3.8828 0-2.1426-1.7412-3.8848-3.8828-3.8848z"/></svg>
+                  </div>
+                  <div class="settings-card-info">
+                    <h3>Cloudflare Workers</h3>
+                    <p class="text-muted">Deploy agents to the edge</p>
+                  </div>
+                  <div class="settings-card-status" id="cfStatus">
+                    <span class="connection-dot"></span>
+                    <span class="status-label">Not connected</span>
+                  </div>
+                </div>
+                <div class="settings-card-body">
+                  <div class="settings-field">
+                    <label for="cfApiToken">API Token</label>
+                    <div class="input-reveal">
+                      <input id="cfApiToken" type="password" class="form-input" placeholder="Your Cloudflare API token" autocomplete="off" />
+                      <button class="reveal-btn" data-target="cfApiToken" title="Show/hide">
+                        <svg class="eye-open" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+                        <svg class="eye-closed" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:none"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"/><line x1="1" y1="1" x2="23" y2="23"/></svg>
+                      </button>
+                    </div>
+                    <span class="field-hint"><a href="https://dash.cloudflare.com/profile/api-tokens" target="_blank" rel="noopener noreferrer">Create API token</a> with Workers Scripts edit permission</span>
+                  </div>
+                  <div class="settings-field">
+                    <label for="cfAccountId">Account ID</label>
+                    <input id="cfAccountId" type="text" class="form-input" placeholder="Your Cloudflare Account ID" autocomplete="off" />
+                    <span class="field-hint">Found in Cloudflare dashboard sidebar</span>
+                  </div>
+                  <button id="testCf" class="btn btn-secondary btn-sm press-feedback">Test Connection</button>
+                </div>
+              </div>
+
+              <div class="settings-card">
+                <div class="settings-card-header">
+                  <div class="settings-card-icon" style="color:#000">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 76 65" fill="currentColor" aria-hidden="true"><path d="M37.59 0l37.59 64.84H0z"/></svg>
+                  </div>
+                  <div class="settings-card-info">
+                    <h3>Vercel</h3>
+                    <p class="text-muted">Direct deployment via Vercel REST API</p>
+                  </div>
+                  <div class="settings-card-status" id="vercelStatus">
+                    <span class="connection-dot"></span>
+                    <span class="status-label">Not connected</span>
+                  </div>
+                </div>
+                <div class="settings-card-body">
+                  <div class="settings-field">
+                    <label for="vercelToken">Access Token</label>
+                    <div class="input-reveal">
+                      <input id="vercelToken" type="password" class="form-input" placeholder="Vercel access token" autocomplete="off" />
+                      <button class="reveal-btn" data-target="vercelToken" title="Show/hide">
+                        <svg class="eye-open" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+                        <svg class="eye-closed" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:none"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"/><line x1="1" y1="1" x2="23" y2="23"/></svg>
+                      </button>
+                    </div>
+                  </div>
+                  <div class="settings-field-grid">
+                    <div class="settings-field">
+                      <label for="vercelProject">Project (optional)</label>
+                      <input id="vercelProject" type="text" class="form-input" placeholder="Existing Vercel project name/id" autocomplete="off" />
+                    </div>
+                    <div class="settings-field">
+                      <label for="vercelTeamId">Team ID (optional)</label>
+                      <input id="vercelTeamId" type="text" class="form-input" placeholder="team_xxxxxxx" autocomplete="off" />
+                    </div>
+                  </div>
+                  <span class="field-hint">Use when deploying the <code>Vercel (Elysia + Bun)</code> target directly from the browser.</span>
+                  <button id="testVercel" class="btn btn-secondary btn-sm press-feedback">Test Connection</button>
+                </div>
+              </div>
+            </section>
+
+            <section class="settings-section anim-in anim-d2">
+              <div class="settings-section-header">
+                <h2>LLM Providers</h2>
+                <p class="text-muted">OpenAI-style multi-provider model routing with per-provider model stacks and API keys.</p>
+              </div>
+              <div class="settings-card">
+                <div class="settings-card-body">
+                  <div class="settings-field">
+                    <label for="llmProviderSelect">Saved Providers</label>
+                    <select id="llmProviderSelect" class="form-select">
+                      <option value="">Select provider...</option>
+                    </select>
+                    <span class="field-hint">Pick an existing provider or create a new one.</span>
+                  </div>
+
+                  <div class="settings-field-grid">
+                    <div class="settings-field">
+                      <label for="llmProviderName">Provider Name</label>
+                      <input id="llmProviderName" type="text" class="form-input" placeholder="OpenAI / OpenRouter / Custom" />
+                    </div>
+                    <div class="settings-field">
+                      <label for="llmProviderBaseUrl">Base URL</label>
+                      <input id="llmProviderBaseUrl" type="text" class="form-input" placeholder="https://api.openai.com" />
+                    </div>
+                  </div>
+
+                  <div class="settings-field">
+                    <label for="llmProviderPath">Endpoint Path</label>
+                    <input id="llmProviderPath" type="text" class="form-input" placeholder="/v1/chat/completions" />
+                    <span class="field-hint">Use an OpenAI-compatible chat completions path.</span>
+                  </div>
+
+                  <div class="settings-field">
+                    <label for="llmProviderModels">Models (comma or newline separated)</label>
+                    <textarea id="llmProviderModels" class="form-textarea" rows="4" placeholder="gpt-4.1-mini&#10;gpt-4.1&#10;gpt-4o-mini"></textarea>
+                  </div>
+
+                  <div class="settings-field">
+                    <label for="llmProviderModelSelect">Active Model</label>
+                    <select id="llmProviderModelSelect" class="form-select">
+                      <option value="">Select active model...</option>
+                    </select>
+                  </div>
+
+                  <div class="settings-field">
+                    <label for="llmProviderApiKey">Provider API Key (session)</label>
+                    <div class="input-reveal">
+                      <input id="llmProviderApiKey" type="password" class="form-input" placeholder="sk-..." autocomplete="off" />
+                      <button class="reveal-btn" data-target="llmProviderApiKey" title="Show/hide">
+                        <svg class="eye-open" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+                        <svg class="eye-closed" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:none"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"/><line x1="1" y1="1" x2="23" y2="23"/></svg>
+                      </button>
+                    </div>
+                  </div>
+
+                  <div class="settings-actions-row">
+                    <button id="newLlmProvider" class="btn btn-ghost btn-sm press-feedback">New Provider</button>
+                    <button id="saveLlmProvider" class="btn btn-secondary btn-sm press-feedback">Save Provider</button>
+                    <button id="removeLlmProvider" class="btn btn-danger btn-sm press-feedback">Remove Provider</button>
+                    <button id="setActiveLlmProvider" class="btn btn-primary btn-sm press-feedback">Set Active</button>
+                  </div>
+                  <div id="llmProviderStatus" class="settings-inline-status"></div>
+                </div>
+              </div>
+            </section>
+
+            <section class="settings-section anim-in anim-d3">
+              <div class="settings-section-header">
+                <h2>Session API Keys</h2>
+                <p class="text-muted">Session-scoped keys used by static generation/chat/deploy tools.</p>
+              </div>
+              <div class="settings-card">
+                <div class="settings-card-body">
+                  <div class="settings-field">
+                    <label for="openaiKey">Active Provider API Key</label>
+                    <div class="input-reveal">
+                      <input id="openaiKey" type="password" class="form-input" placeholder="sk-..." autocomplete="off" />
+                      <button class="reveal-btn" data-target="openaiKey" title="Show/hide">
+                        <svg class="eye-open" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+                        <svg class="eye-closed" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:none"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"/><line x1="1" y1="1" x2="23" y2="23"/></svg>
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </section>
+
+            <section class="settings-section anim-in anim-d4">
+              <div class="settings-section-header">
+                <h2>Appearance</h2>
+              </div>
+              <div class="settings-card">
+                <div class="settings-card-body">
+                  <div class="settings-field">
+                    <label>Theme</label>
+                    <div class="theme-picker" id="themePicker">
+                      <button class="theme-option" data-theme="light">
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/></svg>
+                        <span>Light</span>
+                      </button>
+                      <button class="theme-option" data-theme="dark">
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>
+                        <span>Dark</span>
+                      </button>
+                      <button class="theme-option" data-theme="system">
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="3" width="20" height="14" rx="2" ry="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg>
+                        <span>System</span>
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </section>
+
+            <section class="settings-section anim-in anim-d5">
+              <div class="settings-section-header">
+                <h2>Data</h2>
+              </div>
+              <div class="settings-card">
+                <div class="settings-card-body">
+                  <div class="settings-field">
+                    <label>Local Storage</label>
+                    <p class="text-muted" style="margin-bottom: var(--space-3)">Settings are stored in your browser. Calls go directly to provider APIs (GitHub/Cloudflare/LLM), not a CANARIA backend server.</p>
+                    <button id="clearSettings" class="btn btn-danger btn-sm press-feedback">Clear All Settings</button>
+                  </div>
+                </div>
+              </div>
+            </section>
+          </div>
+        </section>
+      </div>
+
+      <!-- ====== FLOATING CHAT PILL ====== -->
+      <div id="chatPill" class="chat-pill">
+        <button class="chat-pill-btn" id="chatPillBtn">
+          <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+          <span class="chat-pill-text">Chat</span>
+        </button>
+        <div class="chat-pill-window" id="chatPillWindow" style="display:none">
+          <div class="chat-pill-header" id="chatPillHeader">
+            <span class="chat-pill-title">Assistant</span>
+            <button id="chatPillMinimize" class="btn btn-ghost btn-icon btn-sm" title="Minimize">
+              <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="5" y1="12" x2="19" y2="12"/></svg>
+            </button>
+          </div>
+          <div class="chat-pill-body">
+            <div class="chat-pill-messages" id="pillChatMessages">
+              <div class="chat-pill-empty">Ask me anything about your flow.</div>
+            </div>
+            <div class="chat-pill-composer">
+              <textarea id="pillChatInput" class="chat-pill-input" placeholder="Ask anything..." rows="1"></textarea>
+              <button id="pillChatSend" class="chat-pill-send" title="Send">
+                <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="19" x2="12" y2="5"/><polyline points="5 12 12 5 19 12"/></svg>
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Floating Inspector -->
+      <div id="floatingInspector" class="floating-inspector" style="display:none">
+        <div class="floating-inspector-header">
+          <span>Inspector</span>
+          <button id="dockInspectorBtn" class="btn btn-ghost btn-icon btn-sm" title="Dock inspector">&#x2B1C;</button>
+        </div>
+        <div id="floatingInspectorBody" class="floating-inspector-body"></div>
+      </div>
+    </main>
+
+    <div id="paletteHoverCard" class="palette-hover-card" aria-hidden="true"></div>
+
+    <script src="https://cdn.jsdelivr.net/npm/drawflow/dist/drawflow.min.js"></script>
+    <script src="../toast.js"></script>
+    <script src="../auth-ui.js"></script>
+    <script src="../ide-runtime.js"></script>
+    <script src="../sw-register.js?v=20260211-03"></script>
+    <script src="../app.js?v=20260211-03"></script>
+    <script src="../settings.js?v=20260211-03"></script>
+    <script>
+      document.getElementById('themeToggle').addEventListener('click', function() {
+        var next = document.documentElement.getAttribute('data-theme') === 'dark' ? 'light' : 'dark';
+        document.documentElement.classList.add('theme-transition');
+        document.documentElement.setAttribute('data-theme', next);
+        localStorage.setItem('voyager-theme', next);
+        setTimeout(function() { document.documentElement.classList.remove('theme-transition'); }, 400);
+      });
+    </script>
+  </body>
+</html>

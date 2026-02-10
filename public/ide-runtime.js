@@ -75,7 +75,7 @@
       label: "Vercel (Elysia + Bun)",
       platform: "vercel",
       runtime: "elysia-bun",
-      canDirectDeploy: false,
+      canDirectDeploy: true,
     },
     {
       id: "local_elysia_bun",
@@ -227,6 +227,14 @@
     const clean = String(path || "").trim();
     if (!clean) return "/v1/chat/completions";
     return clean.startsWith("/") ? clean : `/${clean}`;
+  }
+
+  function normalizeEndpointMode(mode) {
+    const normalized = String(mode || "").trim().toLowerCase();
+    if (normalized === "openai" || normalized === "chat" || normalized === "both") {
+      return normalized;
+    }
+    return "both";
   }
 
   function joinEndpoint(baseUrl, path) {
@@ -662,6 +670,7 @@
     const drawflow = options.drawflow || { drawflow: { Home: { data: {} } } };
     const summary = summarizeFlow(drawflow);
     const providerConfig = options.providerConfig || {};
+    const endpointMode = normalizeEndpointMode(options.endpointMode || "both");
 
     return `import { Elysia } from "elysia";
 import { cors } from "@elysiajs/cors";
@@ -672,6 +681,7 @@ const AGENT_NAME = ${JSON.stringify(String(options.agentName || "Agent Builder R
 const AGENT_DESCRIPTION = ${JSON.stringify(String(options.description || ""))};
 const DEFAULT_LLM_ENDPOINT = ${JSON.stringify(String(providerConfig.endpoint || ""))};
 const DEFAULT_LLM_MODEL = ${JSON.stringify(String(providerConfig.model || ""))};
+const ENDPOINT_MODE = ${JSON.stringify(endpointMode)};
 
 function readEnvValue(source, key) {
   if (source && typeof source === "object" && typeof source[key] === "string") {
@@ -709,6 +719,24 @@ function hasFlowDebugAccess(headers, envSource) {
   if (!required) return false;
   const provided = String(headers.get("x-debug-token") || "").trim();
   return provided && provided === required;
+}
+
+function hasOpenAiEndpoint() {
+  return ENDPOINT_MODE === "openai" || ENDPOINT_MODE === "both";
+}
+
+function hasChatWebUiEndpoint() {
+  return ENDPOINT_MODE === "chat" || ENDPOINT_MODE === "both";
+}
+
+function buildChatWebUiPage() {
+  return "<!doctype html><html><head><meta charset=\\"utf-8\\" /><meta name=\\"viewport\\" content=\\"width=device-width,initial-scale=1\\" /><title>" +
+    AGENT_NAME +
+    " Chat</title><style>body{font-family:ui-sans-serif,system-ui,-apple-system,sans-serif;max-width:860px;margin:24px auto;padding:0 16px;color:#111}textarea,input,button{font:inherit}textarea{width:100%;min-height:100px;padding:10px}#log{margin-top:14px;padding:12px;border:1px solid #ddd;border-radius:10px;white-space:pre-wrap;background:#fafafa}button{padding:10px 14px;border:0;border-radius:8px;background:#111;color:#fff;cursor:pointer}small{color:#666}</style></head><body><h1>" +
+    AGENT_NAME +
+    "</h1><p>" +
+    AGENT_DESCRIPTION +
+    "</p><textarea id=\\"prompt\\" placeholder=\\"Ask your agent...\\"></textarea><div style=\\"margin-top:8px\\"><button id=\\"send\\">Send</button></div><div id=\\"log\\">Ready.</div><small>Auth-enabled deployments require x-worker-token via custom client/script.</small><script>const b=document.getElementById('send');const p=document.getElementById('prompt');const log=document.getElementById('log');b.onclick=async()=>{const prompt=String(p.value||'').trim();if(!prompt){log.textContent='Enter a prompt.';return;}log.textContent='Running...';try{const r=await fetch('/invoke',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({prompt})});const d=await r.json();log.textContent=JSON.stringify(d,null,2);}catch(e){log.textContent=String(e&&e.message||e);}};</script></body></html>";
 }
 
 function safeStringify(value) {
@@ -869,7 +897,25 @@ const app = new Elysia()
       summary: FLOW_SUMMARY,
     };
   })
+  .get("/chat", ({ set }) => {
+    if (!hasChatWebUiEndpoint()) {
+      set.status = 404;
+      return {
+        error: "Not found.",
+      };
+    }
+    set.headers["content-type"] = "text/html; charset=utf-8";
+    return buildChatWebUiPage();
+  })
   .post("/invoke", async ({ body, store, set, request }) => {
+    if (!hasChatWebUiEndpoint()) {
+      set.status = 404;
+      return {
+        ok: false,
+        error: "Not found.",
+      };
+    }
+
     if (!hasWorkerAccess(request.headers, store)) {
       set.status = 401;
       return {
@@ -895,6 +941,13 @@ const app = new Elysia()
     }
   })
   .post("/v1/chat/completions", async ({ body, store, set, request }) => {
+    if (!hasOpenAiEndpoint()) {
+      set.status = 404;
+      return {
+        error: "Not found.",
+      };
+    }
+
     if (!hasWorkerAccess(request.headers, store)) {
       set.status = 401;
       return {
@@ -971,6 +1024,8 @@ export const OPTIONS = app.handle;
 const FLOW = ${JSON.stringify(drawflow, null, 2)};
 const FLOW_SUMMARY = ${JSON.stringify(summary, null, 2)};
 const AGENT_NAME = ${JSON.stringify(String(options.agentName || "Agent Builder Runtime"))};
+const AGENT_DESCRIPTION = ${JSON.stringify(String(options.description || ""))};
+const ENDPOINT_MODE = ${JSON.stringify(normalizeEndpointMode(options.endpointMode || "both"))};
 
 function json(data, status = 200) {
   return new Response(JSON.stringify(data, null, 2), {
@@ -1005,6 +1060,24 @@ function hasFlowAccess(request, env) {
   if (!required) return false;
   const provided = String(request.headers.get("x-debug-token") || "").trim();
   return provided && provided === required;
+}
+
+function hasOpenAiEndpoint() {
+  return ENDPOINT_MODE === "openai" || ENDPOINT_MODE === "both";
+}
+
+function hasChatWebUiEndpoint() {
+  return ENDPOINT_MODE === "chat" || ENDPOINT_MODE === "both";
+}
+
+function buildChatWebUiPage() {
+  return "<!doctype html><html><head><meta charset=\\"utf-8\\" /><meta name=\\"viewport\\" content=\\"width=device-width,initial-scale=1\\" /><title>" +
+    AGENT_NAME +
+    " Chat</title><style>body{font-family:ui-sans-serif,system-ui,-apple-system,sans-serif;max-width:860px;margin:24px auto;padding:0 16px;color:#111}textarea,input,button{font:inherit}textarea{width:100%;min-height:100px;padding:10px}#log{margin-top:14px;padding:12px;border:1px solid #ddd;border-radius:10px;white-space:pre-wrap;background:#fafafa}button{padding:10px 14px;border:0;border-radius:8px;background:#111;color:#fff;cursor:pointer}small{color:#666}</style></head><body><h1>" +
+    AGENT_NAME +
+    "</h1><p>" +
+    AGENT_DESCRIPTION +
+    "</p><textarea id=\\"prompt\\" placeholder=\\"Ask your agent...\\"></textarea><div style=\\"margin-top:8px\\"><button id=\\"send\\">Send</button></div><div id=\\"log\\">Ready.</div><small>Auth-enabled deployments require x-worker-token via custom client/script.</small><script>const b=document.getElementById('send');const p=document.getElementById('prompt');const log=document.getElementById('log');b.onclick=async()=>{const prompt=String(p.value||'').trim();if(!prompt){log.textContent='Enter a prompt.';return;}log.textContent='Running...';try{const r=await fetch('/invoke',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({prompt})});const d=await r.json();log.textContent=JSON.stringify(d,null,2);}catch(e){log.textContent=String(e&&e.message||e);}};</script></body></html>";
 }
 
 function safeStringify(value) {
@@ -1049,7 +1122,43 @@ export default {
       return json({ flow: FLOW, summary: FLOW_SUMMARY });
     }
 
-    if (url.pathname === "/invoke" || url.pathname === "/" || url.pathname === "/v1/chat/completions") {
+    if (url.pathname === "/chat") {
+      if (!hasChatWebUiEndpoint()) {
+        return json({ error: "Not found" }, 404);
+      }
+      return new Response(buildChatWebUiPage(), {
+        status: 200,
+        headers: {
+          "content-type": "text/html; charset=utf-8",
+          "cache-control": "no-store",
+        },
+      });
+    }
+
+    if (url.pathname === "/" || url.pathname === "") {
+      return json({
+        ok: true,
+        agent: AGENT_NAME,
+        endpointMode: ENDPOINT_MODE,
+        endpoints: [
+          "/health",
+          "/flow (debug token required)",
+          ...(hasChatWebUiEndpoint() ? ["/chat", "/invoke"] : []),
+          ...(hasOpenAiEndpoint() ? ["/v1/chat/completions"] : []),
+        ],
+      });
+    }
+
+    if (url.pathname === "/invoke" || url.pathname === "/v1/chat/completions") {
+      const isInvokeRoute = url.pathname === "/invoke";
+      const isOpenAiRoute = url.pathname === "/v1/chat/completions";
+
+      if (isInvokeRoute && !hasChatWebUiEndpoint()) {
+        return json({ error: "Not found" }, 404);
+      }
+      if (isOpenAiRoute && !hasOpenAiEndpoint()) {
+        return json({ error: "Not found" }, 404);
+      }
       if (!hasWorkerAccess(request, env)) {
         return json({ error: "Unauthorized. Invalid x-worker-token." }, 401);
       }
@@ -1066,6 +1175,9 @@ export default {
       const apiKey = String(env.LLM_API_KEY || "").trim();
 
       if (!endpoint || !model || !apiKey) {
+        if (isOpenAiRoute) {
+          return json({ error: "Set LLM_ENDPOINT, LLM_MODEL, and LLM_API_KEY for live inference." }, 503);
+        }
         return json({
           ok: true,
           mode: "static",
@@ -1125,6 +1237,29 @@ export default {
             },
             502,
           );
+        }
+
+        if (isOpenAiRoute) {
+          const contentValue =
+            llmData?.choices?.[0]?.message?.content ||
+            llmData?.reply ||
+            safeStringify(llmData);
+          return json({
+            id: "chatcmpl_agent_builder",
+            object: "chat.completion",
+            created: Math.floor(Date.now() / 1000),
+            model: model,
+            choices: [
+              {
+                index: 0,
+                finish_reason: "stop",
+                message: {
+                  role: "assistant",
+                  content: String(contentValue || ""),
+                },
+              },
+            ],
+          });
         }
 
         return json({ ok: true, agent: AGENT_NAME, llm: llmData, summary: FLOW_SUMMARY });
@@ -1216,25 +1351,39 @@ export default {
   }
 
   function buildReadme(options = {}) {
+    const endpointMode = normalizeEndpointMode(options.endpointMode || "both");
+    const endpointLines = ["- /health", "- /flow (requires FLOW_DEBUG_TOKEN + x-debug-token)"];
+    if (endpointMode === "openai" || endpointMode === "both") {
+      endpointLines.push("- /v1/chat/completions (OpenAI-style)");
+    }
+    if (endpointMode === "chat" || endpointMode === "both") {
+      endpointLines.push("- /chat (web UI)", "- /invoke (chat submit endpoint)");
+    }
+
     const lines = [
       "# Agent Builder Deploy Object",
       "",
       `Target: ${options.targetLabel || options.target || "unknown"}`,
       `Agent: ${options.agentName || "Unnamed Agent"}`,
+      `Endpoint mode: ${endpointMode}`,
       "",
       "Generated from Agent Builder IDE.",
       "",
       "## Runtime",
       "",
       "- Elysia + Bun",
-      "- OpenAI-style /v1/chat/completions endpoint",
-      "- /health, /flow, /invoke endpoints",
+      ...endpointLines,
       "",
       "## Required env vars",
       "",
       "- LLM_ENDPOINT",
       "- LLM_MODEL",
       "- LLM_API_KEY",
+      "",
+      "## Optional auth env vars",
+      "",
+      "- WORKER_AUTH_TOKEN (protect agent invoke endpoints)",
+      "- FLOW_DEBUG_TOKEN (protect /flow endpoint)",
       "",
     ];
 
@@ -1248,7 +1397,14 @@ export default {
       lines.push("## Deploy", "", "```bash", "bun install", "bun run deploy", "```");
     }
 
-    lines.push("", "## Notes", "", "This object is generated in-browser and can be pushed to GitHub from the Deploy view.", "");
+    lines.push(
+      "",
+      "## Notes",
+      "",
+      "This object is generated in-browser and can be pushed to GitHub from the Deploy view.",
+      "Configure secrets and auth tokens in your platform dashboard (Cloudflare/Vercel/GitHub), not in the IDE.",
+      "",
+    );
     return lines.join("\n");
   }
 
@@ -1284,33 +1440,34 @@ export default {
     const agentName = String(options.agentName || options.workerName || "agent-builder-runtime").trim() || "agent-builder-runtime";
     const description = String(options.description || "").trim();
     const providerConfig = options.providerConfig || getActiveLlmConfig();
+    const endpointMode = normalizeEndpointMode(options.endpointMode || "both");
     const drawflow = options.drawflow || { drawflow: { Home: { data: {} } } };
 
     const rootDir = `${slugify(agentName, "agent-builder-runtime")}-${targetDef.id}-${formatDateForSlug(new Date())}`;
     const files = [];
 
     if (targetDef.id === "cloudflare_workers_elysia_bun") {
-      files.push({ path: "src/index.ts", content: buildCloudflareElysiaSource({ agentName, description, drawflow, providerConfig }) });
+      files.push({ path: "src/index.ts", content: buildCloudflareElysiaSource({ agentName, description, drawflow, providerConfig, endpointMode }) });
       files.push({ path: "wrangler.toml", content: buildCloudflareWranglerToml(agentName) });
       files.push({ path: "package.json", content: buildPackageJson(agentName, targetDef.id) });
       files.push({ path: "tsconfig.json", content: buildTsconfig() });
-      files.push({ path: "README.md", content: buildReadme({ target: targetDef.id, targetLabel: targetDef.label, agentName }) });
+      files.push({ path: "README.md", content: buildReadme({ target: targetDef.id, targetLabel: targetDef.label, agentName, endpointMode }) });
     } else if (targetDef.id === "vercel_elysia_bun") {
-      files.push({ path: "api/index.ts", content: buildVercelElysiaSource({ agentName, description, drawflow, providerConfig }) });
+      files.push({ path: "api/index.ts", content: buildVercelElysiaSource({ agentName, description, drawflow, providerConfig, endpointMode }) });
       files.push({ path: "vercel.json", content: buildVercelJson() });
       files.push({ path: "package.json", content: buildPackageJson(agentName, targetDef.id) });
       files.push({ path: "tsconfig.json", content: buildTsconfig() });
-      files.push({ path: "README.md", content: buildReadme({ target: targetDef.id, targetLabel: targetDef.label, agentName }) });
+      files.push({ path: "README.md", content: buildReadme({ target: targetDef.id, targetLabel: targetDef.label, agentName, endpointMode }) });
     } else if (targetDef.id === "local_elysia_bun") {
-      files.push({ path: "src/index.ts", content: buildLocalElysiaSource({ agentName, description, drawflow, providerConfig }) });
+      files.push({ path: "src/index.ts", content: buildLocalElysiaSource({ agentName, description, drawflow, providerConfig, endpointMode }) });
       files.push({ path: "package.json", content: buildPackageJson(agentName, targetDef.id) });
       files.push({ path: "tsconfig.json", content: buildTsconfig() });
       files.push({ path: ".env.example", content: "LLM_ENDPOINT=\nLLM_MODEL=\nLLM_API_KEY=\nPORT=8787\n" });
-      files.push({ path: "README.md", content: buildReadme({ target: targetDef.id, targetLabel: targetDef.label, agentName }) });
+      files.push({ path: "README.md", content: buildReadme({ target: targetDef.id, targetLabel: targetDef.label, agentName, endpointMode }) });
     } else {
-      files.push({ path: "src/worker.js", content: buildCloudflareWorkerModule({ agentName, description, drawflow, providerConfig }) });
+      files.push({ path: "src/worker.js", content: buildCloudflareWorkerModule({ agentName, description, drawflow, providerConfig, endpointMode }) });
       files.push({ path: "wrangler.toml", content: buildCloudflareWranglerToml(agentName).replace('main = "src/index.ts"', 'main = "src/worker.js"') });
-      files.push({ path: "README.md", content: buildReadme({ target: targetDef.id, targetLabel: targetDef.label, agentName }) });
+      files.push({ path: "README.md", content: buildReadme({ target: targetDef.id, targetLabel: targetDef.label, agentName, endpointMode }) });
     }
 
     return {
@@ -1318,10 +1475,12 @@ export default {
       createdAt: nowIso(),
       target: targetDef.id,
       targetLabel: targetDef.label,
+      endpointMode,
       rootDir,
       files,
       summary: {
         fileCount: files.length,
+        endpointMode,
         flow: summarizeFlow(drawflow),
       },
     };
