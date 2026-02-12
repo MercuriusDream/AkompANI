@@ -2,6 +2,9 @@
 
 Static-first browser IDE for building and deploying flow-based agents.
 
+- Website: https://akompani.cc
+- Docs: https://docs.akompani.cc
+
 ## Mission
 
 Build an accompanying AI agent platform for people who have not yet developed strong agentic usage patterns, while keeping generated runtime artifacts practical, readable, and production-oriented.

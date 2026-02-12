@@ -776,7 +776,7 @@ class ScratchCanvas {
     accent.setAttribute("y", "0");
     accent.setAttribute("width", "4");
     accent.setAttribute("height", "400"); // refined by _updateBlockPath
-    accent.setAttribute("rx", `${ScratchCanvas.CORNER_R}`);
+    accent.setAttribute("rx", "0");
     accent.setAttribute("fill", color);
     accent.setAttribute("opacity", "0.82");
     accent.setAttribute("pointer-events", "none");
@@ -858,7 +858,9 @@ class ScratchCanvas {
 
     // Update accent bar height
     const accentEl = g.querySelector(".scratch-accent");
-    if (accentEl) accentEl.setAttribute("height", totalH);
+    if (accentEl) {
+      accentEl.setAttribute("height", String(totalH));
+    }
 
     // Update foreignObject height
     const fo = g.querySelector("foreignObject");

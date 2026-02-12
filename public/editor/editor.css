@@ -1461,18 +1461,42 @@ body.left-panel-flipped .canvas-layout {
   pointer-events: none;
 }
 
-/* Hide summary in palette since fields already show all values */
-.block-item.compact .scratch-block-summary {
-  display: none !important;
-}
-
-/* Palette: hide action buttons and empty vars section */
+/* Palette: compact preview mode (summary-first, non-editable) */
 .block-item.compact .scratch-block-actions,
-.block-item.compact .scratch-block .scratch-block-vars {
+.block-item.compact .scratch-block-status,
+.block-item.compact .scratch-block .scratch-block-vars,
+.block-item.compact .scratch-block .scratch-block-fields {
   display: none !important;
 }
 
-/* Palette: scale down inputs slightly to fit narrow palette */
+.block-item.compact .scratch-block-summary {
+  display: flex !important;
+  padding: 4px 10px 7px;
+  gap: 2px 6px;
+  font-size: 10.5px;
+}
+
+.block-item.compact .scratch-summary-item:nth-child(n + 3) {
+  display: none;
+}
+
+.block-item.compact .scratch-block {
+  border: 1px solid color-mix(in srgb, var(--block-color, var(--border)) 24%, transparent);
+  border-radius: var(--radius-sm, 6px);
+}
+
+.block-item.compact .scratch-block-header {
+  padding: 6px 10px 5px 12px;
+  border-bottom: 1px solid color-mix(in srgb, var(--block-color, var(--border)) 18%, transparent);
+}
+
+.block-item.compact .scratch-block-ports {
+  padding: 2px 10px 6px;
+  font-size: 9px;
+  opacity: 0.72;
+}
+
+/* Palette: fields are hidden in compact mode, keep reduced typography for future toggles */
 .block-item.compact .scratch-input,
 .block-item.compact .scratch-select,
 .block-item.compact .scratch-textarea,
@@ -1496,23 +1520,6 @@ body.left-panel-flipped .canvas-layout {
 .block-item.compact .scratch-field {
   min-height: 24px;
   gap: 6px;
-}
-
-.block-item.compact .scratch-block-header {
-  padding: 6px 10px 4px 12px;
-  font-size: 12px;
-  border-bottom: none;
-}
-
-.block-item.compact .scratch-block-fields {
-  display: flex;
-  padding: 6px 10px 8px;
-  gap: 4px;
-}
-
-.block-item.compact .scratch-block-ports {
-  padding: 2px 10px 5px;
-  font-size: 9px;
 }
 
 /* ===== Layout Toggle Buttons (VSCode-style) ===== */

@@ -14,3 +14,4 @@
 /ops/index.html /app/?mode=deploy 301
 /chat-agents /chat-agents.html 301
 /ops-console /ops-console.html 301
+/docs /docs/ 301

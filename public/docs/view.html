@@ -1,0 +1,30 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Akompani Docs</title>
+  <meta name="description" content="Akompani docs viewer" />
+  <link rel="canonical" href="https://docs.akompani.cc/" />
+  <link rel="stylesheet" href="./docs.css" />
+  <link rel="icon" href="../akompani.svg" type="image/svg+xml" />
+  <script>(function(){var t=localStorage.getItem('akompani-theme');if(!t)t=matchMedia('(prefers-color-scheme:dark)').matches?'dark':'light';document.documentElement.setAttribute('data-theme',t)})()</script>
+</head>
+<body data-doc-view="true">
+  <header class="docs-header">
+    <a class="brand" href="./">Akompani Docs</a>
+    <nav class="doc-nav">
+      <a href="https://akompani.cc">Main Site</a>
+      <a href="./">All Docs</a>
+    </nav>
+    <button id="themeToggle" class="theme-toggle" aria-label="Toggle theme">Theme</button>
+  </header>
+
+  <main class="doc-reader-wrap">
+    <article id="docContent" class="doc-reader" aria-live="polite">Loading...</article>
+  </main>
+
+  <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+  <script src="./docs.js"></script>
+</body>
+</html>
