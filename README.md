@@ -2,6 +2,10 @@
 
 Static-first browser IDE for building and deploying flow-based agents.
 
+## Mission
+
+Build an accompanying AI agent platform for people who have not yet developed strong agentic usage patterns, while keeping generated runtime artifacts practical, readable, and production-oriented.
+
 ## What It Is
 
 - Visual flow editor at `/app`
@@ -11,6 +15,8 @@ Static-first browser IDE for building and deploying flow-based agents.
 - Direct browser push deploy objects to GitHub repos (PAT/token)
 - No project-owned backend API required for core IDE workflows
 - Generated agent endpoint mode selector: `openai`, `chat`, or `both`
+- Bun + Elysia deploy artifacts as first-class targets
+- Easy attachment of existing APIs and KV-style caching/state patterns in flows
 
 ## Design Guidelines
 
@@ -46,6 +52,15 @@ bun run build
 bun run preview
 ```
 
+## Tests
+
+```bash
+bun run test:unit
+bun run test:e2e
+```
+
+One smoke E2E test is included (`tests/e2e/smoke.spec.js`) along with core runtime unit tests (`tests/unit/ide-runtime.test.js`).
+
 ## GitHub Pages Auto-Deploy
 
 - Workflow: `.github/workflows/deploy-pages.yml`
@@ -78,6 +93,14 @@ Repository setting required once:
 - Contributing guide: `CONTRIBUTING.md`
 - Security policy: `SECURITY.md`
 - Code of conduct: `CODE_OF_CONDUCT.md`
+
+## Docs and Tutorials
+
+- Docs index: `docs/README.md`
+- 5-minute first-agent tutorial: `docs/tutorials/first-agent-5-minute.md`
+- Demo video scripts: `docs/demo-videos.md`
+- Release process: `docs/release-process.md`
+- Changelog: `CHANGELOG.md`
 
 ## License
 

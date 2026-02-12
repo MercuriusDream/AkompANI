@@ -1186,7 +1186,7 @@ function listRuntimeEndpoints() {
 async function runD1Query(input, envSource) {
   const binding = resolveD1Binding(envSource);
   if (!binding.available || !binding.db) {
-    throw new Error(`D1 binding "${binding.bindingName}" is unavailable.`);
+    throw new Error('D1 binding "' + binding.bindingName + '" is unavailable.');
   }
 
   const payload = input && typeof input === "object" ? input : {};
@@ -2476,7 +2476,7 @@ function listRuntimeEndpoints() {
 async function runD1Query(input, env) {
   const binding = resolveD1Binding(env);
   if (!binding.available || !binding.db) {
-    throw new Error(`D1 binding "${binding.bindingName}" is unavailable.`);
+    throw new Error('D1 binding "' + binding.bindingName + '" is unavailable.');
   }
 
   const payload = input && typeof input === "object" ? input : {};

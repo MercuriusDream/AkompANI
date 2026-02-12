@@ -1,0 +1,39 @@
+name: Feature request
+description: Propose a new capability for Akompani.
+title: "[Feature] "
+labels:
+  - enhancement
+body:
+  - type: textarea
+    id: problem
+    attributes:
+      label: Problem to solve
+      description: What user pain does this solve?
+      placeholder: I want to...
+    validations:
+      required: true
+
+  - type: textarea
+    id: proposal
+    attributes:
+      label: Proposed solution
+      description: Describe your suggested approach.
+    validations:
+      required: true
+
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternatives considered
+      description: What other options did you evaluate?
+
+  - type: checkboxes
+    id: scope
+    attributes:
+      label: Impact area
+      options:
+        - label: Onboarding for first-time agent builders
+        - label: Bun + Elysia deploy artifacts
+        - label: API/KV integration ergonomics
+        - label: Docs and tutorials
+        - label: Performance/reliability
