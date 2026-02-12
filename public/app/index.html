@@ -7,7 +7,7 @@
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/drawflow/dist/drawflow.min.css" />
+    <!-- Drawflow replaced by ScratchCanvas -->
     <link rel="stylesheet" href="../design-system.css" />
     <link rel="stylesheet" href="../settings/settings.css" />
     <link rel="stylesheet" href="../editor/editor.css" />
@@ -78,12 +78,6 @@
               <svg width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
                 <rect x="1" y="2" width="5" height="12" rx="1" fill="currentColor" opacity="0.9"/>
                 <rect x="7.5" y="2" width="7.5" height="12" rx="1" stroke="currentColor" stroke-width="1.2" fill="none"/>
-              </svg>
-            </button>
-            <button id="toggleRightPanel" class="btn btn-ghost btn-icon btn-sm layout-toggle-btn" title="Toggle right sidebar" aria-label="Toggle right sidebar">
-              <svg width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
-                <rect x="1" y="2" width="7.5" height="12" rx="1" stroke="currentColor" stroke-width="1.2" fill="none"/>
-                <rect x="10" y="2" width="5" height="12" rx="1" fill="currentColor" opacity="0.9"/>
               </svg>
             </button>
             <button id="toggleChatPanel" class="btn btn-ghost btn-icon btn-sm layout-toggle-btn" title="Toggle chat panel" aria-label="Toggle chat panel">
@@ -203,7 +197,7 @@
               <kbd>⌘S</kbd> save · <kbd>⌘⏎</kbd> run
             </div>
           </div>
-          <div id="drawflow" class="drawflow-canvas"></div>
+          <div id="drawflow" class="scratch-canvas"></div>
 
           <!-- Zoom Controls -->
           <div class="canvas-zoom" id="canvasZoom">
@@ -248,90 +242,7 @@
           </div>
         </section>
 
-        <!-- Resize handle: canvas ↔ inspector -->
-        <div class="panel-resize-handle" id="resizeHandleRight" data-panel="right"></div>
-
-        <!-- Right Panel: Inspector -->
-        <aside class="editor-panel panel-right" id="inspectorPanel">
-          <div class="panel-header">
-            <h3 class="panel-title">Inspector</h3>
-            <div class="panel-header-actions">
-              <button id="floatInspectorBtn" class="btn btn-ghost btn-icon btn-sm" title="Float inspector">&#x26F6;</button>
-              <button id="toggleInspectorBtn" class="btn btn-ghost btn-icon btn-sm" title="Collapse panel">
-                <svg class="panel-toggle-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M13 17l5-5-5-5M6 17l5-5-5-5"/></svg>
-              </button>
-            </div>
-          </div>
-          <div id="inspectorBody" class="inspector-body-wrap">
-            <div class="inspector-content">
-              <div id="inspectorEmpty" class="inspector-empty">
-                <div class="empty-icon">
-                  <svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 19l7-7 3 3-7 7-3-3z"/><path d="M18 13l-1.5-7.5L2 2l3.5 14.5L13 18l5-5z"/><path d="M2 2l7.586 7.586"/><circle cx="11" cy="11" r="2"/></svg>
-                </div>
-                <p>Select a block to inspect</p>
-              </div>
-              <div id="inspectorForm" class="inspector-form" style="display: none;">
-                <div class="node-header">
-                  <span id="nodeTypeTag" class="node-tag">Block Type</span>
-                  <div class="node-actions">
-                    <button id="duplicateNodeBtn" class="btn btn-ghost btn-icon btn-sm" title="Duplicate">
-                      <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
-                    </button>
-                    <button id="deleteNodeBtn" class="btn btn-danger btn-icon btn-sm" title="Delete">
-                      <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
-                    </button>
-                  </div>
-                </div>
-                <div class="inspector-tabs">
-                  <button class="inspector-tab active" data-inspector-tab="config">Config</button>
-                  <button class="inspector-tab" data-inspector-tab="variables">Variables</button>
-                  <button class="inspector-tab" data-inspector-tab="runtime">Runtime</button>
-                  <button class="inspector-tab" data-inspector-tab="json">JSON</button>
-                </div>
-                <div id="inspectorTabConfig" class="inspector-tab-content" data-inspector-tab-id="config">
-                  <div class="accordion-section open">
-                    <button class="accordion-header"><span class="accordion-caret">&#x25B8;</span><span class="accordion-title">Summary</span></button>
-                    <div class="accordion-body"><div id="nodeSummary" class="node-summary"></div></div>
-                  </div>
-                  <div id="nodeFormAccordions" class="form-sections"></div>
-                  <div class="accordion-section">
-                    <button class="accordion-header"><span class="accordion-caret">&#x25B8;</span><span class="accordion-title">Extra Variables</span></button>
-                    <div class="accordion-body"><div id="nodeFormCustomVars"></div></div>
-                  </div>
-                </div>
-                <div id="inspectorTabVariables" class="inspector-tab-content" data-inspector-tab-id="variables" style="display:none">
-                  <div class="accordion-section open">
-                    <button class="accordion-header"><span class="accordion-caret">&#x25B8;</span><span class="accordion-title">Connected Variables</span></button>
-                    <div class="accordion-body"><div id="variableHints" class="shortcuts-list"></div></div>
-                  </div>
-                  <div class="accordion-section open">
-                    <button class="accordion-header"><span class="accordion-caret">&#x25B8;</span><span class="accordion-title">Runtime State</span></button>
-                    <div class="accordion-body"><div id="runtimeStateDisplay" class="runtime-state-display"><div class="hint-empty">Run a flow to see runtime variables.</div></div></div>
-                  </div>
-                </div>
-                <div id="inspectorTabRuntime" class="inspector-tab-content" data-inspector-tab-id="runtime" style="display:none">
-                  <div class="accordion-section open">
-                    <button class="accordion-header"><span class="accordion-caret">&#x25B8;</span><span class="accordion-title">Test Input</span></button>
-                    <div class="accordion-body">
-                      <textarea id="runInput" class="form-textarea form-textarea-sm" spellcheck="false">{ "items": [1, 2, 3], "message": "hello" }</textarea>
-                      <div id="runStatus" class="run-status"></div>
-                    </div>
-                  </div>
-                  <div class="accordion-section open">
-                    <button class="accordion-header"><span class="accordion-caret">&#x25B8;</span><span class="accordion-title">Run Events</span></button>
-                    <div class="accordion-body"><pre id="events" class="events-output"></pre></div>
-                  </div>
-                </div>
-                <div id="inspectorTabJson" class="inspector-tab-content" data-inspector-tab-id="json" style="display:none">
-                  <textarea id="nodeJson" class="form-textarea" spellcheck="false"></textarea>
-                  <button id="applyNodeJsonBtn" class="btn btn-secondary btn-sm" style="margin-top:8px">Apply JSON</button>
-                </div>
-              </div>
-            </div>
-          </div>
-        </aside>
-
-        <!-- Resize handle: inspector ↔ chat -->
+        <!-- Resize handle: canvas ↔ chat -->
         <div class="panel-resize-handle chat-resize-handle" id="resizeHandleChat" data-panel="chat"></div>
 
         <!-- Chat Drawer (in-grid) -->
@@ -767,19 +678,11 @@
 
       <!-- Chat drawer is now inside canvasView grid -->
 
-      <!-- Floating Inspector -->
-      <div id="floatingInspector" class="floating-inspector" style="display:none">
-        <div class="floating-inspector-header">
-          <span>Inspector</span>
-          <button id="dockInspectorBtn" class="btn btn-ghost btn-icon btn-sm" title="Dock inspector">&#x2B1C;</button>
-        </div>
-        <div id="floatingInspectorBody" class="floating-inspector-body"></div>
-      </div>
     </main>
 
     <div id="paletteHoverCard" class="palette-hover-card" aria-hidden="true"></div>
 
-    <script src="https://cdn.jsdelivr.net/npm/drawflow/dist/drawflow.min.js"></script>
+    <script src="../scratch-canvas.js"></script>
     <script src="../toast.js"></script>
     <script src="../auth-ui.js"></script>
     <script src="../ide-runtime.js"></script>

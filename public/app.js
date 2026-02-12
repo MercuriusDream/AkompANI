@@ -12,23 +12,24 @@
   const blockSearch = document.getElementById("blockSearch");
   const palettePanel = document.getElementById("palettePanel");
   const paletteSections = document.getElementById("paletteSections");
-  const duplicateNodeBtn = document.getElementById("duplicateNodeBtn");
-  const deleteNodeBtn = document.getElementById("deleteNodeBtn");
-  const nodeTypeTag = document.getElementById("nodeTypeTag");
-  const nodeSummary = document.getElementById("nodeSummary");
-  const nodeFormAccordions = document.getElementById("nodeFormAccordions");
-  const nodeFormCustomVars = document.getElementById("nodeFormCustomVars");
-  const variableHints = document.getElementById("variableHints");
-  const inspectorEmpty = document.getElementById("inspectorEmpty");
-  const inspectorForm = document.getElementById("inspectorForm");
-  const inspectorPanel = document.getElementById("inspectorPanel");
-  const inspectorBody = document.getElementById("inspectorBody");
-  const nodeJson = document.getElementById("nodeJson");
-  const applyNodeJsonBtn = document.getElementById("applyNodeJsonBtn");
-  const runInput = document.getElementById("runInput");
-  const runFlowBtn = document.getElementById("runFlowBtn");
-  const runStatus = document.getElementById("runStatus");
-  const eventsPane = document.getElementById("events");
+  // Inspector removed — inline Scratch blocks handle editing
+  const duplicateNodeBtn = null;
+  const deleteNodeBtn = null;
+  const nodeTypeTag = null;
+  const nodeSummary = null;
+  const nodeFormAccordions = null;
+  const nodeFormCustomVars = null;
+  const variableHints = null;
+  const inspectorEmpty = null;
+  const inspectorForm = null;
+  const inspectorPanel = null;
+  const inspectorBody = null;
+  const nodeJson = null;
+  const applyNodeJsonBtn = null;
+  const runInput = null;
+  const runFlowBtn = null;
+  const runStatus = null;
+  const eventsPane = null;
   const drawflowEl = document.getElementById("drawflow");
   const modeChatTab = document.getElementById("modeChatTab");
   const modeCanvasTab = document.getElementById("modeCanvasTab");
@@ -58,13 +59,14 @@
   const buildChatInput = document.getElementById("buildChatInput");
   const buildChatSend = document.getElementById("buildChatSend");
   const buildChatMessages = document.getElementById("buildChatMessages");
-  const toggleInspectorBtn = document.getElementById("toggleInspectorBtn");
+  const toggleInspectorBtn = null;
   const toggleLeftPanelBtn = document.getElementById("toggleLeftPanel");
-  const toggleRightPanelBtn = document.getElementById("toggleRightPanel");
-  const floatInspectorBtn = document.getElementById("floatInspectorBtn");
-  const floatingInspector = document.getElementById("floatingInspector");
-  const floatingInspectorBody = document.getElementById("floatingInspectorBody");
-  const dockInspectorBtn = document.getElementById("dockInspectorBtn");
+  const toggleRightPanelBtn = null;
+  const floatInspectorBtn = null;
+  const floatingInspector = null;
+  const floatingInspectorBody = null;
+  const dockInspectorBtn = null;
+  const runtimeStateDisplay = null;
   const leftPanelTabs = document.getElementById("leftPanelTabs");
   const globalSearchInput = document.getElementById("globalSearch");
   const globalSearchResults = document.getElementById("globalSearchResults");
@@ -75,7 +77,6 @@
   const generateFlowBtn = document.getElementById("generateFlowBtn");
   const generateBtn = document.getElementById("generateBtn");
   const generateError = document.getElementById("generateError");
-  const runtimeStateDisplay = document.getElementById("runtimeStateDisplay");
   const oauthGithubClientIdInput = document.getElementById("oauthGithubClientId");
   const oauthCloudflareClientIdInput = document.getElementById("oauthCloudflareClientId");
   const connectGithubBtn = document.getElementById("connectGithubBtn");
@@ -166,13 +167,7 @@
 
   let editor = null;
   if (drawflowEl) {
-    editor = new Drawflow(drawflowEl);
-    editor.reroute = true;
-    editor.reroute_fix_curvature = false;
-    editor.reroute_curvature = 0.35;
-    editor.reroute_curvature_start_end = 0.25;
-    editor.reroute_width = 8;
-    editor.line_path = 4;
+    editor = new ScratchCanvas(drawflowEl);
     editor.start();
   }
 
@@ -1276,10 +1271,6 @@
     collapsedGroups: {},
     editorMode: "chat",
     isLeftCollapsed: false,
-    isInspectorCollapsed: false,
-    activeInspectorTab: "config",
-    isInspectorFloating: false,
-    floatingPos: { x: null, y: null },
     // Flow tabs
     openFlowTabs: [],   // [{ id, name }]
     // Chat drawer (in-grid)
@@ -1904,24 +1895,12 @@
     };
     updateNodeCard(id);
 
-    if (state.selectedNodeId === id) {
-      const selected = getSelectedNode();
-      if (selected) {
-        renderNodeSummary(selected, NODE_CATALOG[selected.name]);
-      }
-    }
   }
 
   function resetNodeRuntime() {
     state.nodeRuntimeById = {};
     state.lastRunningNodeId = "";
     refreshAllNodeCards();
-    if (state.selectedNodeId) {
-      const selected = getSelectedNode();
-      if (selected) {
-        renderNodeSummary(selected, NODE_CATALOG[selected.name]);
-      }
-    }
   }
 
   function applyRunEventToNodeRuntime(event) {
@@ -2034,6 +2013,59 @@
     }
   }
 
+  function createInlineFieldHtml(data, field) {
+    const key = field.key;
+    const val = data?.[key] ?? "";
+    const safeVal = escapeHtml(String(val));
+    const label = `<span class="scratch-field-label">${escapeHtml(field.label || field.key)}</span>`;
+    const insertMode = field.insertMode ? ` data-insert-mode="${escapeHtml(field.insertMode)}"` : "";
+
+    if (field.type === "select") {
+      const opts = Array.isArray(field.options) ? field.options : [];
+      // Use pill toggles for small option sets (≤6), dropdown for larger
+      if (opts.length <= 6) {
+        const pills = opts.map(o => {
+          const active = String(val) === String(o) ? " active" : "";
+          return `<button type="button" class="scratch-pill${active}" data-field-key="${escapeHtml(key)}" data-pill-value="${escapeHtml(o)}">${escapeHtml(o)}</button>`;
+        }).join("");
+        return `<div class="scratch-field">${label}<div class="scratch-pill-group">${pills}</div></div>`;
+      } else {
+        const options = opts.map(o => {
+          const selected = String(val) === String(o) ? " selected" : "";
+          return `<option value="${escapeHtml(o)}"${selected}>${escapeHtml(o)}</option>`;
+        }).join("");
+        return `<div class="scratch-field">${label}<select class="scratch-select" data-field-key="${escapeHtml(key)}"${insertMode}>${options}</select></div>`;
+      }
+    }
+
+    if (field.type === "number") {
+      return `<div class="scratch-field">${label}<input class="scratch-input scratch-input-number" type="number" data-field-key="${escapeHtml(key)}" value="${safeVal}"${insertMode}/></div>`;
+    }
+
+    if (field.type === "textarea") {
+      // Show preview when collapsed, real textarea when expanded
+      const preview = String(val).substring(0, 60) || field.example || "Click to edit…";
+      return `<div class="scratch-field" style="flex-direction:column;align-items:stretch">
+        ${label}
+        <div class="scratch-textarea-preview" data-field-key="${escapeHtml(key)}"${insertMode}>${escapeHtml(preview)}</div>
+        <textarea class="scratch-textarea" data-field-key="${escapeHtml(key)}"${insertMode} style="display:none" placeholder="${escapeHtml(field.example || "")}">${safeVal}</textarea>
+      </div>`;
+    }
+
+    if (field.type === "json") {
+      const jsonStr = typeof val === "object" ? JSON.stringify(val, null, 2) : String(val);
+      const preview = String(jsonStr).substring(0, 60) || "{}";
+      return `<div class="scratch-field" style="flex-direction:column;align-items:stretch">
+        ${label}
+        <div class="scratch-textarea-preview" data-field-key="${escapeHtml(key)}"${insertMode}>${escapeHtml(preview)}</div>
+        <textarea class="scratch-textarea" data-field-key="${escapeHtml(key)}"${insertMode} style="display:none" placeholder="${escapeHtml(field.example || "{}")}">${escapeHtml(jsonStr)}</textarea>
+      </div>`;
+    }
+
+    // Default: text input
+    return `<div class="scratch-field">${label}<input class="scratch-input" type="text" data-field-key="${escapeHtml(key)}" value="${safeVal}" placeholder="${escapeHtml(field.example || "")}"${insertMode}/></div>`;
+  }
+
   function nodeTemplate(type, nodeData, nodeId = "") {
     const def = NODE_CATALOG[type] || {
       label: type,
@@ -2046,38 +2078,57 @@
       data: {},
     };
 
+    const data = nodeData ?? def.data ?? {};
     const runtime = getNodeRuntime(String(nodeId || ""));
     const statusClass = runtimeStatusClass(runtime.status);
     const statusText = runtimeStatusText(runtime.status);
-    const hoverInfo = nodeHoverInfo(def);
     const safeColor = sanitizeCssColor(def.color, "#666");
     const safeLabel = escapeHtml(def.label || type || "Node");
     const safeMeta = escapeHtml(def.meta || "");
-    const inlineSummary = nodeInlineSummary(type, nodeData ?? def.data ?? {});
-    const summaryHtml = inlineSummary ? `<div class="node-inline-summary" title="${escapeHtml(inlineSummary)}">${escapeHtml(inlineSummary)}</div>` : "";
 
+    // Status badge class
+    const statusBadgeClass = runtime.status === "running" ? "status-running"
+      : runtime.status === "completed" ? "status-done"
+      : runtime.status === "failed" ? "status-error" : "";
+
+    // Summary: first 3 preview items (shown when collapsed)
+    const previewItems = nodePreviewItems(def, data).slice(0, 3);
+    const summaryHtml = previewItems.map(i =>
+      `<span class="scratch-summary-item"><span class="k">${escapeHtml(i.key)}</span> ${escapeHtml(i.value)}</span>`
+    ).join("");
+
+    // Inline fields (shown when expanded)
+    const fields = Array.isArray(def.fields) ? def.fields : [];
+    const fieldsHtml = fields.map(f => createInlineFieldHtml(data, f)).join("");
+
+    // Port labels
     const portLabels = String(def.ports || "").split("·").map(p => p.trim()).filter(Boolean);
-    const portHtml = portLabels.length > 0
-      ? `<div class="node-port-labels">${portLabels.map(p => `<span class="port-label">${escapeHtml(p)}</span>`).join("")}</div>`
+    const portsHtml = portLabels.length > 0
+      ? portLabels.map(p => `<span>${escapeHtml(p)}</span>`).join("")
       : "";
 
+    // Duplicate / delete SVG icons
+    const dupSvg = `<svg viewBox="0 0 16 16"><path d="M4 4v-2h8v8h-2v2h-8v-8h2zm1-1h6v6h-6v-6zm-2 3h-1v6h6v-1" fill="currentColor"/></svg>`;
+    const delSvg = `<svg viewBox="0 0 16 16"><path d="M5.5 5.5v5m5-5v5M2 4h12m-1 0-.67 8.04a1 1 0 01-1 .96H4.67a1 1 0 01-1-.96L3 4m3-2h4" stroke="currentColor" fill="none" stroke-width="1.2" stroke-linecap="round"/></svg>`;
+
+    const isExpanded = state.selectedNodeId === String(nodeId);
+
     return `
-      <div class="node-card" title="${escapeHtml(hoverInfo)}" style="--node-color:${safeColor}">
-        <div class="node-color-strip" style="background:${safeColor}"></div>
-        <div class="node-card-body">
-          <div class="node-top-row">
-            <div class="node-title-wrap">
-              <div class="badge" style="background:${safeColor}">${blockIconHtml(type, def)}</div>
-              <div class="node-title-col">
-                <div class="title">${safeLabel}</div>
-                <div class="node-meta">${safeMeta}</div>
-              </div>
-            </div>
-            <div class="node-status ${statusClass}">${statusText}</div>
+      <div class="scratch-block${isExpanded ? " is-expanded" : ""}" data-node-type="${escapeHtml(type)}" style="--node-color:${safeColor}">
+        <div class="scratch-block-header" style="background:${safeColor}">
+          <span class="scratch-block-icon">${blockIconHtml(type, def)}</span>
+          <span class="scratch-block-label">${safeLabel}</span>
+          <span class="scratch-block-meta">${safeMeta}</span>
+          <div class="scratch-block-actions">
+            <button class="scratch-btn" data-action="duplicate" title="Duplicate">${dupSvg}</button>
+            <button class="scratch-btn" data-action="delete" title="Delete">${delSvg}</button>
           </div>
-          ${summaryHtml}
-          ${portHtml}
+          ${statusText !== "Idle" ? `<span class="scratch-block-status ${statusBadgeClass}">${statusText}</span>` : ""}
         </div>
+        <div class="scratch-block-summary">${summaryHtml}</div>
+        <div class="scratch-block-fields">${fieldsHtml}</div>
+        <div class="scratch-block-vars"></div>
+        ${portsHtml ? `<div class="scratch-block-ports">${portsHtml}</div>` : ""}
       </div>
     `;
   }
@@ -2088,24 +2139,47 @@
     const node = editor.getNodeFromId(Number(id));
     if (!node) return;
 
-    const nodeEl = document.getElementById(`node-${id}`);
-    const content = nodeEl?.querySelector(".drawflow_content_node");
+    const nodeEl = document.getElementById(`snode-${id}`) || document.getElementById(`node-${id}`);
+    const content = nodeEl?.querySelector(".scratch-fo-body") || nodeEl?.querySelector(".drawflow_content_node");
     if (!content) return;
 
+    // If this node is currently selected/expanded, only update status badge + summary
+    // to avoid destroying active input state (cursor position, focus, etc.)
+    if (state.selectedNodeId === id) {
+      const statusEl = content.querySelector(".scratch-block-status");
+      if (statusEl) {
+        const runtime = getNodeRuntime(id);
+        const statusText = runtimeStatusText(runtime.status);
+        const statusBadgeClass = runtime.status === "running" ? "status-running"
+          : runtime.status === "completed" ? "status-done"
+          : runtime.status === "failed" ? "status-error" : "";
+        statusEl.className = `scratch-block-status ${statusBadgeClass}`;
+        statusEl.textContent = statusText;
+      }
+      updateScratchBlockSummary(id);
+      return;
+    }
+
+    // Not selected — safe to do full re-render
     content.innerHTML = nodeTemplate(node.name, node.data || {}, id);
+    // Update SVG path to match new content size
+    if (editor._updateBlockPath) editor._updateBlockPath(Number(id));
   }
 
   function refreshAllNodeCards() {
     const nodes = editor?.drawflow?.drawflow?.Home?.data || {};
     for (const [nodeId, node] of Object.entries(nodes)) {
-      const nodeEl = document.getElementById(`node-${nodeId}`);
-      const content = nodeEl?.querySelector(".drawflow_content_node");
+      const nodeEl = document.getElementById(`snode-${nodeId}`) || document.getElementById(`node-${nodeId}`);
+      const content = nodeEl?.querySelector(".scratch-fo-body") || nodeEl?.querySelector(".drawflow_content_node");
       if (!content) continue;
       content.innerHTML = nodeTemplate(node.name, node.data || {}, nodeId);
     }
   }
 
   function canvasPositionFromClient(clientX, clientY) {
+    if (editor?.clientToCanvasCoords) {
+      return editor.clientToCanvasCoords(clientX, clientY);
+    }
     if (!editor?.precanvas) return { x: 0, y: 0 };
     const rect = editor.precanvas.getBoundingClientRect();
     const scaleX = editor.precanvas.clientWidth / (editor.precanvas.clientWidth * editor.zoom);
@@ -2382,13 +2456,7 @@
 
   function clearEditor() {
     if (!editor) return;
-    if (typeof editor.clear === "function") {
-      editor.clear();
-      return;
-    }
-
-    editor.drawflow.drawflow.Home.data = {};
-    editor.load();
+    editor.clear();
   }
 
   function createStarterFlow() {
@@ -2412,13 +2480,13 @@
   }
 
   function setNodeButtonsEnabled(enabled) {
-    duplicateNodeBtn.disabled = !enabled;
-    deleteNodeBtn.disabled = !enabled;
+    // No-op — inspector buttons removed; duplicate/delete now on Scratch block header
   }
 
   function nodeIdFromDomId(domId) {
     if (!domId) return "";
-    const match = String(domId).match(/^node-(\d+)$/);
+    // Support both snode-{id} (ScratchCanvas) and node-{id} (legacy Drawflow)
+    const match = String(domId).match(/^(?:snode|node)-(\d+)$/);
     return match ? match[1] : "";
   }
 
@@ -2427,18 +2495,11 @@
     const id = String(nodeId);
     delete state.nodeRuntimeById[id];
     try {
-      editor.removeNodeId(`node-${nodeId}`);
-      return;
+      editor.removeNodeId(Number(nodeId));
     } catch {
       try {
-        editor.removeNodeId(Number(nodeId));
-      } catch {
-        const home = editor?.drawflow?.drawflow?.Home?.data;
-        if (home && home[nodeId]) {
-          delete home[nodeId];
-          editor.load();
-        }
-      }
+        editor.removeNodeId(`node-${nodeId}`);
+      } catch { /* ignore */ }
     }
   }
 
@@ -2477,9 +2538,15 @@
     mutator(next);
     editor.updateNodeDataFromId(Number(state.selectedNodeId), next);
     updateNodeCard(state.selectedNodeId);
-    if (nodeJson) {
-      nodeJson.value = JSON.stringify(next, null, 2);
-    }
+  }
+
+  function patchNodeData(nodeId, fieldKey, value) {
+    const node = editor.getNodeFromId(Number(nodeId));
+    if (!node) return;
+    const next = { ...(node.data || {}), [fieldKey]: value };
+    editor.updateNodeDataFromId(Number(nodeId), next);
+    // Only update summary line, NOT full re-render (preserves field focus)
+    updateScratchBlockSummary(nodeId);
   }
 
   function getInsertTarget() {
@@ -2487,10 +2554,14 @@
       return state.activeFormField;
     }
 
-    const fallback = nodeFormAccordions.querySelector("input, textarea");
-    if (fallback) {
-      state.activeFormField = fallback;
-      return fallback;
+    // Fallback: find first input in the currently expanded Scratch block
+    const expanded = drawflowEl && drawflowEl.querySelector(".scratch-block.is-expanded");
+    if (expanded) {
+      const fallback = expanded.querySelector("input, textarea");
+      if (fallback) {
+        state.activeFormField = fallback;
+        return fallback;
+      }
     }
 
     return null;
@@ -2603,46 +2674,7 @@
     return hints;
   }
 
-  function renderVariableHints(node) {
-    variableHints.innerHTML = "";
-    if (!node) return;
-
-    const hints = collectVariableHints(node);
-
-    const head = document.createElement("div");
-    head.className = "hint-head";
-    head.textContent = "Connected Variables (click to insert)";
-    variableHints.appendChild(head);
-
-    if (hints.length === 0) {
-      const empty = document.createElement("div");
-      empty.className = "hint-empty";
-      empty.textContent = "No upstream variables available yet.";
-      variableHints.appendChild(empty);
-      return;
-    }
-
-    const list = document.createElement("div");
-    list.className = "hint-list";
-
-    for (const hint of hints) {
-      const chip = document.createElement("button");
-      chip.type = "button";
-      chip.className = "hint-chip";
-      chip.textContent = hint.expression;
-      chip.title = `from ${hint.from}`;
-      chip.addEventListener("click", () => {
-        const target = getInsertTarget();
-        if (!target) return;
-        const mode = target.dataset.insertMode || "expression";
-        const snippet = mode === "template" ? `{{${hint.expression}}}` : hint.expression;
-        insertIntoField(target, snippet);
-      });
-      list.appendChild(chip);
-    }
-
-    variableHints.appendChild(list);
-  }
+  // renderVariableHints removed — variable chips now rendered inline in Scratch blocks
 
   function addPresetButtons(fieldInputWrap, field, input) {
     if (!Array.isArray(field.presets) || field.presets.length === 0) return;
@@ -2981,162 +3013,7 @@
     return wrapper;
   }
 
-  function renderNodeSummary(node, def) {
-    nodeSummary.textContent = "";
-
-    if (!node || !def) {
-      const empty = document.createElement("div");
-      empty.className = "node-summary-empty";
-      empty.textContent = "Select a block to view details and edit settings.";
-      nodeSummary.appendChild(empty);
-      return;
-    }
-
-    const runtime = getNodeRuntime(node.id);
-    const groupLabel = groupLabelById(def.group);
-    const statusText = runtimeStatusText(runtime.status);
-    const runtimeDetail = runtime.detail ? truncateText(runtime.detail, 80) : "-";
-
-    const desc = document.createElement("div");
-    desc.className = "summary-desc";
-    desc.textContent = def.description || "";
-
-    const grid = document.createElement("div");
-    grid.className = "summary-grid";
-
-    const rows = [
-      ["Block", def.label || node.name],
-      ["Category", groupLabel],
-      ["Inputs", String(def.inputs ?? 0)],
-      ["Outputs", String(def.outputs ?? 0)],
-      ["Status", statusText],
-      ["Runtime", runtimeDetail],
-    ];
-
-    for (const [label, value] of rows) {
-      const item = document.createElement("div");
-      item.className = "summary-item";
-
-      const key = document.createElement("span");
-      key.className = "k";
-      key.textContent = label;
-
-      const val = document.createElement("span");
-      val.className = "v";
-      val.textContent = value;
-
-      item.appendChild(key);
-      item.appendChild(val);
-      grid.appendChild(item);
-    }
-
-    nodeSummary.appendChild(desc);
-    nodeSummary.appendChild(grid);
-  }
-
-  function groupFieldsBySection(fields) {
-    const map = new Map();
-    for (const field of fields) {
-      const section = field.section || "General";
-      if (!map.has(section)) map.set(section, []);
-      map.get(section).push(field);
-    }
-    return map;
-  }
-
-  function renderNodeForm(node) {
-    nodeFormAccordions.innerHTML = "";
-    nodeFormCustomVars.innerHTML = "";
-
-    const def = NODE_CATALOG[node.name];
-    const fields = def?.fields || [];
-
-    if (fields.length === 0) {
-      const empty = document.createElement("div");
-      empty.className = "node-form-empty";
-      empty.textContent = "No standard settings for this block yet.";
-      nodeFormAccordions.appendChild(empty);
-    }
-
-    if (fields.length > 0) {
-      const bySection = groupFieldsBySection(fields);
-
-      for (const [sectionName, sectionFields] of bySection.entries()) {
-        const accordion = document.createElement("div");
-        accordion.className = "accordion-section open";
-
-        const header = document.createElement("button");
-        header.className = "accordion-header";
-        header.innerHTML = `<span class="accordion-caret">&#x25B8;</span><span class="accordion-title">${escapeHtml(sectionName)}</span>`;
-        accordion.appendChild(header);
-
-        const body = document.createElement("div");
-        body.className = "accordion-body";
-
-        const section = document.createElement("section");
-        section.className = "form-section";
-        section.style.border = "none";
-        section.style.background = "none";
-        section.style.padding = "0";
-
-        for (const field of sectionFields) {
-          section.appendChild(createFieldInput(node, field));
-        }
-
-        body.appendChild(section);
-        accordion.appendChild(body);
-        nodeFormAccordions.appendChild(accordion);
-      }
-    }
-
-    const customHelp = document.createElement("div");
-    customHelp.className = "field-help";
-    customHelp.textContent = "Add custom key/value settings for this node.";
-    nodeFormCustomVars.appendChild(customHelp);
-
-    const customEditor = createJsonObjectEditor((node.data || {}).customVars || {}, (nextObject) => {
-      patchSelectedNodeData((next) => {
-        next.customVars = nextObject;
-      });
-    });
-    nodeFormCustomVars.appendChild(customEditor);
-  }
-
-  function refreshNodeInspector() {
-    const node = getSelectedNode();
-
-    if (!node) {
-      inspectorEmpty.style.display = "";
-      inspectorForm.style.display = "none";
-      nodeTypeTag.textContent = "Pick a block to edit settings";
-      nodeFormAccordions.innerHTML = '<div class="node-form-empty">Select a block to start editing.</div>';
-      nodeFormCustomVars.innerHTML = "";
-      if (nodeJson) {
-        nodeJson.value = "";
-      }
-      variableHints.innerHTML = "";
-      inspectorPanel.dataset.nodeType = "";
-      state.activeFormField = null;
-      setNodeButtonsEnabled(false);
-      renderNodeSummary(null, null);
-      return;
-    }
-
-    inspectorEmpty.style.display = "none";
-    inspectorForm.style.display = "";
-    const def = NODE_CATALOG[node.name];
-    nodeTypeTag.textContent = `${def?.icon || "Node"} · ${groupLabelById(def?.group)}`;
-    inspectorPanel.dataset.nodeType = node.name;
-    if (nodeJson) {
-      nodeJson.value = JSON.stringify(node.data || {}, null, 2);
-    }
-
-    setNodeButtonsEnabled(true);
-    renderNodeSummary(node, def);
-    renderNodeForm(node);
-    renderVariableHints(node);
-    refreshRuntimeStateDisplay();
-  }
+  // renderNodeSummary, renderNodeForm, refreshNodeInspector removed — Scratch blocks handle inline editing
 
   function paletteHoverDefaults(def) {
     return nodePreviewItems(def, def?.data || {}).slice(0, 6);
@@ -3216,24 +3093,15 @@
   }
 
   function refreshCanvasConnections() {
-    const nodes = editor?.drawflow?.drawflow?.Home?.data || {};
-    for (const nodeId of Object.keys(nodes)) {
-      try {
-        editor.updateConnectionNodes(`node-${nodeId}`);
-      } catch {
-        try {
-          editor.updateConnectionNodes(nodeId);
-        } catch {
-          // no-op
-        }
-      }
+    // ScratchCanvas re-renders connections automatically
+    if (editor?._renderConnections) {
+      editor._renderConnections();
     }
   }
 
   function persistEditorMode() {
     try {
       localStorage.setItem("voyager_editor_mode", state.editorMode);
-      localStorage.setItem("voyager_right_collapsed", state.isInspectorCollapsed ? "1" : "0");
     } catch {
       // ignore storage failures
     }
@@ -3271,22 +3139,15 @@
 
     // Apply panel collapse states in canvas mode
     if (resolvedMode === "canvas") {
-      document.body.classList.toggle("right-collapsed", state.isInspectorCollapsed);
       document.body.classList.toggle("left-collapsed", state.isLeftCollapsed);
       document.body.classList.toggle("chat-drawer-open", state.isChatDrawerOpen);
       document.body.classList.toggle("left-panel-flipped", state.isLeftPanelFlipped);
       // Apply persisted panel widths via CSS custom properties
       if (canvasView) {
         if (state._leftW) canvasView.style.setProperty("--col-blocks", state._leftW + "px");
-        if (state._rightW) canvasView.style.setProperty("--col-inspector", state._rightW + "px");
         if (state.isChatDrawerOpen && state._chatW) canvasView.style.setProperty("--col-chat", state._chatW + "px");
       }
-      if (toggleInspectorBtn) {
-        toggleInspectorBtn.classList.toggle("collapsed", state.isInspectorCollapsed);
-        toggleInspectorBtn.title = state.isInspectorCollapsed ? "Expand panel" : "Collapse panel";
-      }
     } else {
-      document.body.classList.remove("right-collapsed");
       document.body.classList.remove("left-collapsed");
       document.body.classList.remove("chat-drawer-open");
       document.body.classList.remove("left-panel-flipped");
@@ -3316,18 +3177,7 @@
     }
   }
 
-  function toggleInspectorCollapse() {
-    state.isInspectorCollapsed = !state.isInspectorCollapsed;
-    document.body.classList.toggle("right-collapsed", state.isInspectorCollapsed);
-    if (toggleInspectorBtn) {
-      toggleInspectorBtn.classList.toggle("collapsed", state.isInspectorCollapsed);
-      toggleInspectorBtn.title = state.isInspectorCollapsed ? "Expand panel" : "Collapse panel";
-    }
-    updateLayoutToggleIcons();
-    hidePaletteHoverCard();
-    persistEditorMode();
-    setTimeout(() => refreshCanvasConnections(), 130);
-  }
+  // Inspector removed — toggleInspectorCollapse no longer needed
 
   function toggleLeftCollapse() {
     state.isLeftCollapsed = !state.isLeftCollapsed;
@@ -3345,13 +3195,6 @@
       toggleLeftPanelBtn.innerHTML = state.isLeftCollapsed
         ? '<svg width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg"><rect x="1" y="2" width="5" height="12" rx="1" stroke="currentColor" stroke-width="1.2" fill="none"/><rect x="7.5" y="2" width="7.5" height="12" rx="1" stroke="currentColor" stroke-width="1.2" fill="none"/></svg>'
         : '<svg width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg"><rect x="1" y="2" width="5" height="12" rx="1" fill="currentColor" opacity="0.9"/><rect x="7.5" y="2" width="7.5" height="12" rx="1" stroke="currentColor" stroke-width="1.2" fill="none"/></svg>';
-    }
-    if (toggleRightPanelBtn) {
-      toggleRightPanelBtn.classList.toggle("is-collapsed", state.isInspectorCollapsed);
-      toggleRightPanelBtn.title = state.isInspectorCollapsed ? "Show right sidebar" : "Hide right sidebar";
-      toggleRightPanelBtn.innerHTML = state.isInspectorCollapsed
-        ? '<svg width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg"><rect x="1" y="2" width="7.5" height="12" rx="1" stroke="currentColor" stroke-width="1.2" fill="none"/><rect x="10" y="2" width="5" height="12" rx="1" stroke="currentColor" stroke-width="1.2" fill="none"/></svg>'
-        : '<svg width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg"><rect x="1" y="2" width="7.5" height="12" rx="1" stroke="currentColor" stroke-width="1.2" fill="none"/><rect x="10" y="2" width="5" height="12" rx="1" fill="currentColor" opacity="0.9"/></svg>';
     }
     if (toggleChatPanelBtn) {
       toggleChatPanelBtn.classList.toggle("is-active", state.isChatDrawerOpen);
@@ -3527,10 +3370,10 @@
       `;
       item.addEventListener("click", () => {
         state.selectedNodeId = String(nodeId);
-        // Highlight the node in the drawflow canvas
-        const nodeEl = document.getElementById(`node-${nodeId}`);
+        // Highlight the node in the canvas
+        const nodeEl = document.getElementById(`snode-${nodeId}`) || document.getElementById(`node-${nodeId}`);
         if (nodeEl) {
-          document.querySelectorAll(".drawflow-node.selected").forEach(n => n.classList.remove("selected"));
+          document.querySelectorAll(".scratch-node.selected, .drawflow-node.selected").forEach(n => n.classList.remove("selected"));
           nodeEl.classList.add("selected");
         }
         refreshNodeInspector();
@@ -3616,10 +3459,10 @@
   function attachDiscardDragBehavior() {
     if (!drawflowEl) return;
     drawflowEl.addEventListener("mousedown", (event) => {
-      const nodeEl = event.target.closest(".drawflow-node");
+      const nodeEl = event.target.closest(".scratch-node") || event.target.closest(".drawflow-node");
       if (!nodeEl) return;
 
-      const nodeId = nodeIdFromDomId(nodeEl.id);
+      const nodeId = nodeEl.dataset.nodeId || nodeIdFromDomId(nodeEl.id);
       if (!nodeId) return;
 
       state.dragCandidateNodeId = nodeId;
@@ -6156,156 +5999,75 @@
     switchDeployMethod("cloudflare");
   }
 
-  /* ===== Inspector Tab Switching ===== */
+  /* ===== Inspector removed — Scratch blocks handle editing inline ===== */
+  function refreshNodeInspector() {} // stub for legacy callsites
 
-  function switchInspectorTab(tabId) {
-    state.activeInspectorTab = tabId;
-    const tabs = document.querySelectorAll(".inspector-tab");
-    const contents = document.querySelectorAll(".inspector-tab-content");
-
-    for (const tab of tabs) {
-      tab.classList.toggle("active", tab.dataset.inspectorTab === tabId);
-    }
-    for (const content of contents) {
-      content.style.display = content.dataset.inspectorTabId === tabId ? "" : "none";
-    }
+  /* ===== Scratch Block Expand / Collapse (implemented fully in Phase 4) ===== */
+  function expandScratchBlock(id) {
+    const el = document.getElementById(`snode-${id}`) || document.getElementById(`node-${id}`);
+    if (!el) return;
+    const block = el.querySelector(".scratch-block");
+    if (!block) return;
+    block.classList.add("is-expanded");
+    const fields = block.querySelector(".scratch-block-fields");
+    const vars = block.querySelector(".scratch-block-vars");
+    const summary = block.querySelector(".scratch-block-summary");
+    if (fields) fields.style.display = "";
+    if (vars) vars.style.display = "";
+    if (summary) summary.style.display = "none";
+    updateScratchBlockVars(id);
+    // Update SVG path size after expand
+    if (editor._updateBlockPath) editor._updateBlockPath(Number(id));
   }
 
-  function bindInspectorTabEvents() {
-    const tabs = document.querySelectorAll(".inspector-tab");
-    for (const tab of tabs) {
-      tab.addEventListener("click", () => {
-        switchInspectorTab(tab.dataset.inspectorTab);
-      });
-    }
+  function collapseScratchBlock(id) {
+    const el = document.getElementById(`snode-${id}`) || document.getElementById(`node-${id}`);
+    if (!el) return;
+    const block = el.querySelector(".scratch-block");
+    if (!block) return;
+    block.classList.remove("is-expanded");
+    const fields = block.querySelector(".scratch-block-fields");
+    const vars = block.querySelector(".scratch-block-vars");
+    const summary = block.querySelector(".scratch-block-summary");
+    if (fields) fields.style.display = "none";
+    if (vars) vars.style.display = "none";
+    if (summary) summary.style.display = "";
+    // Update summary text from current data
+    updateScratchBlockSummary(id);
+    // Update SVG path size after collapse
+    if (editor._updateBlockPath) editor._updateBlockPath(Number(id));
   }
 
-  /* ===== Accordion ===== */
-
-  function bindAccordionEvents() {
-    document.addEventListener("click", (event) => {
-      const header = event.target.closest(".accordion-header");
-      if (!header) return;
-      const section = header.closest(".accordion-section");
-      if (!section) return;
-      section.classList.toggle("open");
-    });
-  }
-
-  /* ===== Runtime State Display ===== */
-
-  function refreshRuntimeStateDisplay() {
-    if (!runtimeStateDisplay) return;
-    const node = getSelectedNode();
-    if (!node) {
-      runtimeStateDisplay.innerHTML = '<div class="hint-empty">Select a node to see runtime state.</div>';
+  function updateScratchBlockVars(id) {
+    const el = document.getElementById(`snode-${id}`) || document.getElementById(`node-${id}`);
+    if (!el) return;
+    const varsEl = el.querySelector(".scratch-block-vars");
+    if (!varsEl) return;
+    const node = editor.getNodeFromId(Number(id));
+    if (!node) return;
+    const hints = collectVariableHints(node);
+    if (hints.length === 0) {
+      varsEl.innerHTML = "";
       return;
     }
-
-    const runtime = getNodeRuntime(node.id);
-    if (runtime.status === "idle") {
-      runtimeStateDisplay.innerHTML = '<div class="hint-empty">Run a flow to see runtime variables.</div>';
-      return;
-    }
-
-    const detail = runtime.detail || "No detail";
-    runtimeStateDisplay.innerHTML = `<pre>${escapeHtml(detail)}</pre>`;
+    varsEl.innerHTML = hints.map(h =>
+      `<button class="scratch-var-chip" data-expr="${escapeHtml(h.expression)}" title="from ${escapeHtml(h.from)}">${escapeHtml(h.expression)}</button>`
+    ).join("");
   }
 
-  /* ===== Floating Inspector ===== */
-
-  function toggleFloatingInspector() {
-    if (state.isInspectorFloating) {
-      dockInspector();
-    } else {
-      floatInspector();
-    }
-  }
-
-  function floatInspector() {
-    if (!inspectorPanel || !floatingInspector) return;
-    state.isInspectorFloating = true;
-
-    // Move inspector body content to floating container
-    if (inspectorBody && floatingInspectorBody) {
-      floatingInspectorBody.appendChild(inspectorBody);
-    }
-
-    // Hide the right panel
-    inspectorPanel.style.display = "none";
-    floatingInspector.style.display = "";
-
-    // Position if not already set
-    if (state.floatingPos.x != null) {
-      floatingInspector.style.left = state.floatingPos.x + "px";
-      floatingInspector.style.top = state.floatingPos.y + "px";
-    }
-
-    // Update grid to not have right panel space
-    document.body.classList.add("right-collapsed");
-  }
-
-  function dockInspector() {
-    if (!inspectorPanel || !floatingInspector) return;
-    state.isInspectorFloating = false;
-
-    // Move inspector body back
-    if (inspectorBody && inspectorPanel) {
-      inspectorPanel.appendChild(inspectorBody);
-    }
-
-    inspectorPanel.style.display = "";
-    floatingInspector.style.display = "none";
-    document.body.classList.remove("right-collapsed");
-    state.isInspectorCollapsed = false;
-    applyPanelCollapseState(true);
-  }
-
-  function initFloatingDrag() {
-    if (!floatingInspector) return;
-    const header = floatingInspector.querySelector(".floating-inspector-header");
-    if (!header) return;
-
-    let isDragging = false;
-    let startX = 0;
-    let startY = 0;
-    let startLeft = 0;
-    let startTop = 0;
-
-    header.addEventListener("mousedown", (event) => {
-      if (event.target.closest("button")) return;
-      isDragging = true;
-      startX = event.clientX;
-      startY = event.clientY;
-      startLeft = floatingInspector.offsetLeft;
-      startTop = floatingInspector.offsetTop;
-      event.preventDefault();
-    });
-
-    document.addEventListener("mousemove", (event) => {
-      if (!isDragging) return;
-      const dx = event.clientX - startX;
-      const dy = event.clientY - startY;
-      const newLeft = startLeft + dx;
-      const newTop = startTop + dy;
-      floatingInspector.style.left = newLeft + "px";
-      floatingInspector.style.top = newTop + "px";
-      state.floatingPos = { x: newLeft, y: newTop };
-    });
-
-    document.addEventListener("mouseup", () => {
-      isDragging = false;
-    });
-  }
-
-  function bindFloatingInspectorEvents() {
-    if (floatInspectorBtn) {
-      floatInspectorBtn.addEventListener("click", () => toggleFloatingInspector());
-    }
-    if (dockInspectorBtn) {
-      dockInspectorBtn.addEventListener("click", () => dockInspector());
-    }
-    initFloatingDrag();
+  function updateScratchBlockSummary(id) {
+    const el = document.getElementById(`snode-${id}`) || document.getElementById(`node-${id}`);
+    if (!el) return;
+    const summaryEl = el.querySelector(".scratch-block-summary");
+    if (!summaryEl) return;
+    const node = editor.getNodeFromId(Number(id));
+    if (!node) return;
+    const def = NODE_CATALOG[node.name];
+    if (!def) return;
+    const items = nodePreviewItems(def, node.data || {}).slice(0, 3);
+    summaryEl.innerHTML = items.map(i =>
+      `<span class="scratch-summary-item"><span class="k">${escapeHtml(i.key)}</span> ${escapeHtml(i.value)}</span>`
+    ).join("");
   }
 
   function bindGenerateEvents() {
@@ -6392,7 +6154,6 @@
   /* ===== Panel Resize Handles ===== */
   (function initPanelResize() {
     const handleLeft = document.getElementById("resizeHandleLeft");
-    const handleRight = document.getElementById("resizeHandleRight");
     const handleChat = document.getElementById("resizeHandleChat");
     const canvasLayout = document.getElementById("canvasView");
     if (!canvasLayout) return;
@@ -6401,12 +6162,12 @@
     const MAX_PANEL = 480;
     const MIN_CHAT = 240;
     const MAX_CHAT = 560;
-    let dragging = null; // "left" | "right" | "chat" | null
+    let dragging = null; // "left" | "chat" | null
 
     function onPointerDown(e, side) {
       e.preventDefault();
       dragging = side;
-      const handles = { left: handleLeft, right: handleRight, chat: handleChat };
+      const handles = { left: handleLeft, chat: handleChat };
       const handle = handles[side];
       if (handle) handle.classList.add("is-dragging");
       document.body.style.cursor = "col-resize";
@@ -6422,14 +6183,6 @@
         leftW = Math.max(MIN_PANEL, Math.min(MAX_PANEL, leftW));
         canvasLayout.style.setProperty("--col-blocks", leftW + "px");
         state._leftW = leftW;
-      } else if (dragging === "right") {
-        // Right panel: distance from right edge, but account for chat column
-        const chatW = state.isChatDrawerOpen ? (state._chatW || 360) : 0;
-        const chatResW = state.isChatDrawerOpen ? 4 : 0;
-        let rightW = Math.round(rect.right - e.clientX - chatW - chatResW);
-        rightW = Math.max(MIN_PANEL, Math.min(MAX_PANEL, rightW));
-        canvasLayout.style.setProperty("--col-inspector", rightW + "px");
-        state._rightW = rightW;
       } else if (dragging === "chat") {
         let chatW = Math.round(rect.right - e.clientX);
         chatW = Math.max(MIN_CHAT, Math.min(MAX_CHAT, chatW));
@@ -6440,7 +6193,7 @@
 
     function onPointerUp() {
       if (!dragging) return;
-      const handles = { left: handleLeft, right: handleRight, chat: handleChat };
+      const handles = { left: handleLeft, chat: handleChat };
       const handle = handles[dragging];
       if (handle) handle.classList.remove("is-dragging");
       dragging = null;
@@ -6448,13 +6201,11 @@
       document.body.style.userSelect = "";
       try {
         localStorage.setItem("voyager_panel_left_w", String(state._leftW || 280));
-        localStorage.setItem("voyager_panel_right_w", String(state._rightW || 300));
         localStorage.setItem("voyager_panel_chat_w", String(state._chatW || 360));
       } catch {}
     }
 
     if (handleLeft) handleLeft.addEventListener("pointerdown", (e) => onPointerDown(e, "left"));
-    if (handleRight) handleRight.addEventListener("pointerdown", (e) => onPointerDown(e, "right"));
     if (handleChat) handleChat.addEventListener("pointerdown", (e) => onPointerDown(e, "chat"));
     document.addEventListener("pointermove", onPointerMove);
     document.addEventListener("pointerup", onPointerUp);
@@ -6462,15 +6213,10 @@
     // Restore persisted widths via CSS custom properties
     try {
       const savedL = parseInt(localStorage.getItem("voyager_panel_left_w"), 10);
-      const savedR = parseInt(localStorage.getItem("voyager_panel_right_w"), 10);
       const savedC = parseInt(localStorage.getItem("voyager_panel_chat_w"), 10);
       if (savedL >= MIN_PANEL && savedL <= MAX_PANEL) {
         state._leftW = savedL;
         canvasLayout.style.setProperty("--col-blocks", savedL + "px");
-      }
-      if (savedR >= MIN_PANEL && savedR <= MAX_PANEL) {
-        state._rightW = savedR;
-        canvasLayout.style.setProperty("--col-inspector", savedR + "px");
       }
       if (savedC >= MIN_CHAT && savedC <= MAX_CHAT) {
         state._chatW = savedC;
@@ -6482,20 +6228,21 @@
   function bindEvents() {
     editor.on("nodeSelected", (id) => {
       state.selectedNodeId = String(id);
-      refreshNodeInspector();
+      expandScratchBlock(id);
     });
 
     editor.on("nodeUnselected", () => {
+      if (state.selectedNodeId) collapseScratchBlock(state.selectedNodeId);
       state.selectedNodeId = "";
-      refreshNodeInspector();
     });
 
     editor.on("connectionCreated", () => {
-      if (state.selectedNodeId) refreshNodeInspector();
+      // Variable hints may have changed — update expanded block if any
+      if (state.selectedNodeId) updateScratchBlockVars(state.selectedNodeId);
     });
 
     editor.on("connectionRemoved", () => {
-      if (state.selectedNodeId) refreshNodeInspector();
+      if (state.selectedNodeId) updateScratchBlockVars(state.selectedNodeId);
     });
 
     if (blockSearch) {
@@ -6510,32 +6257,11 @@
       });
     }
 
-    if (toggleInspectorBtn) {
-      toggleInspectorBtn.addEventListener("click", (e) => {
-        e.stopPropagation();
-        toggleInspectorCollapse();
-      });
-    }
-
-    if (inspectorPanel) {
-      inspectorPanel.addEventListener("click", () => {
-        if (state.isInspectorCollapsed) {
-          toggleInspectorCollapse();
-        }
-      });
-    }
-
-    // Layout sidebar toggle buttons (VSCode-style)
+    // Layout sidebar toggle buttons
     if (toggleLeftPanelBtn) {
       toggleLeftPanelBtn.addEventListener("click", (e) => {
         e.stopPropagation();
         if (state.editorMode === "canvas") toggleLeftCollapse();
-      });
-    }
-    if (toggleRightPanelBtn) {
-      toggleRightPanelBtn.addEventListener("click", (e) => {
-        e.stopPropagation();
-        if (state.editorMode === "canvas") toggleInspectorCollapse();
       });
     }
 
@@ -6565,30 +6291,133 @@
       refreshCanvasConnections();
     });
 
-    if (applyNodeJsonBtn && nodeJson) {
-      applyNodeJsonBtn.addEventListener("click", () => {
-        if (!state.selectedNodeId) return;
-
-        try {
-          const parsed = JSON.parse(nodeJson.value || "{}");
-          editor.updateNodeDataFromId(Number(state.selectedNodeId), parsed);
-          updateNodeCard(state.selectedNodeId);
-          refreshNodeInspector();
-        } catch (error) {
-          if (runStatus) runStatus.textContent = `Invalid node JSON: ${error.message}`;
+    /* ===== Scratch Block Event Delegation on #drawflow ===== */
+    if (drawflowEl) {
+      // Track focused field for variable chip insertion
+      drawflowEl.addEventListener("focusin", (e) => {
+        if (e.target.matches(".scratch-input, .scratch-textarea, .scratch-select")) {
+          state.activeFormField = e.target;
         }
       });
-    }
 
-    if (duplicateNodeBtn) {
-      duplicateNodeBtn.addEventListener("click", () => {
-        duplicateSelectedNode();
+      // Input event — update node data as user types
+      drawflowEl.addEventListener("input", (e) => {
+        const input = e.target.closest(".scratch-input, .scratch-textarea");
+        if (!input) return;
+        const fieldKey = input.dataset.fieldKey;
+        if (!fieldKey) return;
+        const nodeEl = input.closest(".scratch-node");
+        if (!nodeEl) return;
+        const nodeId = nodeEl.dataset.nodeId || nodeEl.id.replace("snode-", "").replace("node-", "");
+        let value = input.value;
+        if (input.type === "number") value = Number(value) || 0;
+        patchNodeData(nodeId, fieldKey, value);
       });
-    }
 
-    if (deleteNodeBtn) {
-      deleteNodeBtn.addEventListener("click", () => {
-        deleteSelectedNode();
+      // Change event — for <select> dropdowns
+      drawflowEl.addEventListener("change", (e) => {
+        const select = e.target.closest(".scratch-select");
+        if (!select) return;
+        const fieldKey = select.dataset.fieldKey;
+        if (!fieldKey) return;
+        const nodeEl = select.closest(".scratch-node");
+        if (!nodeEl) return;
+        const nodeId = nodeEl.dataset.nodeId || nodeEl.id.replace("snode-", "").replace("node-", "");
+        patchNodeData(nodeId, fieldKey, select.value);
+      });
+
+      // Click events — pills, actions, var chips, textarea preview
+      drawflowEl.addEventListener("click", (e) => {
+        // Pill toggle
+        const pill = e.target.closest(".scratch-pill");
+        if (pill) {
+          const fieldKey = pill.dataset.fieldKey;
+          const pillValue = pill.dataset.pillValue;
+          if (!fieldKey) return;
+          const group = pill.closest(".scratch-pill-group");
+          if (group) {
+            group.querySelectorAll(".scratch-pill").forEach(p => p.classList.remove("active"));
+            pill.classList.add("active");
+          }
+          const nodeEl = pill.closest(".scratch-node");
+          if (!nodeEl) return;
+          const nodeId = nodeEl.dataset.nodeId || nodeEl.id.replace("snode-", "").replace("node-", "");
+          patchNodeData(nodeId, fieldKey, pillValue);
+          return;
+        }
+
+        // Action buttons (duplicate / delete) — handled by ScratchCanvas internally
+        // but keep app-level handling for compat
+        const actionBtn = e.target.closest(".scratch-btn[data-action]");
+        if (actionBtn) {
+          const action = actionBtn.dataset.action;
+          const nodeEl = actionBtn.closest(".scratch-node");
+          if (!nodeEl) return;
+          const nodeId = nodeEl.dataset.nodeId || nodeEl.id.replace("snode-", "").replace("node-", "");
+          if (action === "duplicate") {
+            const node = editor.getNodeFromId(Number(nodeId));
+            if (node) {
+              const cloneId = addNode(node.name, Number(node.pos_x || 180) + 50, Number(node.pos_y || 160) + 40, node.data || {});
+              if (cloneId) {
+                state.selectedNodeId = String(cloneId);
+                refreshNodeInspector();
+              }
+            }
+          } else if (action === "delete") {
+            const wasSelected = state.selectedNodeId === nodeId;
+            removeNodeById(nodeId);
+            if (wasSelected) state.selectedNodeId = "";
+          }
+          return;
+        }
+
+        // Variable chip → insert into focused field
+        const chip = e.target.closest(".scratch-var-chip");
+        if (chip) {
+          const expr = chip.dataset.expr;
+          if (!expr) return;
+          const target = getInsertTarget();
+          if (!target) return;
+          const mode = target.dataset.insertMode || "expression";
+          const snippet = mode === "template" ? `{{${expr}}}` : expr;
+          insertIntoField(target, snippet);
+          return;
+        }
+
+        // Textarea preview → expand to real textarea
+        const preview = e.target.closest(".scratch-textarea-preview");
+        if (preview) {
+          const fieldKey = preview.dataset.fieldKey;
+          const parent = preview.parentElement;
+          if (!parent) return;
+          const textarea = parent.querySelector(`.scratch-textarea[data-field-key="${fieldKey}"]`);
+          if (textarea) {
+            preview.style.display = "none";
+            textarea.style.display = "";
+            textarea.focus();
+          }
+          return;
+        }
+      });
+
+      // Blur on textarea → collapse back to preview
+      drawflowEl.addEventListener("focusout", (e) => {
+        const textarea = e.target.closest(".scratch-textarea");
+        if (!textarea) return;
+        const fieldKey = textarea.dataset.fieldKey;
+        const parent = textarea.parentElement;
+        if (!parent) return;
+        const preview = parent.querySelector(`.scratch-textarea-preview[data-field-key="${fieldKey}"]`);
+        if (preview) {
+          const val = textarea.value;
+          preview.textContent = val.substring(0, 60) || "Click to edit…";
+          setTimeout(() => {
+            if (document.activeElement !== textarea) {
+              textarea.style.display = "none";
+              preview.style.display = "";
+            }
+          }, 150);
+        }
       });
     }
 
@@ -6727,26 +6556,36 @@
         if (!snapToGrid) return;
         const GRID = 20;
         try {
-          const node = editor.drawflow.drawflow.Home.data[nodeId];
+          const node = editor.getNodeFromId(nodeId);
           if (!node) return;
           const snappedX = Math.round(node.pos_x / GRID) * GRID;
           const snappedY = Math.round(node.pos_y / GRID) * GRID;
           if (snappedX !== node.pos_x || snappedY !== node.pos_y) {
-            node.pos_x = snappedX;
-            node.pos_y = snappedY;
-            const el = document.querySelector(`#node-${nodeId}`);
-            if (el) {
-              el.style.left = snappedX + "px";
-              el.style.top = snappedY + "px";
-              editor.updateConnectionNodes(`node-${nodeId}`);
+            // Use public API to move + reposition the whole stack
+            if (typeof editor.moveNodeTo === "function") {
+              editor.moveNodeTo(Number(nodeId), snappedX, snappedY);
+            } else {
+              // Fallback: update position directly
+              const internalNode = editor._nodes?.get(Number(nodeId));
+              if (internalNode) {
+                internalNode.pos_x = snappedX;
+                internalNode.pos_y = snappedY;
+                const el = document.getElementById(`snode-${nodeId}`);
+                if (el) {
+                  el.setAttribute("transform", `translate(${snappedX},${snappedY})`);
+                }
+                // Reposition the whole stack below this node
+                if (typeof editor._repositionStack === "function") {
+                  editor._repositionStack(editor._findStackRoot(Number(nodeId)));
+                }
+              }
             }
           }
         } catch {}
       });
     }
 
-    // Track Drawflow zoom/pan events for UI updates
-    // Note: Drawflow already handles Ctrl+Wheel zoom natively — no custom handler needed
+    // Track ScratchCanvas zoom events for UI updates
     if (editor) {
       try {
         editor.on("zoom", () => { updateZoomDisplay(); });
@@ -6766,9 +6605,7 @@
     bindWelcomeChipEvents();
     bindPillEvents();
     bindDeployEvents();
-    bindInspectorTabEvents();
-    bindAccordionEvents();
-    bindFloatingInspectorEvents();
+    // Inspector tab/accordion/floating events removed
   }
 
   async function boot() {
@@ -6781,14 +6618,12 @@
           const savedMode = normalizeEditorMode(localStorage.getItem("voyager_editor_mode"));
           state.editorMode = savedMode || "chat";
         }
-        state.isInspectorCollapsed = localStorage.getItem("voyager_right_collapsed") === "1";
         state.isLeftCollapsed = localStorage.getItem("voyager_left_collapsed") === "1";
         state.isChatDrawerOpen = localStorage.getItem("voyager_chat_drawer_open") === "1";
         state.isLeftPanelFlipped = localStorage.getItem("voyager_left_panel_flipped") === "1";
         state.isChatLogCollapsed = localStorage.getItem("voyager_chat_log_collapsed") === "1";
       } catch {
         state.editorMode = "chat";
-        state.isInspectorCollapsed = false;
         state.isLeftCollapsed = false;
         state.isChatDrawerOpen = false;
         state.isLeftPanelFlipped = false;
