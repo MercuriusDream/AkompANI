@@ -36,9 +36,9 @@ flowchart LR
 
 ## 4. Build and Dev
 
-- `npm run dev`: Vite dev server
-- `npm run build`: production static bundle in `dist/`
-- `npm run preview`: preview built output
+- `bun run dev`: Vite dev server
+- `bun run build`: production static bundle in `dist/`
+- `bun run preview`: preview built output
 
 ## 5. Routing
 

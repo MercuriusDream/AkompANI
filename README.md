@@ -1,4 +1,4 @@
-# Agent Builder OSS
+# Akompani (Agent Builder OSS)
 
 Static-first browser IDE for building and deploying flow-based agents.
 
@@ -23,12 +23,18 @@ Note: the app itself has no internal `/api/*` runtime. The only `/api/index.ts` 
 - Frontend: Vanilla JS/HTML/CSS
 - Build/dev server: Vite
 - Persistence: browser storage (`localStorage` + `sessionStorage`)
+- Package manager/runtime: Bun-first (`bun.lock`, `packageManager: bun@1.3.3`)
+
+## Requirements
+
+- Bun `1.3.3+`
+- Node `20+`
 
 ## Quick Start
 
 ```bash
-npm install
-npm run dev
+bun install
+bun run dev
 ```
 
 Open: `http://localhost:3000`
@@ -36,8 +42,8 @@ Open: `http://localhost:3000`
 ## Build
 
 ```bash
-npm run build
-npm run preview
+bun run build
+bun run preview
 ```
 
 ## GitHub Pages Auto-Deploy
@@ -66,6 +72,12 @@ Repository setting required once:
 - Auth is scaffolded in generated agents; users configure secrets in their platform dashboards.
 - If a provider blocks direct browser API calls (CORS/network), the IDE auto-falls back to deploy-object generation.
 - Service worker uses conservative cache policy with stale-shell protections.
+
+## Community
+
+- Contributing guide: `CONTRIBUTING.md`
+- Security policy: `SECURITY.md`
+- Code of conduct: `CODE_OF_CONDUCT.md`
 
 ## License
 
