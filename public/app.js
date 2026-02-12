@@ -160,6 +160,13 @@
     oauthGithubClientId: "akompani_oauth_github_client_id",
     oauthCloudflareClientId: "akompani_oauth_cloudflare_client_id",
     cloudflareAccountId: "akompani_cf_account_id",
+    cloudflareWorkersDev: "akompani_cf_workers_dev",
+    cloudflareZoneId: "akompani_cf_zone_id",
+    cloudflareRoutePattern: "akompani_cf_route_pattern",
+    cloudflareZeroTrustMode: "akompani_cf_zero_trust_mode",
+    cloudflareAccessAud: "akompani_cf_access_aud",
+    cloudflareAccessServiceTokenId: "akompani_cf_access_service_token_id",
+    cloudflareAccessServiceTokenSecret: "akompani_cf_access_service_token_secret",
     vercelProject: "akompani_vercel_project",
     vercelTeamId: "akompani_vercel_team_id",
     deployEndpointMode: "akompani_deploy_endpoint_mode",
@@ -1603,6 +1610,50 @@
       return normalized;
     }
     return "both";
+  }
+
+  function normalizeCloudflareZeroTrustMode(mode) {
+    const normalized = String(mode || "").trim().toLowerCase();
+    if (normalized === "access_jwt" || normalized === "service_token") {
+      return normalized;
+    }
+    return "off";
+  }
+
+  function normalizeCloudflareRoutePattern(value) {
+    return String(value || "")
+      .trim()
+      .replace(/\s+/g, "");
+  }
+
+  function resolveCloudflareDeploySettings(raw = {}) {
+    const source = raw && typeof raw === "object" ? raw : {};
+    const zoneId = String(source.zoneId || "").trim();
+    const routePattern = normalizeCloudflareRoutePattern(source.routePattern);
+    const zeroTrustMode = normalizeCloudflareZeroTrustMode(source.zeroTrustMode);
+    const hasRoute = Boolean(zoneId && routePattern);
+    const workersDevRequested = source.workersDevEnabled !== false;
+    return {
+      workersDevEnabled: zeroTrustMode === "access_jwt" && hasRoute ? false : workersDevRequested,
+      zoneId,
+      routePattern,
+      zeroTrustMode,
+      accessAud: String(source.accessAud || "").trim(),
+      accessServiceTokenId: String(source.accessServiceTokenId || "").trim(),
+      accessServiceTokenSecret: String(source.accessServiceTokenSecret || "").trim(),
+    };
+  }
+
+  function getCloudflareDeploySettings() {
+    return resolveCloudflareDeploySettings({
+      workersDevEnabled: String(readLocal(STORAGE_KEYS.cloudflareWorkersDev) || "true").toLowerCase() !== "false",
+      zoneId: readLocal(STORAGE_KEYS.cloudflareZoneId),
+      routePattern: readLocal(STORAGE_KEYS.cloudflareRoutePattern),
+      zeroTrustMode: readLocal(STORAGE_KEYS.cloudflareZeroTrustMode),
+      accessAud: readLocal(STORAGE_KEYS.cloudflareAccessAud),
+      accessServiceTokenId: readLocal(STORAGE_KEYS.cloudflareAccessServiceTokenId),
+      accessServiceTokenSecret: readSession(STORAGE_KEYS.cloudflareAccessServiceTokenSecret),
+    });
   }
 
   function parseEndpointParts(endpoint) {
@@ -5048,6 +5099,7 @@
     const hasCf = Boolean(getCloudflareToken());
     const hasVercel = Boolean(getVercelToken());
     const accountId = getCloudflareAccountId();
+    const cloudflareSettings = getCloudflareDeploySettings();
     const targetId = getSelectedDeployTarget();
     const targetDef = getDeployTargetDefinition(targetId);
     const targetPlatform = String(targetDef?.platform || "").trim();
@@ -5061,6 +5113,12 @@
       let message = "";
       if (targetPlatform === "cloudflare" && !(hasCf && accountId)) {
         message = "Set Cloudflare token and account id in Settings to deploy directly.";
+      } else if (
+        targetPlatform === "cloudflare" &&
+        cloudflareSettings.zeroTrustMode === "access_jwt" &&
+        (!cloudflareSettings.zoneId || !cloudflareSettings.routePattern || !cloudflareSettings.accessAud)
+      ) {
+        message = "Zero Trust JWT mode requires Zone ID, Route Pattern, and Access AUD in Settings.";
       } else if (targetPlatform === "vercel" && !hasVercel) {
         message = "Set a Vercel token in Settings to deploy directly.";
       }
@@ -5596,6 +5654,163 @@
     throw lastError || new Error("Cloudflare deploy failed.");
   }
 
+  function routePatternToUrl(pattern) {
+    const value = String(pattern || "").trim();
+    if (!value) return "";
+    const host = value.replace(/^\*?\./, "").replace(/\/\*$/, "").replace(/\*$/, "");
+    if (!host || host.includes("*")) return "";
+    return normalizeSafeExternalUrl(`https://${host}`);
+  }
+
+  async function setCloudflareWorkerSubdomain(params) {
+    const accountId = String(params?.accountId || "").trim();
+    const workerName = String(params?.workerName || "").trim();
+    const apiToken = String(params?.apiToken || "").trim();
+    const enabled = params?.enabled !== false;
+    if (!accountId || !workerName || !apiToken) {
+      throw new Error("Cloudflare subdomain update requires account id, worker name, and API token.");
+    }
+
+    const url = `https://api.cloudflare.com/client/v4/accounts/${encodeURIComponent(accountId)}/workers/scripts/${encodeURIComponent(workerName)}/subdomain`;
+    const { response, data } = await cloudflareApiRequest(url, apiToken, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ enabled }),
+    });
+
+    if (!response.ok || data?.success === false) {
+      throw new Error(extractCloudflareErrorMessage(data, response.status));
+    }
+    return data?.result || null;
+  }
+
+  async function upsertCloudflareWorkerRoute(params) {
+    const zoneId = String(params?.zoneId || "").trim();
+    const routePattern = normalizeCloudflareRoutePattern(params?.routePattern);
+    const workerName = String(params?.workerName || "").trim();
+    const apiToken = String(params?.apiToken || "").trim();
+    if (!zoneId || !routePattern || !workerName || !apiToken) {
+      throw new Error("Cloudflare route update requires zone id, route pattern, worker name, and API token.");
+    }
+
+    const baseUrl = `https://api.cloudflare.com/client/v4/zones/${encodeURIComponent(zoneId)}/workers/routes`;
+    let existingRoute = null;
+    let page = 1;
+    const perPage = 100;
+    for (;;) {
+      const listUrl = `${baseUrl}?page=${page}&per_page=${perPage}`;
+      const listRes = await cloudflareApiRequest(listUrl, apiToken, { method: "GET" });
+      if (!listRes.response.ok || listRes.data?.success === false) {
+        throw new Error(extractCloudflareErrorMessage(listRes.data, listRes.response.status));
+      }
+
+      const rows = Array.isArray(listRes.data?.result) ? listRes.data.result : [];
+      existingRoute = rows.find((row) => String(row?.pattern || "").trim() === routePattern) || null;
+      if (existingRoute) break;
+
+      const totalPages = Number(listRes.data?.result_info?.total_pages || 0);
+      if (totalPages > 0) {
+        if (page >= totalPages) break;
+      } else if (rows.length < perPage) {
+        break;
+      }
+      page += 1;
+      if (page > 50) break;
+    }
+
+    const payload = JSON.stringify({ pattern: routePattern, script: workerName });
+    const method = existingRoute?.id ? "PUT" : "POST";
+    const targetUrl = existingRoute?.id
+      ? `${baseUrl}/${encodeURIComponent(String(existingRoute.id))}`
+      : baseUrl;
+    const writeRes = await cloudflareApiRequest(targetUrl, apiToken, {
+      method,
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: payload,
+    });
+
+    if (!writeRes.response.ok || writeRes.data?.success === false) {
+      throw new Error(extractCloudflareErrorMessage(writeRes.data, writeRes.response.status));
+    }
+
+    return writeRes.data?.result || null;
+  }
+
+  async function setCloudflareWorkerSecret(params) {
+    const accountId = String(params?.accountId || "").trim();
+    const workerName = String(params?.workerName || "").trim();
+    const apiToken = String(params?.apiToken || "").trim();
+    const name = String(params?.name || "").trim();
+    const text = String(params?.text || "").trim();
+    if (!accountId || !workerName || !apiToken || !name) {
+      throw new Error("Cloudflare secret update requires account id, worker name, token, and secret name.");
+    }
+    if (!text) return null;
+
+    const url = `https://api.cloudflare.com/client/v4/accounts/${encodeURIComponent(accountId)}/workers/scripts/${encodeURIComponent(workerName)}/secrets`;
+    const { response, data } = await cloudflareApiRequest(url, apiToken, {
+      method: "PUT",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        name,
+        text,
+        type: "secret_text",
+      }),
+    });
+    if (!response.ok || data?.success === false) {
+      throw new Error(extractCloudflareErrorMessage(data, response.status));
+    }
+    return data?.result || null;
+  }
+
+  async function applyCloudflareDeploymentSettings(params) {
+    const accountId = String(params?.accountId || "").trim();
+    const workerName = String(params?.workerName || "").trim();
+    const apiToken = String(params?.apiToken || "").trim();
+    const settings = resolveCloudflareDeploySettings(params?.settings || {});
+    if (!accountId || !workerName || !apiToken) return { routeUrl: "" };
+
+    if (settings.zeroTrustMode === "access_jwt" && (!settings.zoneId || !settings.routePattern || !settings.accessAud)) {
+      throw new Error("Zero Trust mode access_jwt requires Cloudflare Zone ID, Route Pattern, and Access AUD.");
+    }
+
+    await setCloudflareWorkerSubdomain({
+      accountId,
+      workerName,
+      apiToken,
+      enabled: settings.workersDevEnabled,
+    });
+
+    let routeUrl = "";
+    if (settings.zoneId && settings.routePattern) {
+      await upsertCloudflareWorkerRoute({
+        zoneId: settings.zoneId,
+        routePattern: settings.routePattern,
+        workerName,
+        apiToken,
+      });
+      routeUrl = routePatternToUrl(settings.routePattern);
+    }
+
+    if (settings.zeroTrustMode === "service_token" && settings.accessServiceTokenSecret) {
+      await setCloudflareWorkerSecret({
+        accountId,
+        workerName,
+        apiToken,
+        name: "CF_ACCESS_SERVICE_TOKEN_SECRET",
+        text: settings.accessServiceTokenSecret,
+      });
+    }
+
+    return { routeUrl };
+  }
+
   function getSelectedDeployTarget() {
     const targetSelect = document.getElementById("deployCfTarget");
     return String(targetSelect?.value || "cloudflare_workers_elysia_bun").trim() || "cloudflare_workers_elysia_bun";
@@ -5611,6 +5826,9 @@
 
   function generateWorkerScript(name, description, targetId = "cloudflare_workers", endpointMode = "both") {
     const drawflowData = editor ? editor.export() : {};
+    const targetDef = getDeployTargetDefinition(targetId);
+    const cloudflareSettings =
+      String(targetDef?.platform || "").trim() === "cloudflare" ? getCloudflareDeploySettings() : { zeroTrustMode: "off" };
     const runtime = getIdeRuntime();
     if (runtime?.buildCloudflareWorkerModule) {
       return runtime.buildCloudflareWorkerModule({
@@ -5620,6 +5838,7 @@
         providerConfig: getLlmConfig(),
         target: targetId,
         endpointMode: normalizeEndpointMode(endpointMode),
+        cloudflareConfig: cloudflareSettings,
       });
     }
 
@@ -5628,6 +5847,9 @@
 
   function buildDeployObjectForCurrentFlow(name, description, targetId, endpointMode = "both") {
     const drawflowData = editor ? editor.export() : {};
+    const targetDef = getDeployTargetDefinition(targetId);
+    const cloudflareSettings =
+      String(targetDef?.platform || "").trim() === "cloudflare" ? getCloudflareDeploySettings() : { zeroTrustMode: "off" };
     const runtime = getIdeRuntime();
     const workerName = sanitizeWorkerName(name || "akompani-agent");
     const resolvedEndpointMode = normalizeEndpointMode(endpointMode);
@@ -5640,6 +5862,7 @@
         drawflow: drawflowData,
         providerConfig: getLlmConfig(),
         endpointMode: resolvedEndpointMode,
+        cloudflareConfig: cloudflareSettings,
       });
     }
 
@@ -5743,6 +5966,7 @@
     const targetPlatform = String(targetDef?.platform || "").trim();
     const canDirectCloudflare = Boolean(targetPlatform === "cloudflare" && targetDef?.canDirectDeploy !== false);
     const canDirectVercel = Boolean(targetPlatform === "vercel");
+    const cloudflareSettings = getCloudflareDeploySettings();
     const apiToken = getCloudflareToken();
     const accountId = String(getCloudflareAccountId() || "").trim().toLowerCase();
     const vercelToken = getVercelToken();
@@ -5856,6 +6080,18 @@
       if (!isLikelyCloudflareAccountId(accountId)) {
         throw new Error("Cloudflare account ID looks invalid. Use the 32-character account ID from Cloudflare dashboard.");
       }
+      if (
+        cloudflareSettings.zeroTrustMode === "access_jwt" &&
+        (!cloudflareSettings.zoneId || !cloudflareSettings.routePattern || !cloudflareSettings.accessAud)
+      ) {
+        throw new Error("Cloudflare Zero Trust JWT mode requires Zone ID, Route Pattern, and Access AUD in Settings.");
+      }
+      if (
+        cloudflareSettings.zeroTrustMode === "service_token" &&
+        (!cloudflareSettings.accessServiceTokenId || !cloudflareSettings.accessServiceTokenSecret)
+      ) {
+        throw new Error("Cloudflare Zero Trust service-token mode requires both service token ID and secret in Settings.");
+      }
 
       if (steps) {
         steps.innerHTML = '<div class="deploy-step active"><span class="deploy-step-icon"><svg class="spin" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83"/></svg></span><span>Uploading worker script to Cloudflare...</span></div>';
@@ -5897,8 +6133,21 @@
         throw uploadError || new Error("Cloudflare deploy failed.");
       }
 
+      let routeUrl = "";
+      if (steps) {
+        steps.innerHTML = '<div class="deploy-step active"><span class="deploy-step-icon"><svg class="spin" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83"/></svg></span><span>Applying Cloudflare deployment settings...</span></div>';
+      }
+      const applied = await applyCloudflareDeploymentSettings({
+        accountId,
+        workerName,
+        apiToken,
+        settings: cloudflareSettings,
+      });
+      routeUrl = String(applied?.routeUrl || "").trim();
+
       let workerUrl = "";
-      try {
+      if (cloudflareSettings.workersDevEnabled) {
+        try {
         if (steps) {
           steps.innerHTML = '<div class="deploy-step active"><span class="deploy-step-icon"><svg class="spin" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83"/></svg></span><span>Resolving workers.dev URL...</span></div>';
         }
@@ -5907,12 +6156,13 @@
         if (subRes.ok && subData?.success && subData?.result?.subdomain) {
           workerUrl = `https://${workerName}.${subData.result.subdomain}.workers.dev`;
         }
-      } catch {
-        // Keep empty URL and fall back to dashboard.
+        } catch {
+          // Keep empty URL and fall back to dashboard.
+        }
       }
 
       const dashboardUrl = `https://dash.cloudflare.com/?to=/:account/workers/services/view/${encodeURIComponent(workerName)}/production`;
-      const url = workerUrl || dashboardUrl;
+      const url = routeUrl || workerUrl || dashboardUrl;
       if (result) {
         renderDeployObjectResult(
           result,

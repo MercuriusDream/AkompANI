@@ -499,6 +499,54 @@
                     <input id="cfAccountId" type="text" class="form-input" placeholder="Your Cloudflare Account ID" autocomplete="off" />
                     <span class="field-hint">Found in Cloudflare dashboard sidebar</span>
                   </div>
+                  <div class="settings-field-grid">
+                    <div class="settings-field">
+                      <label for="cfWorkersDev">workers.dev Exposure</label>
+                      <select id="cfWorkersDev" class="form-select">
+                        <option value="true">Enabled</option>
+                        <option value="false">Disabled</option>
+                      </select>
+                    </div>
+                    <div class="settings-field">
+                      <label for="cfZeroTrustMode">Zero Trust Mode</label>
+                      <select id="cfZeroTrustMode" class="form-select">
+                        <option value="off">Off</option>
+                        <option value="access_jwt">Cloudflare Access JWT</option>
+                        <option value="service_token">Cloudflare Access Service Token</option>
+                      </select>
+                    </div>
+                  </div>
+                  <div class="settings-field-grid">
+                    <div class="settings-field">
+                      <label for="cfZoneId">Zone ID (optional)</label>
+                      <input id="cfZoneId" type="text" class="form-input" placeholder="Zone ID for custom route" autocomplete="off" />
+                    </div>
+                    <div class="settings-field">
+                      <label for="cfRoutePattern">Route Pattern (optional)</label>
+                      <input id="cfRoutePattern" type="text" class="form-input" placeholder="agent.example.com/*" autocomplete="off" />
+                    </div>
+                  </div>
+                  <div class="settings-field-grid">
+                    <div class="settings-field">
+                      <label for="cfAccessAud">Access AUD Tag (JWT mode)</label>
+                      <input id="cfAccessAud" type="text" class="form-input" placeholder="aud tag" autocomplete="off" />
+                    </div>
+                    <div class="settings-field">
+                      <label for="cfAccessServiceTokenId">Service Token ID (service_token mode)</label>
+                      <input id="cfAccessServiceTokenId" type="text" class="form-input" placeholder="xxxxxxxxxxxxxxxx" autocomplete="off" />
+                    </div>
+                  </div>
+                  <div class="settings-field">
+                    <label for="cfAccessServiceTokenSecret">Service Token Secret (service_token mode)</label>
+                    <div class="input-reveal">
+                      <input id="cfAccessServiceTokenSecret" type="password" class="form-input" placeholder="Cloudflare Access service token secret" autocomplete="off" />
+                      <button class="reveal-btn" data-target="cfAccessServiceTokenSecret" title="Show/hide">
+                        <svg class="eye-open" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+                        <svg class="eye-closed" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:none"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"/><line x1="1" y1="1" x2="23" y2="23"/></svg>
+                      </button>
+                    </div>
+                    <span class="field-hint">Stored in this browser session and uploaded as worker secret during direct deploy.</span>
+                  </div>
                   <button id="testCf" class="btn btn-secondary btn-sm press-feedback">Test Connection</button>
                 </div>
               </div>

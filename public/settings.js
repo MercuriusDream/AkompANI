@@ -9,6 +9,13 @@
     githubPat: "akompani_oauth_github_token",
     cfApiToken: "akompani_oauth_cloudflare_token",
     cfAccountId: "akompani_cf_account_id",
+    cfWorkersDev: "akompani_cf_workers_dev",
+    cfZoneId: "akompani_cf_zone_id",
+    cfRoutePattern: "akompani_cf_route_pattern",
+    cfZeroTrustMode: "akompani_cf_zero_trust_mode",
+    cfAccessAud: "akompani_cf_access_aud",
+    cfAccessServiceTokenId: "akompani_cf_access_service_token_id",
+    cfAccessServiceTokenSecret: "akompani_cf_access_service_token_secret",
     vercelToken: "akompani_oauth_vercel_token",
     vercelProject: "akompani_vercel_project",
     vercelTeamId: "akompani_vercel_team_id",
@@ -21,12 +28,19 @@
     openaiKey: "akompani_openai_key",
   };
 
-  const SESSION_SECRET_KEYS = new Set(["githubPat", "cfApiToken", "vercelToken", "openaiKey"]);
+  const SESSION_SECRET_KEYS = new Set(["githubPat", "cfApiToken", "cfAccessServiceTokenSecret", "vercelToken", "openaiKey"]);
 
   const els = {
     githubPat: document.getElementById("githubPat"),
     cfApiToken: document.getElementById("cfApiToken"),
     cfAccountId: document.getElementById("cfAccountId"),
+    cfWorkersDev: document.getElementById("cfWorkersDev"),
+    cfZoneId: document.getElementById("cfZoneId"),
+    cfRoutePattern: document.getElementById("cfRoutePattern"),
+    cfZeroTrustMode: document.getElementById("cfZeroTrustMode"),
+    cfAccessAud: document.getElementById("cfAccessAud"),
+    cfAccessServiceTokenId: document.getElementById("cfAccessServiceTokenId"),
+    cfAccessServiceTokenSecret: document.getElementById("cfAccessServiceTokenSecret"),
     vercelToken: document.getElementById("vercelToken"),
     vercelProject: document.getElementById("vercelProject"),
     vercelTeamId: document.getElementById("vercelTeamId"),
@@ -73,7 +87,7 @@
     const key = KEYS[id];
     if (!key) return;
 
-    const clean = String(value || "").trim();
+    const clean = id === "cfWorkersDev" ? String(value || "true").trim().toLowerCase() : String(value || "").trim();
     try {
       if (!clean) {
         sessionStorage.removeItem(key);
@@ -406,6 +420,13 @@
       }
     });
 
+    if (els.cfWorkersDev && !["true", "false"].includes(String(els.cfWorkersDev.value || "").toLowerCase())) {
+      els.cfWorkersDev.value = "true";
+    }
+    if (els.cfZeroTrustMode && !["off", "access_jwt", "service_token"].includes(String(els.cfZeroTrustMode.value || "").toLowerCase())) {
+      els.cfZeroTrustMode.value = "off";
+    }
+
     if (runtime?.ensureProviderAndReturn) {
       runtime.ensureProviderAndReturn();
       renderProviderSelect(runtime.getActiveProviderId?.() || "");
@@ -433,7 +454,21 @@
 
   // Auto-save for simple key fields.
   const timers = {};
-  ["githubPat", "cfApiToken", "cfAccountId", "vercelToken", "vercelProject", "vercelTeamId"].forEach(function (id) {
+  [
+    "githubPat",
+    "cfApiToken",
+    "cfAccountId",
+    "cfWorkersDev",
+    "cfZoneId",
+    "cfRoutePattern",
+    "cfZeroTrustMode",
+    "cfAccessAud",
+    "cfAccessServiceTokenId",
+    "cfAccessServiceTokenSecret",
+    "vercelToken",
+    "vercelProject",
+    "vercelTeamId",
+  ].forEach(function (id) {
     const el = els[id];
     if (!el) return;
     el.addEventListener("input", function () {
@@ -719,6 +754,12 @@
           els[id].value = "";
         }
       });
+      if (els.cfWorkersDev) {
+        els.cfWorkersDev.value = "true";
+      }
+      if (els.cfZeroTrustMode) {
+        els.cfZeroTrustMode.value = "off";
+      }
 
       resetProviderForm();
       if (runtime?.ensureProviderAndReturn) {

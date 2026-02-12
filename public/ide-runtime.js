@@ -686,10 +686,38 @@
     };
   }
 
+  function normalizeCloudflareZeroTrustMode(mode) {
+    const normalized = String(mode || "")
+      .trim()
+      .toLowerCase();
+    if (normalized === "access_jwt" || normalized === "service_token") {
+      return normalized;
+    }
+    return "off";
+  }
+
+  function normalizeCloudflareDeployConfig(config = {}) {
+    const source = config && typeof config === "object" ? config : {};
+    const mode = normalizeCloudflareZeroTrustMode(source.zeroTrustMode);
+    const hasRoute = Boolean(String(source.routePattern || "").trim() && String(source.zoneId || "").trim());
+    const workersDevRequested = source.workersDevEnabled !== false;
+    const workersDevEnabled = mode === "access_jwt" && hasRoute ? false : workersDevRequested;
+
+    return {
+      workersDevEnabled,
+      zoneId: String(source.zoneId || "").trim(),
+      routePattern: String(source.routePattern || "").trim(),
+      zeroTrustMode: mode,
+      accessAud: String(source.accessAud || "").trim(),
+      accessServiceTokenId: String(source.accessServiceTokenId || "").trim(),
+    };
+  }
+
   function buildSharedAgenticRuntimeSource(options = {}) {
     const drawflow = options.drawflow || { drawflow: { Home: { data: {} } } };
     const summary = summarizeFlow(drawflow);
     const providerConfig = options.providerConfig || {};
+    const cloudflareConfig = normalizeCloudflareDeployConfig(options.cloudflareConfig);
     const endpointMode = normalizeEndpointMode(options.endpointMode || "both");
     const defaultAuthHeader = String(providerConfig.authHeader || "Authorization").trim() || "Authorization";
     const defaultAuthPrefix = typeof providerConfig.authPrefix === "string" ? providerConfig.authPrefix : "Bearer ";
@@ -705,8 +733,12 @@
       defaultExtraHeaders[cleanKey] = cleanValue;
     }
 
-    return `import { Elysia } from "elysia";
+    return `// @ts-nocheck
+import { Elysia } from "elysia";
 import { cors } from "@elysiajs/cors";
+
+declare const process: any;
+declare const Buffer: any;
 
 const FLOW = ${JSON.stringify(drawflow, null, 2)};
 const FLOW_SUMMARY = ${JSON.stringify(summary, null, 2)};
@@ -718,6 +750,9 @@ const DEFAULT_LLM_AUTH_HEADER = ${JSON.stringify(defaultAuthHeader)};
 const DEFAULT_LLM_AUTH_PREFIX = ${JSON.stringify(defaultAuthPrefix)};
 const DEFAULT_LLM_EXTRA_HEADERS = ${JSON.stringify(defaultExtraHeaders, null, 2)};
 const ENDPOINT_MODE = ${JSON.stringify(endpointMode)};
+const DEFAULT_CF_ZERO_TRUST_MODE = ${JSON.stringify(cloudflareConfig.zeroTrustMode)};
+const DEFAULT_CF_ACCESS_AUD = ${JSON.stringify(cloudflareConfig.accessAud)};
+const DEFAULT_CF_ACCESS_SERVICE_TOKEN_ID = ${JSON.stringify(cloudflareConfig.accessServiceTokenId)};
 const DEFAULT_RUNTIME_SYSTEM_PROMPT = [
   "You are Agent Builder Runtime, an execution assistant for deployed flow-based agents.",
   "Priority order: (1) safety and correctness, (2) explicit tool usage when provided, (3) concise user-facing output.",
@@ -752,7 +787,82 @@ function isAllowedEndpoint(endpoint) {
   return false;
 }
 
+function normalizeZeroTrustMode(value) {
+  const normalized = String(value || "").trim().toLowerCase();
+  if (normalized === "access_jwt" || normalized === "service_token") {
+    return normalized;
+  }
+  return "off";
+}
+
+function decodeBase64Url(value) {
+  const input = String(value || "").trim();
+  if (!input) return "";
+  const normalized = input.replace(/-/g, "+").replace(/_/g, "/");
+  const padded = normalized + "=".repeat((4 - (normalized.length % 4 || 4)) % 4);
+  try {
+    if (typeof atob === "function") {
+      return atob(padded);
+    }
+  } catch {
+    // Ignore browser decode errors.
+  }
+  try {
+    if (typeof Buffer !== "undefined") {
+      return Buffer.from(padded, "base64").toString("utf8");
+    }
+  } catch {
+    // Ignore server decode errors.
+  }
+  return "";
+}
+
+function parseJwtPayload(token) {
+  const parts = String(token || "").split(".");
+  if (parts.length < 2) return null;
+  const decoded = decodeBase64Url(parts[1]);
+  if (!decoded) return null;
+  try {
+    return JSON.parse(decoded);
+  } catch {
+    return null;
+  }
+}
+
+function hasZeroTrustAccess(headers, envSource) {
+  const mode = normalizeZeroTrustMode(readEnvValue(envSource, "CF_ZERO_TRUST_MODE") || DEFAULT_CF_ZERO_TRUST_MODE);
+  if (mode === "off") {
+    return true;
+  }
+
+  if (mode === "service_token") {
+    const requiredId = readEnvValue(envSource, "CF_ACCESS_SERVICE_TOKEN_ID") || DEFAULT_CF_ACCESS_SERVICE_TOKEN_ID;
+    const requiredSecret = readEnvValue(envSource, "CF_ACCESS_SERVICE_TOKEN_SECRET");
+    if (!requiredId || !requiredSecret) return false;
+    const incomingId = String(headers.get("cf-access-client-id") || "").trim();
+    const incomingSecret = String(headers.get("cf-access-client-secret") || "").trim();
+    return incomingId === requiredId && incomingSecret === requiredSecret;
+  }
+
+  const jwt = String(headers.get("cf-access-jwt-assertion") || "").trim();
+  if (!jwt) return false;
+  const requiredAud = readEnvValue(envSource, "CF_ACCESS_AUD") || DEFAULT_CF_ACCESS_AUD;
+  if (!requiredAud) return false;
+  const payload = parseJwtPayload(jwt);
+  const now = Math.floor(Date.now() / 1000);
+  const exp = Number(payload?.exp || 0);
+  if (Number.isFinite(exp) && exp > 0 && exp <= now) return false;
+  const nbf = Number(payload?.nbf || 0);
+  if (Number.isFinite(nbf) && nbf > 0 && nbf > now + 30) return false;
+  const aud = payload?.aud;
+  if (Array.isArray(aud)) {
+    return aud.map((value) => String(value || "").trim()).includes(requiredAud);
+  }
+  return String(aud || "").trim() === requiredAud;
+}
+
 function hasWorkerAccess(headers, envSource) {
+  if (!hasZeroTrustAccess(headers, envSource)) return false;
   const required = readEnvValue(envSource, "WORKER_AUTH_TOKEN");
   if (!required) return true;
   const provided = String(headers.get("x-worker-token") || "").trim();
@@ -760,6 +870,7 @@ function hasWorkerAccess(headers, envSource) {
 }
 
 function hasFlowDebugAccess(headers, envSource) {
+  if (!hasZeroTrustAccess(headers, envSource)) return false;
   const required = readEnvValue(envSource, "FLOW_DEBUG_TOKEN");
   if (!required) return false;
   const provided = String(headers.get("x-debug-token") || "").trim();
@@ -1231,7 +1342,7 @@ const app = new Elysia()
     if (!hasWorkerAccess(request.headers, store)) {
       set.status = 401;
       return {
-        error: "Unauthorized. Invalid x-worker-token.",
+        error: "Unauthorized. Missing or invalid worker auth / zero-trust headers.",
       };
     }
 
@@ -1271,7 +1382,7 @@ const app = new Elysia()
       set.status = 401;
       return {
         ok: false,
-        error: "Unauthorized. Invalid x-worker-token.",
+        error: "Unauthorized. Missing or invalid worker auth / zero-trust headers.",
       };
     }
 
@@ -1302,7 +1413,7 @@ const app = new Elysia()
     if (!hasWorkerAccess(request.headers, store)) {
       set.status = 401;
       return {
-        error: "Unauthorized. Invalid x-worker-token.",
+        error: "Unauthorized. Missing or invalid worker auth / zero-trust headers.",
       };
     }
 
@@ -1327,8 +1438,10 @@ export default app;
 
   function buildCloudflareElysiaSource(options = {}) {
     const base = buildSharedAgenticRuntimeSource(options);
-    return `import { Cloudflare } from "elysia/adapter/cloudflare-worker";
-${base.replace("const app = new Elysia()", "const app = new Elysia({ adapter: Cloudflare() })")}`;
+    const withoutTsNocheck = base.replace(/^\/\/ @ts-nocheck\s*/m, "");
+    return `// @ts-nocheck
+import { CloudflareAdapter } from "elysia/adapter/cloudflare-worker";
+${withoutTsNocheck.replace("const app = new Elysia()", "const app = new Elysia({ adapter: CloudflareAdapter, aot: false })")}`;
   }
 
   function buildLocalElysiaSource(options = {}) {
@@ -1358,6 +1471,7 @@ export const OPTIONS = app.handle;
     const drawflow = options.drawflow || { drawflow: { Home: { data: {} } } };
     const summary = summarizeFlow(drawflow);
     const providerConfig = options.providerConfig || {};
+    const cloudflareConfig = normalizeCloudflareDeployConfig(options.cloudflareConfig);
     const defaultAuthHeader = String(providerConfig.authHeader || "Authorization").trim() || "Authorization";
     const defaultAuthPrefix = typeof providerConfig.authPrefix === "string" ? providerConfig.authPrefix : "Bearer ";
     const defaultExtraHeaders = {};
@@ -1383,6 +1497,9 @@ const ENDPOINT_MODE = ${JSON.stringify(normalizeEndpointMode(options.endpointMod
 const DEFAULT_LLM_AUTH_HEADER = ${JSON.stringify(defaultAuthHeader)};
 const DEFAULT_LLM_AUTH_PREFIX = ${JSON.stringify(defaultAuthPrefix)};
 const DEFAULT_LLM_EXTRA_HEADERS = ${JSON.stringify(defaultExtraHeaders, null, 2)};
+const DEFAULT_CF_ZERO_TRUST_MODE = ${JSON.stringify(cloudflareConfig.zeroTrustMode)};
+const DEFAULT_CF_ACCESS_AUD = ${JSON.stringify(cloudflareConfig.accessAud)};
+const DEFAULT_CF_ACCESS_SERVICE_TOKEN_ID = ${JSON.stringify(cloudflareConfig.accessServiceTokenId)};
 const DEFAULT_RUNTIME_SYSTEM_PROMPT = [
   "You are Agent Builder Runtime, an execution assistant for deployed flow-based agents.",
   "Priority order: (1) safety and correctness, (2) explicit tool usage when provided, (3) concise user-facing output.",
@@ -1414,7 +1531,82 @@ function isAllowedEndpoint(endpoint) {
   return false;
 }
 
+function normalizeZeroTrustMode(value) {
+  const normalized = String(value || "").trim().toLowerCase();
+  if (normalized === "access_jwt" || normalized === "service_token") {
+    return normalized;
+  }
+  return "off";
+}
+
+function decodeBase64Url(value) {
+  const input = String(value || "").trim();
+  if (!input) return "";
+  const normalized = input.replace(/-/g, "+").replace(/_/g, "/");
+  const padded = normalized + "=".repeat((4 - (normalized.length % 4 || 4)) % 4);
+  try {
+    if (typeof atob === "function") {
+      return atob(padded);
+    }
+  } catch {
+    // Ignore browser decode errors.
+  }
+  try {
+    if (typeof Buffer !== "undefined") {
+      return Buffer.from(padded, "base64").toString("utf8");
+    }
+  } catch {
+    // Ignore server decode errors.
+  }
+  return "";
+}
+
+function parseJwtPayload(token) {
+  const parts = String(token || "").split(".");
+  if (parts.length < 2) return null;
+  const decoded = decodeBase64Url(parts[1]);
+  if (!decoded) return null;
+  try {
+    return JSON.parse(decoded);
+  } catch {
+    return null;
+  }
+}
+
+function hasZeroTrustAccess(headers, env) {
+  const mode = normalizeZeroTrustMode(String(env.CF_ZERO_TRUST_MODE || DEFAULT_CF_ZERO_TRUST_MODE || "").trim());
+  if (mode === "off") {
+    return true;
+  }
+
+  if (mode === "service_token") {
+    const requiredId = String(env.CF_ACCESS_SERVICE_TOKEN_ID || DEFAULT_CF_ACCESS_SERVICE_TOKEN_ID || "").trim();
+    const requiredSecret = String(env.CF_ACCESS_SERVICE_TOKEN_SECRET || "").trim();
+    if (!requiredId || !requiredSecret) return false;
+    const incomingId = String(headers.get("cf-access-client-id") || "").trim();
+    const incomingSecret = String(headers.get("cf-access-client-secret") || "").trim();
+    return incomingId === requiredId && incomingSecret === requiredSecret;
+  }
+
+  const jwt = String(headers.get("cf-access-jwt-assertion") || "").trim();
+  if (!jwt) return false;
+  const requiredAud = String(env.CF_ACCESS_AUD || DEFAULT_CF_ACCESS_AUD || "").trim();
+  if (!requiredAud) return false;
+  const payload = parseJwtPayload(jwt);
+  const now = Math.floor(Date.now() / 1000);
+  const exp = Number(payload?.exp || 0);
+  if (Number.isFinite(exp) && exp > 0 && exp <= now) return false;
+  const nbf = Number(payload?.nbf || 0);
+  if (Number.isFinite(nbf) && nbf > 0 && nbf > now + 30) return false;
+  const aud = payload?.aud;
+  if (Array.isArray(aud)) {
+    return aud.map((value) => String(value || "").trim()).includes(requiredAud);
+  }
+  return String(aud || "").trim() === requiredAud;
+}
+
 function hasWorkerAccess(request, env) {
+  if (!hasZeroTrustAccess(request.headers, env)) return false;
   const required = String(env.WORKER_AUTH_TOKEN || "").trim();
   if (!required) return true;
   const provided = String(request.headers.get("x-worker-token") || "").trim();
@@ -1422,6 +1614,7 @@ function hasWorkerAccess(request, env) {
 }
 
 function hasFlowAccess(request, env) {
+  if (!hasZeroTrustAccess(request.headers, env)) return false;
   const required = String(env.FLOW_DEBUG_TOKEN || "").trim();
   if (!required) return false;
   const provided = String(request.headers.get("x-debug-token") || "").trim();
@@ -1893,7 +2086,7 @@ export default {
         return json({ error: "Not found" }, 404);
       }
       if (!hasWorkerAccess(request, env)) {
-        return json({ error: "Unauthorized. Invalid x-worker-token." }, 401);
+        return json({ error: "Unauthorized. Missing or invalid worker auth / zero-trust headers." }, 401);
       }
       const model = String(env.LLM_MODEL || "").trim() || "agent-builder-sim";
       return json({
@@ -1920,7 +2113,7 @@ export default {
         return json({ error: "Not found" }, 404);
       }
       if (!hasWorkerAccess(request, env)) {
-        return json({ error: "Unauthorized. Invalid x-worker-token." }, 401);
+        return json({ error: "Unauthorized. Missing or invalid worker auth / zero-trust headers." }, 401);
       }
 
       let input = {};
@@ -1992,6 +2185,14 @@ export default {
       },
     };
 
+    if (targetId === "cloudflare_workers_elysia_bun" || targetId === "cloudflare_workers") {
+      payload.devDependencies["@cloudflare/workers-types"] = "^4.20260205.0";
+    }
+
+    if (targetId === "local_elysia_bun" || targetId === "vercel_elysia_bun") {
+      payload.devDependencies["bun-types"] = "^1.2.2";
+    }
+
     if (targetId === "vercel_elysia_bun") {
       payload.devDependencies.vercel = "^37.0.0";
     }
@@ -1999,17 +2200,29 @@ export default {
     return `${JSON.stringify(payload, null, 2)}\n`;
   }
 
-  function buildTsconfig() {
+  function buildTsconfig(targetId = "") {
+    const target = String(targetId || "").trim();
+    const isCloudflareTarget = target === "cloudflare_workers_elysia_bun" || target === "cloudflare_workers";
+    const compilerOptions = {
+      target: "ES2022",
+      module: "ESNext",
+      moduleResolution: "Bundler",
+      strict: false,
+      noImplicitAny: false,
+      skipLibCheck: true,
+      ...(isCloudflareTarget
+        ? {
+            lib: ["ES2022", "WebWorker", "DOM.Iterable"],
+            types: ["@cloudflare/workers-types"],
+          }
+        : {
+            types: ["bun-types"],
+          }),
+    };
+
     return `${JSON.stringify(
       {
-        compilerOptions: {
-          target: "ES2022",
-          module: "ESNext",
-          moduleResolution: "Bundler",
-          strict: true,
-          skipLibCheck: true,
-          types: ["bun-types"],
-        },
+        compilerOptions,
         include: ["src/**/*.ts", "api/**/*.ts"],
       },
       null,
@@ -2052,6 +2265,10 @@ export default {
       "",
       "- WORKER_AUTH_TOKEN (protect agent invoke endpoints)",
       "- FLOW_DEBUG_TOKEN (protect /flow endpoint)",
+      "- CF_ZERO_TRUST_MODE (off | access_jwt | service_token)",
+      "- CF_ACCESS_AUD (required when CF_ZERO_TRUST_MODE=access_jwt)",
+      "- CF_ACCESS_SERVICE_TOKEN_ID (required when CF_ZERO_TRUST_MODE=service_token)",
+      "- CF_ACCESS_SERVICE_TOKEN_SECRET (configure via wrangler secret for service_token mode)",
       "",
     ];
 
@@ -2072,14 +2289,50 @@ export default {
       "This object is generated in-browser and can be pushed to GitHub from the Deploy view.",
       "OpenAI-style clients (including ChatKit-style frontends) can target /v1/chat/completions directly.",
       "Configure secrets and auth tokens in your platform dashboard (Cloudflare/Vercel/GitHub), not in the IDE.",
+      "For service-token mode, set secret via: wrangler secret put CF_ACCESS_SERVICE_TOKEN_SECRET",
       "",
     );
     return lines.join("\n");
   }
 
-  function buildCloudflareWranglerToml(workerName) {
+  function escapeTomlString(value) {
+    return String(value || "")
+      .replace(/\\/g, "\\\\")
+      .replace(/"/g, '\\"');
+  }
+
+  function buildCloudflareWranglerToml(workerName, cloudflareConfig = {}) {
+    const config = normalizeCloudflareDeployConfig(cloudflareConfig);
     const compatibilityDate = new Date().toISOString().slice(0, 10);
-    return `name = "${slugify(workerName, "agent-builder-runtime")}"\nmain = "src/index.ts"\ncompatibility_date = "${compatibilityDate}"\nworkers_dev = true\n\n[vars]\nLLM_ENDPOINT = ""\nLLM_MODEL = ""\n`;
+    const lines = [
+      `name = "${escapeTomlString(slugify(workerName, "agent-builder-runtime"))}"`,
+      'main = "src/index.ts"',
+      `compatibility_date = "${compatibilityDate}"`,
+      `workers_dev = ${config.workersDevEnabled ? "true" : "false"}`,
+    ];
+
+    if (config.zoneId && config.routePattern) {
+      lines.push("", "[[routes]]", `pattern = "${escapeTomlString(config.routePattern)}"`, `zone_id = "${escapeTomlString(config.zoneId)}"`);
+    }
+
+    lines.push(
+      "",
+      "[vars]",
+      'LLM_ENDPOINT = ""',
+      'LLM_MODEL = ""',
+      `CF_ZERO_TRUST_MODE = "${escapeTomlString(config.zeroTrustMode)}"`,
+      `CF_ACCESS_AUD = "${escapeTomlString(config.accessAud)}"`,
+      `CF_ACCESS_SERVICE_TOKEN_ID = "${escapeTomlString(config.accessServiceTokenId)}"`,
+      "",
+      "# Set auth/debug tokens via Wrangler secrets (recommended):",
+      "# wrangler secret put WORKER_AUTH_TOKEN",
+      "# wrangler secret put FLOW_DEBUG_TOKEN",
+      "",
+      "# Set service-token secret via Wrangler secret when using service_token mode:",
+      "# wrangler secret put CF_ACCESS_SERVICE_TOKEN_SECRET",
+    );
+
+    return `${lines.join("\n")}\n`;
   }
 
   function buildVercelJson() {
@@ -2109,6 +2362,8 @@ export default {
     const agentName = String(options.agentName || options.workerName || "agent-builder-runtime").trim() || "agent-builder-runtime";
     const description = String(options.description || "").trim();
     const providerConfig = options.providerConfig || getActiveLlmConfig();
+    const cloudflareConfig = normalizeCloudflareDeployConfig(options.cloudflareConfig);
+    const nonCloudflareConfig = normalizeCloudflareDeployConfig({ zeroTrustMode: "off" });
     const endpointMode = normalizeEndpointMode(options.endpointMode || "both");
     const drawflow = options.drawflow || { drawflow: { Home: { data: {} } } };
 
@@ -2116,26 +2371,26 @@ export default {
     const files = [];
 
     if (targetDef.id === "cloudflare_workers_elysia_bun") {
-      files.push({ path: "src/index.ts", content: buildCloudflareElysiaSource({ agentName, description, drawflow, providerConfig, endpointMode }) });
-      files.push({ path: "wrangler.toml", content: buildCloudflareWranglerToml(agentName) });
+      files.push({ path: "src/index.ts", content: buildCloudflareElysiaSource({ agentName, description, drawflow, providerConfig, endpointMode, cloudflareConfig }) });
+      files.push({ path: "wrangler.toml", content: buildCloudflareWranglerToml(agentName, cloudflareConfig) });
       files.push({ path: "package.json", content: buildPackageJson(agentName, targetDef.id) });
-      files.push({ path: "tsconfig.json", content: buildTsconfig() });
+      files.push({ path: "tsconfig.json", content: buildTsconfig(targetDef.id) });
       files.push({ path: "README.md", content: buildReadme({ target: targetDef.id, targetLabel: targetDef.label, agentName, endpointMode }) });
     } else if (targetDef.id === "vercel_elysia_bun") {
-      files.push({ path: "api/index.ts", content: buildVercelElysiaSource({ agentName, description, drawflow, providerConfig, endpointMode }) });
+      files.push({ path: "api/index.ts", content: buildVercelElysiaSource({ agentName, description, drawflow, providerConfig, endpointMode, cloudflareConfig: nonCloudflareConfig }) });
       files.push({ path: "vercel.json", content: buildVercelJson() });
       files.push({ path: "package.json", content: buildPackageJson(agentName, targetDef.id) });
-      files.push({ path: "tsconfig.json", content: buildTsconfig() });
+      files.push({ path: "tsconfig.json", content: buildTsconfig(targetDef.id) });
       files.push({ path: "README.md", content: buildReadme({ target: targetDef.id, targetLabel: targetDef.label, agentName, endpointMode }) });
     } else if (targetDef.id === "local_elysia_bun") {
-      files.push({ path: "src/index.ts", content: buildLocalElysiaSource({ agentName, description, drawflow, providerConfig, endpointMode }) });
+      files.push({ path: "src/index.ts", content: buildLocalElysiaSource({ agentName, description, drawflow, providerConfig, endpointMode, cloudflareConfig: nonCloudflareConfig }) });
       files.push({ path: "package.json", content: buildPackageJson(agentName, targetDef.id) });
-      files.push({ path: "tsconfig.json", content: buildTsconfig() });
+      files.push({ path: "tsconfig.json", content: buildTsconfig(targetDef.id) });
       files.push({ path: ".env.example", content: "LLM_ENDPOINT=\nLLM_MODEL=\nLLM_API_KEY=\nPORT=8787\n" });
       files.push({ path: "README.md", content: buildReadme({ target: targetDef.id, targetLabel: targetDef.label, agentName, endpointMode }) });
     } else {
-      files.push({ path: "src/worker.js", content: buildCloudflareWorkerModule({ agentName, description, drawflow, providerConfig, endpointMode }) });
-      files.push({ path: "wrangler.toml", content: buildCloudflareWranglerToml(agentName).replace('main = "src/index.ts"', 'main = "src/worker.js"') });
+      files.push({ path: "src/worker.js", content: buildCloudflareWorkerModule({ agentName, description, drawflow, providerConfig, endpointMode, cloudflareConfig }) });
+      files.push({ path: "wrangler.toml", content: buildCloudflareWranglerToml(agentName, cloudflareConfig).replace('main = "src/index.ts"', 'main = "src/worker.js"') });
       files.push({ path: "README.md", content: buildReadme({ target: targetDef.id, targetLabel: targetDef.label, agentName, endpointMode }) });
     }
 
