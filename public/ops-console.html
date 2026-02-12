@@ -3,14 +3,14 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Ops Console - CANARIA</title>
+    <title>Ops Console - Akompani</title>
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
     <link rel="stylesheet" href="./design-system.css" />
     <link rel="stylesheet" href="./ops/ops.css" />
     <link rel="manifest" href="./manifest.json" />
-    <script>(function(){var t=localStorage.getItem('voyager-theme');if(!t)t=matchMedia('(prefers-color-scheme:dark)').matches?'dark':'light';document.documentElement.setAttribute('data-theme',t)})()</script>
+    <script>(function(){var t=localStorage.getItem('akompani-theme');if(!t)t=matchMedia('(prefers-color-scheme:dark)').matches?'dark':'light';document.documentElement.setAttribute('data-theme',t)})()</script>
   </head>
   <body>
     <!-- Navigation -->
@@ -20,7 +20,7 @@
           <div class="nav-brand-icon">
             <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2L2 7l10 5 10-5-10-5z"/><path d="M2 17l10 5 10-5"/><path d="M2 12l10 5 10-5"/></svg>
           </div>
-          <span class="nav-brand-text">CANARIA</span>
+          <span class="nav-brand-text">Akompani</span>
         </a>
         
         <div class="nav-links">
@@ -142,7 +142,7 @@
           root.classList.add('theme-transition');
           var next = root.getAttribute('data-theme') === 'dark' ? 'light' : 'dark';
           root.setAttribute('data-theme', next);
-          localStorage.setItem('voyager-theme', next);
+          localStorage.setItem('akompani-theme', next);
           setTimeout(function() { root.classList.remove('theme-transition'); }, 400);
         });
       }

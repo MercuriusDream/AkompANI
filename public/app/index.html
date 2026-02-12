@@ -10,9 +10,9 @@
     <!-- Drawflow replaced by ScratchCanvas -->
     <link rel="stylesheet" href="../design-system.css" />
     <link rel="stylesheet" href="../settings/settings.css" />
-    <link rel="stylesheet" href="../editor/editor.css" />
+    <link rel="stylesheet" href="../editor/editor.css?v=20260212-06" />
     <link rel="manifest" href="../manifest.json" />
-    <script>(function(){var t=localStorage.getItem('voyager-theme');if(!t)t=matchMedia('(prefers-color-scheme:dark)').matches?'dark':'light';document.documentElement.setAttribute('data-theme',t)})()</script>
+    <script>(function(){var t=localStorage.getItem('akompani-theme');if(!t)t=matchMedia('(prefers-color-scheme:dark)').matches?'dark':'light';document.documentElement.setAttribute('data-theme',t)})()</script>
   </head>
   <body>
     <!-- Navigation -->
@@ -393,7 +393,7 @@
                 </div>
                 <div class="deploy-field">
                   <label class="deploy-label" for="deployGhMessage">Commit Message</label>
-                  <input id="deployGhMessage" type="text" class="form-input" placeholder="Deploy agent via CANARIA" value="Deploy agent via CANARIA" />
+                  <input id="deployGhMessage" type="text" class="form-input" placeholder="Deploy agent via Akompani" value="Deploy agent via Akompani" />
                 </div>
                 <div id="deployGhMissing" class="deploy-missing" style="display:none">
                   <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
@@ -429,7 +429,7 @@
           <div class="settings-container">
             <div class="settings-header anim-in">
               <h1>Settings</h1>
-              <p class="text-secondary">Configure your CANARIA IDE connections and preferences.</p>
+              <p class="text-secondary">Configure your Akompani IDE connections and preferences.</p>
             </div>
 
             <section class="settings-section anim-in anim-d1">
@@ -462,7 +462,7 @@
                         <svg class="eye-closed" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:none"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"/><line x1="1" y1="1" x2="23" y2="23"/></svg>
                       </button>
                     </div>
-                    <span class="field-hint">Needs <code>repo</code> scope. <a href="https://github.com/settings/tokens/new?scopes=repo&description=CANARIA+IDE" target="_blank" rel="noopener noreferrer">Create token</a></span>
+                    <span class="field-hint">Needs <code>repo</code> scope. <a href="https://github.com/settings/tokens/new?scopes=repo&description=Akompani+IDE" target="_blank" rel="noopener noreferrer">Create token</a></span>
                   </div>
                   <button id="testGithub" class="btn btn-secondary btn-sm press-feedback">Test Connection</button>
                 </div>
@@ -666,7 +666,7 @@
                 <div class="settings-card-body">
                   <div class="settings-field">
                     <label>Local Storage</label>
-                    <p class="text-muted" style="margin-bottom: var(--space-3)">Settings are stored in your browser. Calls go directly to provider APIs (GitHub/Cloudflare/LLM), not a CANARIA backend server.</p>
+                    <p class="text-muted" style="margin-bottom: var(--space-3)">Settings are stored in your browser. Calls go directly to provider APIs (GitHub/Cloudflare/LLM), not an Akompani backend server.</p>
                     <button id="clearSettings" class="btn btn-danger btn-sm press-feedback">Clear All Settings</button>
                   </div>
                 </div>
@@ -686,15 +686,15 @@
     <script src="../toast.js"></script>
     <script src="../auth-ui.js"></script>
     <script src="../ide-runtime.js"></script>
-    <script src="../sw-register.js?v=20260211-03"></script>
-    <script src="../app.js?v=20260211-03"></script>
-    <script src="../settings.js?v=20260211-03"></script>
+    <script src="../sw-register.js?v=20260212-06"></script>
+    <script src="../app.js?v=20260212-06"></script>
+    <script src="../settings.js?v=20260212-06"></script>
     <script>
       document.getElementById('themeToggle').addEventListener('click', function() {
         var next = document.documentElement.getAttribute('data-theme') === 'dark' ? 'light' : 'dark';
         document.documentElement.classList.add('theme-transition');
         document.documentElement.setAttribute('data-theme', next);
-        localStorage.setItem('voyager-theme', next);
+        localStorage.setItem('akompani-theme', next);
         setTimeout(function() { document.documentElement.classList.remove('theme-transition'); }, 400);
       });
     </script>

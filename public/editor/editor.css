@@ -1,4 +1,4 @@
-/* Flow Editor — CANARIA */
+/* Flow Editor — Akompani */
 
 /* ===== Easing ===== */
 :root {
@@ -10,6 +10,10 @@
   --static-shadow: 0 6px 0 rgba(183, 169, 187, 0.28);
   --static-shadow-sm: 0 3px 0 rgba(183, 169, 187, 0.22);
   --static-shadow-lg: 0 8px 0 rgba(183, 169, 187, 0.24);
+  /* Scratch block card surface */
+  --scratch-card-bg: #ffffff;
+  --scratch-card-border: rgba(0, 0, 0, 0.08);
+  --scratch-arm-cavity: rgba(0, 0, 0, 0.04);
 }
 
 [data-theme="dark"] {
@@ -19,6 +23,9 @@
   --static-shadow: 0 6px 0 rgba(170, 157, 182, 0.24);
   --static-shadow-sm: 0 3px 0 rgba(170, 157, 182, 0.18);
   --static-shadow-lg: 0 8px 0 rgba(170, 157, 182, 0.20);
+  --scratch-card-bg: #2a2d3a;
+  --scratch-card-border: rgba(255, 255, 255, 0.08);
+  --scratch-arm-cavity: rgba(0, 0, 0, 0.18);
 }
 
 /* ===== Nav Overrides ===== */
@@ -1309,10 +1316,10 @@ body.left-panel-flipped .canvas-layout {
   flex: 1 1 0;
   min-height: 0;
   overflow-y: auto;
-  padding: 12px;
+  padding: 8px 10px;
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: 4px;
 }
 
 .palette-content > * {
@@ -1321,7 +1328,7 @@ body.left-panel-flipped .canvas-layout {
 
 /* Palette Groups */
 .palette-group {
-  background: color-mix(in srgb, var(--editor-surface-strong) 76%, transparent);
+  background: transparent;
   border-radius: var(--radius-md);
 }
 
@@ -1330,7 +1337,7 @@ body.left-panel-flipped .canvas-layout {
   align-items: center;
   gap: 8px;
   width: 100%;
-  padding: 8px 12px;
+  padding: 6px 12px;
   background: transparent;
   border: none;
   cursor: pointer;
@@ -1345,8 +1352,8 @@ body.left-panel-flipped .canvas-layout {
 }
 
 .palette-group-caret {
-  width: 14px;
-  height: 14px;
+  width: 12px;
+  height: 12px;
   color: var(--text-muted);
   flex-shrink: 0;
   transition: transform 200ms var(--ease-out-expo);
@@ -1362,85 +1369,139 @@ body.left-panel-flipped .canvas-layout {
 
 .palette-group-label {
   flex: 1;
-  font-size: var(--text-xs);
+  font-size: 10px;
   font-weight: var(--font-semibold);
   text-transform: uppercase;
-  letter-spacing: 0.05em;
-  color: var(--text-secondary);
+  letter-spacing: 0.06em;
+  color: var(--text-muted);
 }
 
 .palette-group-count {
-  font-size: var(--text-xs);
+  font-size: 10px;
   color: var(--text-muted);
-  background: var(--bg-tertiary);
-  padding: 2px 6px;
-  border-radius: var(--radius-full);
+  opacity: 0.6;
+}
+
+.palette-group-items {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  padding: 4px 10px 8px;
 }
 
 
 .palette-group-empty {
-  padding: 8px 12px;
-  font-size: var(--text-xs);
+  padding: 6px 14px;
+  font-size: 11px;
   color: var(--text-muted);
   font-style: italic;
 }
 
-/* ===== Compact Block Cards ===== */
+/* ===== Compact Block Cards (palette) ===== */
 .block-item.compact {
   display: flex;
-  align-items: center;
-  gap: 10px;
-  padding: 8px 10px;
-  border-radius: var(--radius-md);
+  flex-direction: column;
+  border-radius: var(--radius-sm, 6px);
   cursor: grab;
-  transition: all 200ms var(--ease-out-expo);
+  transition: filter 140ms ease, transform 140ms ease;
+  background: var(--scratch-card-bg, #f5f7fb);
+  border: none;
+  position: relative;
+  overflow: hidden;
+}
+
+/* Left accent bar */
+.block-item.compact::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  width: 4px;
+  background: var(--block-color, #888);
+  border-radius: 4px 0 0 4px;
+  z-index: 1;
 }
 
 .block-item.compact:hover {
-  background: var(--bg-hover);
+  filter: brightness(0.97);
+}
+
+[data-theme="dark"] .block-item.compact:hover {
+  filter: brightness(1.1);
 }
 
 .block-item.compact:active {
   cursor: grabbing;
+  transform: scale(0.97);
 }
 
-.block-icon {
-  flex-shrink: 0;
-  width: 8px;
-  height: 8px;
-  border-radius: 50%;
-  display: block;
-  overflow: hidden;
-  font-size: 0;
-  line-height: 0;
+.block-item.compact:focus-visible {
+  outline: 2px solid var(--brand);
+  outline-offset: 1px;
 }
 
-.block-icon svg,
-.block-icon * {
-  display: none;
-}
-
-.block-info {
-  flex: 1;
+/* Palette block: show scratch-block as full replica */
+.block-item.compact .scratch-block {
+  width: 100%;
   min-width: 0;
+  max-width: none;
+  background: transparent;
+  pointer-events: none;
 }
 
-.block-label {
-  font-size: var(--text-sm);
-  font-weight: var(--font-medium);
-  color: var(--text);
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
+/* Hide summary in palette since fields already show all values */
+.block-item.compact .scratch-block-summary {
+  display: none !important;
 }
 
-.block-desc {
-  font-size: var(--text-xs);
-  color: var(--text-muted);
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  line-height: 1.4;
+/* Palette: hide action buttons and empty vars section */
+.block-item.compact .scratch-block-actions,
+.block-item.compact .scratch-block .scratch-block-vars {
+  display: none !important;
+}
+
+/* Palette: scale down inputs slightly to fit narrow palette */
+.block-item.compact .scratch-input,
+.block-item.compact .scratch-select,
+.block-item.compact .scratch-textarea,
+.block-item.compact .scratch-textarea-preview {
+  font-size: 10.5px;
+  padding: 3px 6px;
+  min-height: 22px;
+  cursor: grab;
+}
+
+.block-item.compact .scratch-pill {
+  font-size: 9.5px;
+  padding: 2px 7px;
+  cursor: grab;
+}
+
+.block-item.compact .scratch-field-label {
+  font-size: 10.5px;
+}
+
+.block-item.compact .scratch-field {
+  min-height: 24px;
+  gap: 6px;
+}
+
+.block-item.compact .scratch-block-header {
+  padding: 6px 10px 4px 12px;
+  font-size: 12px;
+  border-bottom: none;
+}
+
+.block-item.compact .scratch-block-fields {
+  display: flex;
+  padding: 6px 10px 8px;
+  gap: 4px;
+}
+
+.block-item.compact .scratch-block-ports {
+  padding: 2px 10px 5px;
+  font-size: 9px;
 }
 
 /* ===== Layout Toggle Buttons (VSCode-style) ===== */
@@ -1656,7 +1717,10 @@ body.left-collapsed .panel-resize-handle[data-panel="left"] {
 }
 .scratch-node.selected .scratch-shape {
   stroke: var(--brand, #6366f1);
-  stroke-width: 3;
+  stroke-width: 2;
+}
+.scratch-node.selected .scratch-accent {
+  opacity: 1;
 }
 
 .scratch-fo-body {
@@ -2402,7 +2466,7 @@ body.chat-drawer-open .chat-resize-handle {
 
 [data-theme="dark"] .scratch-node.selected .scratch-shape {
   stroke: var(--brand);
-  stroke-width: 3;
+  stroke-width: 2;
 }
 
 [data-theme="dark"] .settings-view {
@@ -2505,74 +2569,67 @@ body.chat-drawer-open .chat-resize-handle {
 }
 
 /* ===================================================================
-   Scratch-Style Inline Blocks
+   Scratch-Style Inline Blocks — Card Design
    =================================================================== */
 
 /* --- Block structure --- */
 .scratch-block {
   display: flex;
   flex-direction: column;
-  width: 300px;
+  width: 260px;
   border-radius: 0;
   overflow: hidden;
   background: transparent;
 }
 
-/* Inside ScratchCanvas SVG foreignObject — no bg, SVG path provides shape */
 .scratch-fo-body .scratch-block {
+  width: 260px;
   background: transparent;
   border-radius: 0;
 }
 
-/* Fallback for non-SVG contexts (palette preview etc.) */
 .block-item .scratch-block,
 .drawflow_content_node .scratch-block {
   min-width: 260px;
   max-width: 400px;
   width: auto;
-  border-radius: 12px;
+  border-radius: 10px;
   background: var(--bg-secondary);
 }
 
+/* --- Header --- */
 .scratch-block-header {
   display: flex;
   align-items: center;
   gap: 6px;
-  padding: 7px 12px;
-  color: white;
-  font-size: var(--text-sm);
-  font-weight: var(--font-semibold);
+  padding: 8px 12px 6px 14px;
+  color: var(--text);
+  font-size: 13px;
+  font-weight: 600;
+  letter-spacing: 0.01em;
   user-select: none;
+  border-bottom: 1px solid color-mix(in srgb, var(--node-color, var(--border)) 12%, transparent);
 }
 
-.scratch-block-icon {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 22px;
-  height: 22px;
-  flex-shrink: 0;
-}
-.scratch-block-icon svg {
-  width: 14px;
-  height: 14px;
-  fill: currentColor;
-}
+/* Icon removed — accent bar on SVG handles category color */
+.scratch-block-icon { display: none; }
 
 .scratch-block-label {
   flex: 1;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+  color: var(--node-color, var(--text));
 }
 
 .scratch-block-meta {
   font-size: 10px;
-  opacity: 0.7;
+  color: var(--text-muted);
   white-space: nowrap;
+  font-weight: 500;
 }
 
-/* --- Actions (show on hover / selection) --- */
+/* --- Actions (hover / selected) --- */
 .scratch-block-actions {
   display: flex;
   gap: 2px;
@@ -2586,118 +2643,125 @@ body.chat-drawer-open .chat-resize-handle {
 }
 
 .scratch-btn {
-  width: 22px;
-  height: 22px;
+  width: 20px;
+  height: 20px;
   border: none;
-  border-radius: 6px;
-  background: rgba(255, 255, 255, 0.2);
-  color: white;
+  border-radius: 4px;
+  background: transparent;
+  color: var(--text-muted);
   cursor: pointer;
   display: flex;
   align-items: center;
   justify-content: center;
   padding: 0;
+  transition: all 100ms ease;
 }
-.scratch-btn svg {
-  width: 12px;
-  height: 12px;
-  fill: currentColor;
-}
-.scratch-btn:hover {
-  background: rgba(255, 255, 255, 0.35);
-}
+.scratch-btn svg { width: 12px; height: 12px; fill: currentColor; }
+.scratch-btn:hover { background: var(--bg-hover); color: var(--text); }
 .scratch-btn[data-action="delete"]:hover {
-  background: rgba(239, 68, 68, 0.8);
+  background: rgba(239, 68, 68, 0.12);
+  color: #ef4444;
 }
 
 /* --- Status badge --- */
 .scratch-block-status {
-  font-size: 10px;
-  font-weight: 500;
-  padding: 1px 6px;
+  font-size: 9px;
+  font-weight: 600;
+  padding: 2px 7px;
   border-radius: 9999px;
-  background: rgba(255, 255, 255, 0.15);
+  background: var(--bg-tertiary);
+  color: var(--text-muted);
   white-space: nowrap;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
 }
 .scratch-block-status.status-running {
-  background: rgba(59, 130, 246, 0.3);
+  background: rgba(59, 130, 246, 0.10);
+  color: #3b82f6;
 }
 .scratch-block-status.status-done {
-  background: rgba(34, 197, 94, 0.3);
+  background: rgba(34, 197, 94, 0.10);
+  color: #22c55e;
 }
 .scratch-block-status.status-error {
-  background: rgba(239, 68, 68, 0.3);
+  background: rgba(239, 68, 68, 0.10);
+  color: #ef4444;
 }
 
 /* --- Summary (collapsed state) --- */
 .scratch-block-summary {
   display: flex;
   flex-wrap: wrap;
-  gap: 4px 8px;
-  padding: 6px 12px 8px;
-  font-size: 11px;
+  gap: 3px 8px;
+  padding: 5px 14px 8px;
+  font-size: 11.5px;
   color: var(--text-secondary);
-  line-height: 1.4;
+  line-height: 1.45;
 }
-.scratch-summary-item {
-  display: inline;
-}
+.scratch-summary-item { display: inline; }
 .scratch-summary-item .k {
   color: var(--text-muted);
-  font-weight: 500;
+  font-weight: 600;
   margin-right: 3px;
+  text-transform: uppercase;
+  font-size: 9.5px;
+  letter-spacing: 0.04em;
 }
-.scratch-summary-item .k::after {
-  content: ":";
+.scratch-summary-item .k::after { content: ":"; }
+
+/* --- SVG block body: transparent (card bg from SVG path fill) --- */
+.scratch-fo-body .scratch-block-summary,
+.scratch-fo-body .scratch-block-fields {
+  background: transparent;
+}
+.scratch-fo-body .scratch-block-ports {
+  color: var(--text-muted);
+  font-size: 10px;
+  padding: 4px 14px 6px;
+  opacity: 0.75;
 }
 
 /* --- Inline fields (expanded state) --- */
 .scratch-block-fields {
   display: flex;
   flex-direction: column;
-  gap: 5px;
-  padding: 8px 12px;
+  gap: 7px;
+  padding: 10px 14px;
 }
 
 .scratch-field {
   display: flex;
   align-items: center;
-  gap: 6px;
-  min-height: 26px;
+  gap: 8px;
+  min-height: 30px;
 }
 
 .scratch-field-label {
-  font-size: 11px;
-  font-weight: 500;
+  font-size: 12px;
+  font-weight: 600;
   color: var(--text-secondary);
   white-space: nowrap;
-  min-width: 55px;
+  min-width: 58px;
   flex-shrink: 0;
 }
 
-/* Scratch white input bubble */
+/* Scratch input bubble */
 .scratch-input {
   flex: 1;
   min-width: 0;
-  padding: 3px 8px;
+  padding: 5px 10px;
   font-size: 12px;
   font-family: var(--font-mono);
-  border: none;
-  border-radius: 9999px;
-  background: white;
-  color: var(--text);
-  box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.08);
-  outline: none;
-}
-[data-theme="dark"] .scratch-input {
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
   background: var(--bg);
-  box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.2);
+  color: var(--text);
+  outline: none;
+  transition: border-color 150ms ease;
 }
 .scratch-input:focus {
-  box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.08), 0 0 0 2px var(--brand);
-}
-[data-theme="dark"] .scratch-input:focus {
-  box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.2), 0 0 0 2px var(--brand);
+  border-color: var(--brand);
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--brand) 15%, transparent);
 }
 
 .scratch-input-number {
@@ -2709,37 +2773,34 @@ body.chat-drawer-open .chat-resize-handle {
 .scratch-select {
   flex: 1;
   min-width: 0;
-  padding: 3px 8px;
+  padding: 5px 10px;
   font-size: 12px;
   font-family: var(--font-mono);
-  border: none;
-  border-radius: 9999px;
-  background: white;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: var(--bg);
   color: var(--text);
-  box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.08);
   outline: none;
   cursor: pointer;
-}
-[data-theme="dark"] .scratch-select {
-  background: var(--bg);
-  box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.2);
+  transition: border-color 150ms ease;
 }
 .scratch-select:focus {
-  box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.08), 0 0 0 2px var(--brand);
+  border-color: var(--brand);
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--brand) 15%, transparent);
 }
 
 /* Pill toggles for small select groups */
 .scratch-pill-group {
   display: flex;
-  gap: 0;
+  gap: 2px;
   background: var(--bg-tertiary);
   border-radius: 9999px;
   padding: 2px;
 }
 .scratch-pill {
-  padding: 2px 8px;
-  font-size: 10px;
-  font-weight: 500;
+  padding: 3px 10px;
+  font-size: 11px;
+  font-weight: 600;
   border: none;
   border-radius: 9999px;
   background: transparent;
@@ -2748,58 +2809,60 @@ body.chat-drawer-open .chat-resize-handle {
   transition: background 100ms, color 100ms;
 }
 .scratch-pill.active {
-  background: white;
+  background: var(--bg);
   color: var(--text);
   box-shadow: 0 1px 2px rgba(0, 0, 0, 0.08);
 }
 [data-theme="dark"] .scratch-pill.active {
-  background: var(--bg);
+  background: var(--bg-secondary);
+  color: var(--text);
 }
 
 /* Textarea: preview and expanded */
 .scratch-textarea-preview {
   flex: 1;
-  padding: 3px 8px;
-  font-size: 11px;
+  padding: 5px 10px;
+  font-size: 12px;
   font-family: var(--font-mono);
-  background: white;
-  border: none;
-  border-radius: 8px;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
   cursor: text;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
-  box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.08);
-  color: var(--text-secondary);
-  min-height: 22px;
-  line-height: 1.4;
+  color: var(--text);
+  min-height: 26px;
+  line-height: 1.5;
+  transition: border-color 150ms ease;
 }
 [data-theme="dark"] .scratch-textarea-preview {
-  background: var(--bg);
-  box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.2);
+  background: var(--bg-tertiary);
+  color: var(--text);
 }
 
 .scratch-textarea {
   width: 100%;
-  min-height: 56px;
+  min-height: 60px;
   max-height: 200px;
-  padding: 5px 8px;
+  padding: 6px 10px;
   font-size: 12px;
   font-family: var(--font-mono);
-  border: none;
-  border-radius: 8px;
-  background: white;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: var(--bg);
   color: var(--text);
   resize: vertical;
   outline: none;
-  box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.08);
+  transition: border-color 150ms ease;
 }
 [data-theme="dark"] .scratch-textarea {
-  background: var(--bg);
-  box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.2);
+  background: var(--bg-tertiary);
+  color: var(--text);
 }
 .scratch-textarea:focus {
-  box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.08), 0 0 0 2px var(--brand);
+  border-color: var(--brand);
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--brand) 15%, transparent);
 }
 
 /* --- Variable chips (Scratch ovals) --- */
@@ -2807,32 +2870,35 @@ body.chat-drawer-open .chat-resize-handle {
   display: flex;
   flex-wrap: wrap;
   gap: 4px;
-  padding: 6px 12px;
+  padding: 4px 14px 8px;
   border-top: 1px dashed var(--border);
 }
 .scratch-var-chip {
   padding: 2px 10px;
   font-family: var(--font-mono);
   font-size: 10px;
-  color: white;
-  border: none;
-  background: color-mix(in srgb, var(--node-color, #6366f1) 80%, black);
+  font-weight: 500;
+  color: var(--node-color, var(--brand));
+  border: 1px solid color-mix(in srgb, var(--node-color, var(--brand)) 30%, transparent);
+  background: color-mix(in srgb, var(--node-color, var(--brand)) 8%, transparent);
   border-radius: 9999px;
   cursor: pointer;
-  transition: transform 100ms;
+  transition: all 100ms;
 }
 .scratch-var-chip:hover {
-  transform: scale(1.05);
+  background: color-mix(in srgb, var(--node-color, var(--brand)) 15%, transparent);
+  transform: scale(1.03);
 }
 
 /* --- Ports row (bottom of block) --- */
 .scratch-block-ports {
   display: flex;
   justify-content: space-between;
-  padding: 4px 12px 6px;
-  font-size: 9px;
+  padding: 5px 14px 7px;
+  font-size: 10px;
   color: var(--text-muted);
-  letter-spacing: 0.02em;
+  letter-spacing: 0.03em;
+  font-weight: 500;
 }
 
 /* --- Expand / collapse transition --- */

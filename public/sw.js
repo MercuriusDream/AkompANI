@@ -1,4 +1,4 @@
-const CACHE_NAME = "canaria-v6";
+const CACHE_NAME = "akompani-v6";
 const STATIC_ASSETS = [
   "./",
   "./index.html",
@@ -169,7 +169,7 @@ self.addEventListener("fetch", (event) => {
           putInCache(request, response).catch(() => {});
           return response;
         })
-        .catch(() => cached);
+        .catch(() => cached || Response.error());
       return cached || refresh;
     }),
   );

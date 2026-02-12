@@ -1,13 +1,13 @@
 (() => {
   const STORAGE = {
-    llmProviders: "voyager_llm_provider_profiles_v2",
-    llmProviderKeys: "voyager_llm_provider_keys_v2",
-    llmActiveProviderId: "voyager_llm_active_provider_id_v2",
-    llmLegacyMigrated: "voyager_llm_legacy_migrated_v2",
-    llmEndpointLegacy: "voyager_llm_endpoint",
-    llmModelLegacy: "voyager_llm_model",
-    llmApiKeyLegacy: "voyager_llm_api_key",
-    llmApiKeyLegacyOpenAi: "voyager_openai_key",
+    llmProviders: "akompani_llm_provider_profiles_v2",
+    llmProviderKeys: "akompani_llm_provider_keys_v2",
+    llmActiveProviderId: "akompani_llm_active_provider_id_v2",
+    llmLegacyMigrated: "akompani_llm_legacy_migrated_v2",
+    llmEndpointLegacy: "akompani_llm_endpoint",
+    llmModelLegacy: "akompani_llm_model",
+    llmApiKeyLegacy: "akompani_llm_api_key",
+    llmApiKeyLegacyOpenAi: "akompani_openai_key",
   };
 
   const PROVIDER_PRESETS = [
@@ -599,6 +599,8 @@
     for (const [key, value] of Object.entries(extra)) {
       const cleanKey = String(key || "").trim();
       const cleanValue = String(value || "").trim();
+      const lowered = cleanKey.toLowerCase();
+      if (lowered === "__proto__" || lowered === "constructor" || lowered === "prototype") continue;
       if (!cleanKey || !cleanValue) continue;
       headers[cleanKey] = cleanValue;
     }
@@ -615,6 +617,9 @@
         endpoint: "",
         model: "",
         apiKey: "",
+        authHeader: "Authorization",
+        authPrefix: "Bearer ",
+        extraHeaders: {},
         headers: { "Content-Type": "application/json" },
       };
     }
@@ -622,6 +627,18 @@
     const endpoint = joinEndpoint(provider.baseUrl, provider.path);
     const model = String(provider.activeModel || provider.models?.[0] || "").trim();
     const apiKey = getProviderApiKey(provider.id);
+    const authHeader = String(provider.apiKeyHeader || "Authorization").trim() || "Authorization";
+    const authPrefix = typeof provider.apiKeyPrefix === "string" ? provider.apiKeyPrefix : "Bearer ";
+    const extraHeaders = {};
+    const sourceExtraHeaders = provider.extraHeaders && typeof provider.extraHeaders === "object" ? provider.extraHeaders : {};
+    for (const [key, value] of Object.entries(sourceExtraHeaders)) {
+      const cleanKey = String(key || "").trim();
+      const cleanValue = String(value || "").trim();
+      const lowered = cleanKey.toLowerCase();
+      if (!cleanKey || !cleanValue) continue;
+      if (lowered === "__proto__" || lowered === "constructor" || lowered === "prototype") continue;
+      extraHeaders[cleanKey] = cleanValue;
+    }
 
     return {
       providerId: provider.id,
@@ -629,6 +646,9 @@
       endpoint,
       model,
       apiKey,
+      authHeader,
+      authPrefix,
+      extraHeaders,
       headers: buildProviderHeaders(provider, apiKey),
     };
   }
@@ -671,6 +691,19 @@
     const summary = summarizeFlow(drawflow);
     const providerConfig = options.providerConfig || {};
     const endpointMode = normalizeEndpointMode(options.endpointMode || "both");
+    const defaultAuthHeader = String(providerConfig.authHeader || "Authorization").trim() || "Authorization";
+    const defaultAuthPrefix = typeof providerConfig.authPrefix === "string" ? providerConfig.authPrefix : "Bearer ";
+    const defaultExtraHeaders = {};
+    const sourceExtraHeaders =
+      providerConfig.extraHeaders && typeof providerConfig.extraHeaders === "object" ? providerConfig.extraHeaders : {};
+    for (const [key, value] of Object.entries(sourceExtraHeaders)) {
+      const cleanKey = String(key || "").trim();
+      const cleanValue = String(value || "").trim();
+      const lowered = cleanKey.toLowerCase();
+      if (!cleanKey || !cleanValue) continue;
+      if (lowered === "__proto__" || lowered === "constructor" || lowered === "prototype") continue;
+      defaultExtraHeaders[cleanKey] = cleanValue;
+    }
 
     return `import { Elysia } from "elysia";
 import { cors } from "@elysiajs/cors";
@@ -681,6 +714,9 @@ const AGENT_NAME = ${JSON.stringify(String(options.agentName || "Agent Builder R
 const AGENT_DESCRIPTION = ${JSON.stringify(String(options.description || ""))};
 const DEFAULT_LLM_ENDPOINT = ${JSON.stringify(String(providerConfig.endpoint || ""))};
 const DEFAULT_LLM_MODEL = ${JSON.stringify(String(providerConfig.model || ""))};
+const DEFAULT_LLM_AUTH_HEADER = ${JSON.stringify(defaultAuthHeader)};
+const DEFAULT_LLM_AUTH_PREFIX = ${JSON.stringify(defaultAuthPrefix)};
+const DEFAULT_LLM_EXTRA_HEADERS = ${JSON.stringify(defaultExtraHeaders, null, 2)};
 const ENDPOINT_MODE = ${JSON.stringify(endpointMode)};
 
 function readEnvValue(source, key) {
@@ -729,13 +765,57 @@ function hasChatWebUiEndpoint() {
   return ENDPOINT_MODE === "chat" || ENDPOINT_MODE === "both";
 }
 
+function normalizeHeaderMap(source) {
+  const result = {};
+  if (!source || typeof source !== "object") return result;
+  for (const [key, value] of Object.entries(source)) {
+    const cleanKey = String(key || "").trim();
+    const cleanValue = String(value || "").trim();
+    const lowered = cleanKey.toLowerCase();
+    if (!cleanKey || !cleanValue) continue;
+    if (lowered === "__proto__" || lowered === "constructor" || lowered === "prototype") continue;
+    result[cleanKey] = cleanValue;
+  }
+  return result;
+}
+
+function parseEnvHeaders(raw) {
+  const value = String(raw || "").trim();
+  if (!value) return {};
+  try {
+    return normalizeHeaderMap(JSON.parse(value));
+  } catch {
+    return {};
+  }
+}
+
+function buildLlmRequestHeaders(envSource, apiKey) {
+  const authHeader = readEnvValue(envSource, "LLM_AUTH_HEADER") || DEFAULT_LLM_AUTH_HEADER || "Authorization";
+  const authPrefix = readEnvValue(envSource, "LLM_AUTH_PREFIX") || DEFAULT_LLM_AUTH_PREFIX;
+  const defaultExtra = normalizeHeaderMap(DEFAULT_LLM_EXTRA_HEADERS);
+  const envExtra = parseEnvHeaders(readEnvValue(envSource, "LLM_EXTRA_HEADERS_JSON"));
+  const headers = {
+    ...defaultExtra,
+    ...envExtra,
+    "content-type": "application/json",
+  };
+  if (apiKey) {
+    headers[authHeader] = String(authPrefix || "") + apiKey;
+  }
+  return headers;
+}
+
+function escHtml(s){return String(s||"").replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;");}
+
 function buildChatWebUiPage() {
+  const safeName = escHtml(AGENT_NAME);
+  const safeDesc = escHtml(AGENT_DESCRIPTION);
   return "<!doctype html><html><head><meta charset=\\"utf-8\\" /><meta name=\\"viewport\\" content=\\"width=device-width,initial-scale=1\\" /><title>" +
-    AGENT_NAME +
+    safeName +
     " Chat</title><style>body{font-family:ui-sans-serif,system-ui,-apple-system,sans-serif;max-width:860px;margin:24px auto;padding:0 16px;color:#111}textarea,input,button{font:inherit}textarea{width:100%;min-height:100px;padding:10px}#log{margin-top:14px;padding:12px;border:1px solid #ddd;border-radius:10px;white-space:pre-wrap;background:#fafafa}button{padding:10px 14px;border:0;border-radius:8px;background:#111;color:#fff;cursor:pointer}small{color:#666}</style></head><body><h1>" +
-    AGENT_NAME +
+    safeName +
     "</h1><p>" +
-    AGENT_DESCRIPTION +
+    safeDesc +
     "</p><textarea id=\\"prompt\\" placeholder=\\"Ask your agent...\\"></textarea><div style=\\"margin-top:8px\\"><button id=\\"send\\">Send</button></div><div id=\\"log\\">Ready.</div><small>Auth-enabled deployments require x-worker-token via custom client/script.</small><script>const b=document.getElementById('send');const p=document.getElementById('prompt');const log=document.getElementById('log');b.onclick=async()=>{const prompt=String(p.value||'').trim();if(!prompt){log.textContent='Enter a prompt.';return;}log.textContent='Running...';try{const r=await fetch('/invoke',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({prompt})});const d=await r.json();log.textContent=JSON.stringify(d,null,2);}catch(e){log.textContent=String(e&&e.message||e);}};</script></body></html>";
 }
 
@@ -797,10 +877,7 @@ async function callConfiguredLlm(input, envSource) {
   try {
     response = await fetch(endpoint, {
       method: "POST",
-      headers: {
-        "content-type": "application/json",
-        authorization: "Bearer " + apiKey,
-      },
+      headers: buildLlmRequestHeaders(envSource, apiKey),
       body: JSON.stringify({
         model,
         temperature: 0.2,
@@ -1017,6 +1094,20 @@ export const OPTIONS = app.handle;
   function buildCloudflareWorkerModule(options = {}) {
     const drawflow = options.drawflow || { drawflow: { Home: { data: {} } } };
     const summary = summarizeFlow(drawflow);
+    const providerConfig = options.providerConfig || {};
+    const defaultAuthHeader = String(providerConfig.authHeader || "Authorization").trim() || "Authorization";
+    const defaultAuthPrefix = typeof providerConfig.authPrefix === "string" ? providerConfig.authPrefix : "Bearer ";
+    const defaultExtraHeaders = {};
+    const sourceExtraHeaders =
+      providerConfig.extraHeaders && typeof providerConfig.extraHeaders === "object" ? providerConfig.extraHeaders : {};
+    for (const [key, value] of Object.entries(sourceExtraHeaders)) {
+      const cleanKey = String(key || "").trim();
+      const cleanValue = String(value || "").trim();
+      const lowered = cleanKey.toLowerCase();
+      if (!cleanKey || !cleanValue) continue;
+      if (lowered === "__proto__" || lowered === "constructor" || lowered === "prototype") continue;
+      defaultExtraHeaders[cleanKey] = cleanValue;
+    }
 
     return `// Generated by Agent Builder IDE
 // Target: Cloudflare Worker module fallback
@@ -1026,6 +1117,9 @@ const FLOW_SUMMARY = ${JSON.stringify(summary, null, 2)};
 const AGENT_NAME = ${JSON.stringify(String(options.agentName || "Agent Builder Runtime"))};
 const AGENT_DESCRIPTION = ${JSON.stringify(String(options.description || ""))};
 const ENDPOINT_MODE = ${JSON.stringify(normalizeEndpointMode(options.endpointMode || "both"))};
+const DEFAULT_LLM_AUTH_HEADER = ${JSON.stringify(defaultAuthHeader)};
+const DEFAULT_LLM_AUTH_PREFIX = ${JSON.stringify(defaultAuthPrefix)};
+const DEFAULT_LLM_EXTRA_HEADERS = ${JSON.stringify(defaultExtraHeaders, null, 2)};
 
 function json(data, status = 200) {
   return new Response(JSON.stringify(data, null, 2), {
@@ -1070,13 +1164,57 @@ function hasChatWebUiEndpoint() {
   return ENDPOINT_MODE === "chat" || ENDPOINT_MODE === "both";
 }
 
+function normalizeHeaderMap(source) {
+  const result = {};
+  if (!source || typeof source !== "object") return result;
+  for (const [key, value] of Object.entries(source)) {
+    const cleanKey = String(key || "").trim();
+    const cleanValue = String(value || "").trim();
+    const lowered = cleanKey.toLowerCase();
+    if (!cleanKey || !cleanValue) continue;
+    if (lowered === "__proto__" || lowered === "constructor" || lowered === "prototype") continue;
+    result[cleanKey] = cleanValue;
+  }
+  return result;
+}
+
+function parseEnvHeaders(raw) {
+  const value = String(raw || "").trim();
+  if (!value) return {};
+  try {
+    return normalizeHeaderMap(JSON.parse(value));
+  } catch {
+    return {};
+  }
+}
+
+function buildLlmRequestHeaders(env, apiKey) {
+  const authHeader = String(env.LLM_AUTH_HEADER || DEFAULT_LLM_AUTH_HEADER || "Authorization").trim() || "Authorization";
+  const authPrefix = String(env.LLM_AUTH_PREFIX || DEFAULT_LLM_AUTH_PREFIX || "");
+  const defaultExtra = normalizeHeaderMap(DEFAULT_LLM_EXTRA_HEADERS);
+  const envExtra = parseEnvHeaders(env.LLM_EXTRA_HEADERS_JSON);
+  const headers = {
+    ...defaultExtra,
+    ...envExtra,
+    "content-type": "application/json",
+  };
+  if (apiKey) {
+    headers[authHeader] = authPrefix + apiKey;
+  }
+  return headers;
+}
+
+function escHtml(s){return String(s||"").replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;");}
+
 function buildChatWebUiPage() {
+  const safeName = escHtml(AGENT_NAME);
+  const safeDesc = escHtml(AGENT_DESCRIPTION);
   return "<!doctype html><html><head><meta charset=\\"utf-8\\" /><meta name=\\"viewport\\" content=\\"width=device-width,initial-scale=1\\" /><title>" +
-    AGENT_NAME +
+    safeName +
     " Chat</title><style>body{font-family:ui-sans-serif,system-ui,-apple-system,sans-serif;max-width:860px;margin:24px auto;padding:0 16px;color:#111}textarea,input,button{font:inherit}textarea{width:100%;min-height:100px;padding:10px}#log{margin-top:14px;padding:12px;border:1px solid #ddd;border-radius:10px;white-space:pre-wrap;background:#fafafa}button{padding:10px 14px;border:0;border-radius:8px;background:#111;color:#fff;cursor:pointer}small{color:#666}</style></head><body><h1>" +
-    AGENT_NAME +
+    safeName +
     "</h1><p>" +
-    AGENT_DESCRIPTION +
+    safeDesc +
     "</p><textarea id=\\"prompt\\" placeholder=\\"Ask your agent...\\"></textarea><div style=\\"margin-top:8px\\"><button id=\\"send\\">Send</button></div><div id=\\"log\\">Ready.</div><small>Auth-enabled deployments require x-worker-token via custom client/script.</small><script>const b=document.getElementById('send');const p=document.getElementById('prompt');const log=document.getElementById('log');b.onclick=async()=>{const prompt=String(p.value||'').trim();if(!prompt){log.textContent='Enter a prompt.';return;}log.textContent='Running...';try{const r=await fetch('/invoke',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({prompt})});const d=await r.json();log.textContent=JSON.stringify(d,null,2);}catch(e){log.textContent=String(e&&e.message||e);}};</script></body></html>";
 }
 
@@ -1199,10 +1337,7 @@ export default {
         try {
           upstream = await fetch(endpoint, {
             method: "POST",
-            headers: {
-              "content-type": "application/json",
-              authorization: "Bearer " + apiKey,
-            },
+            headers: buildLlmRequestHeaders(env, apiKey),
             body: JSON.stringify({
               model,
               temperature: 0.2,
@@ -1508,7 +1643,7 @@ export default {
   ensureProviderState();
   syncLegacyFromActive();
 
-  window.CANARIA_IDE = {
+  window.AKOMPANI_IDE = {
     storage: STORAGE,
     providerPresets: clone(PROVIDER_PRESETS),
     parseModelText,

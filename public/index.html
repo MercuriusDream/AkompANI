@@ -11,7 +11,7 @@
   <link rel="stylesheet" href="./design-system.css" />
   <link rel="stylesheet" href="./landing.css" />
   <link rel="manifest" href="./manifest.json" />
-  <script>(function () { var t = localStorage.getItem('voyager-theme'); if (!t) t = matchMedia('(prefers-color-scheme:dark)').matches ? 'dark' : 'light'; document.documentElement.setAttribute('data-theme', t) })()</script>
+  <script>(function () { var t = localStorage.getItem('akompani-theme'); if (!t) t = matchMedia('(prefers-color-scheme:dark)').matches ? 'dark' : 'light'; document.documentElement.setAttribute('data-theme', t) })()</script>
 </head>
 
 <body>
@@ -23,7 +23,7 @@
       </a>
       <div class="nav-links">
         <a href="./app/?mode=canvas" class="nav-link">Flow Editor</a>
-        <a href="https://docs.voyager.dev" target="_blank" rel="noopener noreferrer" class="nav-link">Docs</a>
+        <a href="https://docs.akompani.dev" target="_blank" rel="noopener noreferrer" class="nav-link">Docs</a>
         <a href="./app/?mode=chat" class="nav-link">Chat</a>
         <a href="./app/?mode=deploy" class="nav-link">Deploy</a>
       </div>
@@ -88,7 +88,7 @@
         </h1>
         <div class="hero-actions">
           <a href="./app/?mode=chat" class="btn btn-primary btn-lg press-feedback">Get Started</a>
-          <a href="https://docs.voyager.dev" target="_blank" rel="noopener noreferrer" class="btn btn-secondary btn-lg">Documentation</a>
+          <a href="https://docs.akompani.dev" target="_blank" rel="noopener noreferrer" class="btn btn-secondary btn-lg">Documentation</a>
         </div>
       </div>
     </div>
@@ -366,9 +366,9 @@
     <div class="container">
       <div class="quickstart reveal">
         <div class="code-block">
-          <code>git clone https://github.com/your-org/canaria.git && cd canaria && npm install && npm run dev</code>
+          <code>git clone https://github.com/your-org/akompani.git && cd akompani && npm install && npm run dev</code>
           <button class="code-copy"
-            onclick="navigator.clipboard.writeText('git clone https://github.com/your-org/canaria.git && cd canaria && npm install && npm run dev')">
+            onclick="navigator.clipboard.writeText('git clone https://github.com/your-org/akompani.git && cd akompani && npm install && npm run dev')">
             <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none"
               stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
               <rect x="9" y="9" width="13" height="13" rx="2" ry="2" />
@@ -422,7 +422,7 @@
           <a href="./app/?mode=canvas">Editor</a>
           <a href="./app/?mode=chat">Chat</a>
           <a href="./app/?mode=deploy">Ops</a>
-          <a href="https://docs.voyager.dev" target="_blank" rel="noopener noreferrer">Docs</a>
+          <a href="https://docs.akompani.dev" target="_blank" rel="noopener noreferrer">Docs</a>
           <a href="https://github.com" target="_blank" rel="noopener noreferrer">GitHub</a>
         </div>
       </div>
@@ -796,7 +796,7 @@
       root.classList.add('theme-transition');
       var next = root.getAttribute('data-theme') === 'dark' ? 'light' : 'dark';
       root.setAttribute('data-theme', next);
-      localStorage.setItem('voyager-theme', next);
+      localStorage.setItem('akompani-theme', next);
       setTimeout(function () { root.classList.remove('theme-transition'); }, 400);
     });
   </script>

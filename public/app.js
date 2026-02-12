@@ -145,24 +145,24 @@
   function updateEditorNavModeLinks() {}
 
   const STORAGE_KEYS = {
-    localFlows: "voyager_local_flows",
-    localAgents: "voyager_local_agents",
-    localDeployments: "voyager_local_deployments",
-    llmEndpoint: "voyager_llm_endpoint",
-    llmModel: "voyager_llm_model",
-    llmApiKeySession: "voyager_llm_api_key",
-    llmProviderProfiles: "voyager_llm_provider_profiles_v2",
-    llmActiveProviderId: "voyager_llm_active_provider_id_v2",
-    llmProviderKeysSession: "voyager_llm_provider_keys_v2",
-    oauthGithubToken: "voyager_oauth_github_token",
-    oauthCloudflareToken: "voyager_oauth_cloudflare_token",
-    oauthVercelToken: "voyager_oauth_vercel_token",
-    oauthGithubClientId: "voyager_oauth_github_client_id",
-    oauthCloudflareClientId: "voyager_oauth_cloudflare_client_id",
-    cloudflareAccountId: "voyager_cf_account_id",
-    vercelProject: "voyager_vercel_project",
-    vercelTeamId: "voyager_vercel_team_id",
-    deployEndpointMode: "voyager_deploy_endpoint_mode",
+    localFlows: "akompani_local_flows",
+    localAgents: "akompani_local_agents",
+    localDeployments: "akompani_local_deployments",
+    llmEndpoint: "akompani_llm_endpoint",
+    llmModel: "akompani_llm_model",
+    llmApiKeySession: "akompani_llm_api_key",
+    llmProviderProfiles: "akompani_llm_provider_profiles_v2",
+    llmActiveProviderId: "akompani_llm_active_provider_id_v2",
+    llmProviderKeysSession: "akompani_llm_provider_keys_v2",
+    oauthGithubToken: "akompani_oauth_github_token",
+    oauthCloudflareToken: "akompani_oauth_cloudflare_token",
+    oauthVercelToken: "akompani_oauth_vercel_token",
+    oauthGithubClientId: "akompani_oauth_github_client_id",
+    oauthCloudflareClientId: "akompani_oauth_cloudflare_client_id",
+    cloudflareAccountId: "akompani_cf_account_id",
+    vercelProject: "akompani_vercel_project",
+    vercelTeamId: "akompani_vercel_team_id",
+    deployEndpointMode: "akompani_deploy_endpoint_mode",
   };
 
   let editor = null;
@@ -1377,15 +1377,15 @@
 
   function persistFlowTabs() {
     try {
-      localStorage.setItem("voyager_open_flow_tabs", JSON.stringify(state.openFlowTabs));
-      localStorage.setItem("voyager_active_flow_tab", state.currentFlowId);
+      localStorage.setItem("akompani_open_flow_tabs", JSON.stringify(state.openFlowTabs));
+      localStorage.setItem("akompani_active_flow_tab", state.currentFlowId);
     } catch {}
   }
 
   function restoreFlowTabs() {
     try {
-      const tabs = JSON.parse(localStorage.getItem("voyager_open_flow_tabs") || "[]");
-      const activeId = localStorage.getItem("voyager_active_flow_tab") || "";
+      const tabs = JSON.parse(localStorage.getItem("akompani_open_flow_tabs") || "[]");
+      const activeId = localStorage.getItem("akompani_active_flow_tab") || "";
       // Validate that referenced flows still exist in localStorage
       const existingFlows = listLocalFlows();
       const validTabs = tabs.filter((t) => existingFlows.some((f) => f.id === t.id));
@@ -1408,7 +1408,11 @@
   function parseJsonString(value) {
     const text = String(value || "").trim();
     if (!text) return null;
-    return JSON.parse(text);
+    try {
+      return JSON.parse(text);
+    } catch {
+      return null;
+    }
   }
 
   function groupLabelById(groupId) {
@@ -1583,12 +1587,12 @@
     return (
       String(deployCfAccountIdInput?.value || "").trim() ||
       readLocal(STORAGE_KEYS.cloudflareAccountId) ||
-      readLocal("voyager_cf_account_id")
+      readLocal("akompani_cf_account_id")
     );
   }
 
   function getIdeRuntime() {
-    const runtime = window.CANARIA_IDE;
+    const runtime = window.AKOMPANI_IDE;
     if (!runtime || typeof runtime !== "object") return null;
     return runtime;
   }
@@ -1655,9 +1659,9 @@
     return {
       providerId: "",
       providerName: "",
-      endpoint: readLocal(STORAGE_KEYS.llmEndpoint),
-      apiKey: readSession(STORAGE_KEYS.llmApiKeySession),
-      model: readLocal(STORAGE_KEYS.llmModel),
+      endpoint: String(readLocal(STORAGE_KEYS.llmEndpoint) || "").trim(),
+      apiKey: String(readSession(STORAGE_KEYS.llmApiKeySession) || "").trim(),
+      model: String(readLocal(STORAGE_KEYS.llmModel) || "").trim(),
       headers: {},
     };
   }
@@ -1980,7 +1984,9 @@
   function blockIconHtml(type, def) {
     const svg = BLOCK_SVG_ICONS[type];
     if (svg) return svg;
-    return escapeHtml(def.icon);
+    // Return empty string — label already shows the block name
+    // (prevents "StartStart" duplicate text bug)
+    return '';
   }
 
   function nodeInlineSummary(type, data) {
@@ -2115,8 +2121,7 @@
 
     return `
       <div class="scratch-block${isExpanded ? " is-expanded" : ""}" data-node-type="${escapeHtml(type)}" style="--node-color:${safeColor}">
-        <div class="scratch-block-header" style="background:${safeColor}">
-          <span class="scratch-block-icon">${blockIconHtml(type, def)}</span>
+        <div class="scratch-block-header">
           <span class="scratch-block-label">${safeLabel}</span>
           <span class="scratch-block-meta">${safeMeta}</span>
           <div class="scratch-block-actions">
@@ -2135,7 +2140,7 @@
 
   function updateNodeCard(nodeId) {
     const id = String(nodeId || "").trim();
-    if (!id) return;
+    if (!id || !editor) return;
     const node = editor.getNodeFromId(Number(id));
     if (!node) return;
 
@@ -2163,7 +2168,7 @@
     // Not selected — safe to do full re-render
     content.innerHTML = nodeTemplate(node.name, node.data || {}, id);
     // Update SVG path to match new content size
-    if (editor._updateBlockPath) editor._updateBlockPath(Number(id));
+    if (editor?._updateBlockPath) editor._updateBlockPath(Number(id));
   }
 
   function refreshAllNodeCards() {
@@ -2182,8 +2187,9 @@
     }
     if (!editor?.precanvas) return { x: 0, y: 0 };
     const rect = editor.precanvas.getBoundingClientRect();
-    const scaleX = editor.precanvas.clientWidth / (editor.precanvas.clientWidth * editor.zoom);
-    const scaleY = editor.precanvas.clientHeight / (editor.precanvas.clientHeight * editor.zoom);
+    const z = editor.zoom || 1;
+    const scaleX = editor.precanvas.clientWidth > 0 ? editor.precanvas.clientWidth / (editor.precanvas.clientWidth * z) : 1;
+    const scaleY = editor.precanvas.clientHeight > 0 ? editor.precanvas.clientHeight / (editor.precanvas.clientHeight * z) : 1;
 
     const x = clientX * scaleX - rect.x * scaleX;
     const y = clientY * scaleY - rect.y * scaleY;
@@ -2195,7 +2201,7 @@
   }
 
   function connectNodesSafe(sourceId, targetId, sourcePort = "output_1", targetPort = "input_1") {
-    if (!sourceId || !targetId) return;
+    if (sourceId == null || targetId == null) return;
     try {
       editor.addConnection(sourceId, targetId, sourcePort, targetPort);
     } catch {
@@ -2418,8 +2424,8 @@
 
     if (def.isMacro) {
       const created = insertMakerMacro(def.macroKind, x, y);
-      if (created && typeof CANARIAToast !== "undefined") {
-        CANARIAToast.success({
+      if (created && typeof AkompaniToast !== "undefined") {
+        AkompaniToast.success({
           title: `${def.label} inserted`,
           message: "Maker blueprint blocks were added to the canvas.",
         });
@@ -2475,7 +2481,7 @@
   }
 
   function getSelectedNode() {
-    if (!state.selectedNodeId) return null;
+    if (!state.selectedNodeId || !editor) return null;
     return editor.getNodeFromId(Number(state.selectedNodeId));
   }
 
@@ -2491,7 +2497,7 @@
   }
 
   function removeNodeById(nodeId) {
-    if (!nodeId) return;
+    if (nodeId == null || nodeId === "") return;
     const id = String(nodeId);
     delete state.nodeRuntimeById[id];
     try {
@@ -2541,6 +2547,7 @@
   }
 
   function patchNodeData(nodeId, fieldKey, value) {
+    if (!editor) return;
     const node = editor.getNodeFromId(Number(nodeId));
     if (!node) return;
     const next = { ...(node.data || {}), [fieldKey]: value };
@@ -3101,7 +3108,7 @@
 
   function persistEditorMode() {
     try {
-      localStorage.setItem("voyager_editor_mode", state.editorMode);
+      localStorage.setItem("akompani_editor_mode", state.editorMode);
     } catch {
       // ignore storage failures
     }
@@ -3184,7 +3191,7 @@
     document.body.classList.toggle("left-collapsed", state.isLeftCollapsed);
     updateLayoutToggleIcons();
     hidePaletteHoverCard();
-    try { localStorage.setItem("voyager_left_collapsed", state.isLeftCollapsed ? "1" : "0"); } catch {}
+    try { localStorage.setItem("akompani_left_collapsed", state.isLeftCollapsed ? "1" : "0"); } catch {}
     setTimeout(() => refreshCanvasConnections(), 130);
   }
 
@@ -3212,48 +3219,57 @@
     card.draggable = true;
     card.tabIndex = 0;
     card.dataset.nodeType = type;
-    card.title = nodeHoverInfo(def);
+    card.title = def.label;
     card.style.setProperty("--block-color", def.color || "#888");
 
-    const desc = truncateText(def.description || "", 60);
+    // Render full 1:1 replica of the canvas block using nodeTemplate with default/example data
+    const exampleData = Object.assign({}, def.data || {});
+    // Fill in example values for fields that have no default data
+    if (Array.isArray(def.fields)) {
+      for (const field of def.fields) {
+        if (field.key && (exampleData[field.key] === undefined || exampleData[field.key] === "") && field.example) {
+          exampleData[field.key] = field.example;
+        }
+      }
+    }
+    card.innerHTML = nodeTemplate(type, exampleData, "");
 
-    card.innerHTML = `
-      <div class="block-icon" style="background:${def.color}">${blockIconHtml(type, def)}</div>
-      <div class="block-info">
-        <div class="block-label">${escapeHtml(def.label)}</div>
-        <div class="block-desc">${escapeHtml(desc)}</div>
-      </div>
-    `;
+    // Make all inputs/textareas/selects inside the palette block read-only (they're just for preview)
+    for (const input of card.querySelectorAll("input, textarea, select")) {
+      input.setAttribute("readonly", "");
+      input.setAttribute("tabindex", "-1");
+      input.style.pointerEvents = "none";
+    }
+    for (const btn of card.querySelectorAll("button")) {
+      btn.setAttribute("tabindex", "-1");
+      btn.style.pointerEvents = "none";
+    }
 
     card.addEventListener("click", () => {
       addNodeNearCanvasCenter(type);
     });
 
-    card.addEventListener("mouseenter", () => {
-      showPaletteHoverCard(type, card);
-    });
-
-    card.addEventListener("mousemove", () => {
-      positionPaletteHoverCard(card);
-    });
-
-    card.addEventListener("mouseleave", () => {
-      hidePaletteHoverCard();
-    });
-
-    card.addEventListener("focus", () => {
-      showPaletteHoverCard(type, card);
-    });
-
-    card.addEventListener("blur", () => {
-      hidePaletteHoverCard();
-    });
-
     card.addEventListener("dragstart", (event) => {
       event.dataTransfer.effectAllowed = "copy";
       event.dataTransfer.setData("application/node-type", type);
+    });
+
+    // Hover popup
+    let hoverTimer = null;
+    card.addEventListener("mouseenter", () => {
+      hoverTimer = setTimeout(() => showPaletteHoverCard(type, card), 400);
+    });
+    card.addEventListener("mousemove", () => {
+      if (paletteHoverCard?.classList.contains("visible")) {
+        positionPaletteHoverCard(card);
+      }
+    });
+    card.addEventListener("mouseleave", () => {
+      clearTimeout(hoverTimer);
       hidePaletteHoverCard();
     });
+    card.addEventListener("focus", () => showPaletteHoverCard(type, card));
+    card.addEventListener("blur", () => hidePaletteHoverCard());
 
     return card;
   }
@@ -3573,7 +3589,9 @@
     }
 
     clearEditor();
-    editor.import(flow.drawflow);
+    if (editor) {
+      editor.import(flow.drawflow);
+    }
     resetNodeRuntime();
 
     state.currentFlowId = flow.id;
@@ -3669,15 +3687,15 @@
       if (runStatus) {
         runStatus.textContent = `Flow exported to ${filename}.`;
       }
-      if (typeof CANARIAToast !== "undefined") {
-        CANARIAToast.success({ title: "Flow exported", message: filename });
+      if (typeof AkompaniToast !== "undefined") {
+        AkompaniToast.success({ title: "Flow exported", message: filename });
       }
     } catch (error) {
       if (runStatus) {
         runStatus.textContent = `Export error: ${error.message}`;
       }
-      if (typeof CANARIAToast !== "undefined") {
-        CANARIAToast.error({ title: "Export failed", message: error.message || "Could not export flow file." });
+      if (typeof AkompaniToast !== "undefined") {
+        AkompaniToast.error({ title: "Export failed", message: error.message || "Could not export flow file." });
       }
     }
   }
@@ -3725,8 +3743,8 @@
     if (runStatus) {
       runStatus.textContent = `Imported flow "${record.name}".`;
     }
-    if (typeof CANARIAToast !== "undefined") {
-      CANARIAToast.success({ title: "Flow imported", message: record.name });
+    if (typeof AkompaniToast !== "undefined") {
+      AkompaniToast.success({ title: "Flow imported", message: record.name });
     }
   }
 
@@ -3759,9 +3777,14 @@
       resetNodeRuntime();
 
       let parsedInput = {};
-      const raw = runInput.value.trim();
+      const raw = runInput?.value?.trim() || "";
       if (raw) {
-        parsedInput = JSON.parse(raw);
+        try {
+          parsedInput = JSON.parse(raw);
+        } catch (parseErr) {
+          if (runStatus) runStatus.textContent = `Invalid JSON input: ${parseErr.message}`;
+          return;
+        }
       }
       if (!state.currentFlowId) {
         await saveFlow();
@@ -3950,10 +3973,108 @@
     return parts.join(" ");
   }
 
+  /**
+   * Detect whether user intent is to generate/modify a flow or just have a conversation.
+   */
+  function detectChatIntent(text) {
+    const lower = text.toLowerCase().trim();
+    const flowPatterns = [
+      /\b(create|build|make|generate|design|set\s*up)\b.*\b(flow|agent|workflow|pipeline|automation)\b/,
+      /\b(flow|agent|workflow|pipeline)\b.*\b(that|which|to|for)\b/,
+      /\bautomate\b/, /\bscrape\b/, /\bfetch\b.*\bapi\b/, /\bsend\s+email\b/,
+      /\bcall\s+(api|endpoint)\b/, /\bhttp\s+request\b/, /\bwebhook\b/,
+      /\bif\b.*\bthen\b/, /\bloop\b.*\b(through|over)\b/, /\bfor\s+each\b/,
+      /\bclassif(y|ier)\b/, /\bembed(ding)?\b/, /\bllm\b/, /\bgpt\b/,
+      /\bchain\b.*\b(nodes?|blocks?|steps?)\b/, /\bconnect\b.*\b(nodes?|blocks?)\b/,
+      /\badd\s+(a\s+)?(node|block)\b/, /\bvibe\b.*\b(agent|code)\b/,
+    ];
+    for (const pat of flowPatterns) {
+      if (pat.test(lower)) return "flow";
+    }
+    return "chat";
+  }
+
+  /** Build the flow-generation system prompt with full node catalog info. */
+  function buildFlowGenSystemPrompt() {
+    return [
+      "You are an expert workflow architect for Akompani, a visual block-based agent IDE.",
+      "Your job is to design agent flows as structured JSON that the IDE can render.",
+      "",
+      "## Response Format",
+      "Return ONLY valid JSON (no markdown fences, no explanation) with this structure:",
+      '{ "name": "Flow Name", "drawflow": { "drawflow": { "Home": { "data": { "1": { ... }, "2": { ... } } } } } }',
+      "",
+      "## Node Structure",
+      'Each node: { "id": N, "name": "type_name", "data": {...}, "inputs": { "input_1": { "connections": [{ "node": "M", "input": "output_1" }] } }, "outputs": { "output_1": { "connections": [{ "node": "K", "output": "input_1" }] } }, "pos_x": X, "pos_y": Y }',
+      "",
+      "## Available Node Types",
+      "",
+      "FLOW CONTROL:",
+      "- start: Entry point. outputs:1. data:{}",
+      "- end: Terminator. inputs:1. data:{returnExpr:'last'}",
+      "- if: Conditional. data:{condition:'expr'}. outputs:2 (output_1=true, output_2=false)",
+      "- while: Loop. data:{condition:'expr', maxIterations:100}",
+      "- for_each: Iterate. data:{itemsExpr:'vars.items', itemVar:'item', indexVar:'i'}",
+      "- switch_case: Multi-branch. data:{expression:'expr', cases:['a','b','default']}. outputs:N",
+      "- try_catch: Error handling. data:{errorVar:'err', retries:0}. outputs:2",
+      "- delay: Wait. data:{msExpr:'1000'}",
+      "- assert: Guard. data:{condition:'expr', message:'fail msg'}",
+      "- merge: Join branches. data:{strategy:'waitAll'}",
+      "- parallel: Fork. outputs:3",
+      "",
+      "AI / LLM:",
+      "- openai_structured: Structured LLM output. data:{model:'gpt-4.1-mini', systemPrompt:'...', userPrompt:'{{input}}', schemaName:'Result', schema:{type:'object',properties:{...}}, storeAs:'result'}",
+      "- llm_chat: Chat completion. data:{model:'gpt-4.1-mini', systemPrompt:'...', userPrompt:'{{input}}', storeAs:'reply'}",
+      "- embeddings: Vector embed. data:{model:'text-embedding-3-small', inputExpr:'vars.text', storeAs:'embedding'}",
+      "- classifier: Classify text. data:{model:'gpt-4.1-mini', inputExpr:'input', labels:['pos','neg','neutral'], storeAs:'label'}",
+      "",
+      "DATA:",
+      "- template: String interpolation. data:{template:'Hello {{name}}', parseJson:false, storeAs:'output'}",
+      "- set_var: Set variable. data:{varName:'myVar', expression:'input.field'}",
+      "- transform: JS expression. data:{expression:'input.items.map(x=>x.name)', storeAs:'names'}",
+      "- json_parse: Parse JSON. data:{sourceExpr:'input.body', storeAs:'parsed'}",
+      "- json_stringify: Stringify. data:{sourceExpr:'vars.data', indent:2, storeAs:'jsonStr'}",
+      "- array_push: Push to array. data:{arrayVar:'results', valueExpr:'input'}",
+      "- map_filter: Map/filter. data:{sourceExpr:'vars.items', mapExpr:'item.name', filterExpr:'item.active', storeAs:'filtered'}",
+      "- regex: Regex ops. data:{sourceExpr:'input.text', pattern:'\\\\d+', flags:'g', action:'match', storeAs:'matches'}",
+      "- cache: KV cache. data:{action:'get', key:'myKey', valueExpr:'input', ttl:3600, storeAs:'cached'}",
+      "",
+      "INTEGRATIONS:",
+      "- http: HTTP request. data:{method:'GET', url:'https://api.example.com/data', headers:'{}', body:'', storeAs:'response'}",
+      "- webhook: Receive HTTP. data:{path:'/hook', method:'POST', storeAs:'payload'}",
+      "- websocket: WebSocket. data:{url:'wss://...', action:'send', message:'{{data}}', storeAs:'ws_response'}",
+      "- db_query: Database. data:{driver:'postgres', connectionExpr:'vars.dbUrl', query:'SELECT * FROM users', storeAs:'rows'}",
+      "- email_send: Email. data:{to:'user@example.com', subject:'Hello', body:'...', storeAs:'sent'}",
+      "",
+      "CODE: python_script, typescript_script (data:{code:'...', storeAs:'output'})",
+      "DEBUG: log (data:{message:'{{json input}}'})",
+      "",
+      "## Rules",
+      "1. ALWAYS include start (id:1) and end as last node",
+      "2. Connections are bidirectional: output→input and input←output must both exist",
+      "3. Use string IDs in connections: { \"node\": \"2\" }",
+      "4. Space nodes: pos_x += 60, pos_y += 120",
+      "5. Use {{variable}} in template expressions for dynamic values",
+    ].join("\n");
+  }
+
+  /** Build the conversational chat system prompt. */
+  function buildChatSystemPrompt() {
+    return [
+      "You are Akompani AI, a helpful assistant for a visual agent-building IDE.",
+      "Help users understand their flows, debug issues, suggest improvements, and answer questions about building AI agents.",
+      "The user is working in a block-based visual editor where they drag and connect nodes to build agent workflows.",
+      "Be concise and helpful. Use markdown for formatting when useful.",
+      "If the user wants to create a flow, tell them to describe what they want (e.g. 'Build a flow that scrapes a website and summarizes the content').",
+    ].join(" ");
+  }
+
   async function generateFlowViaLlm(prompt) {
     const cfg = getLlmConfig();
     if (!cfg.endpoint || !cfg.apiKey || !cfg.model) {
-      throw new Error("LLM provider is not configured. Configure endpoint, API key, and model in Deploy.");
+      throw new Error(
+        "LLM not configured. Go to Settings and set up an LLM provider (OpenAI, Groq, etc.) with an API key."
+      );
     }
 
     const endpoint = cfg.endpoint.trim();
@@ -3963,41 +4084,65 @@
       throw new Error("LLM endpoint must use HTTPS (or localhost for local development).");
     }
 
-    const systemPrompt = [
-      "You are an expert workflow planner for a block-based agent IDE.",
-      "Return strict JSON with keys: name (string), drawflow (Drawflow export object).",
-      "Allowed node names: start,end,http,openai_structured,if,while,for_each,transform,set_var,log,delay,json_parse,json_stringify,array_push,template,assert,python_script,typescript_script.",
-      "The flow must include at least one start and one end node and valid output/input connections.",
-      "Do not include markdown fences.",
-    ].join(" ");
+    const systemPrompt = buildFlowGenSystemPrompt();
 
-    const response = await fetch(endpoint, {
-      method: "POST",
-      headers: buildLlmRequestHeaders(cfg),
-      body: JSON.stringify({
-        model: cfg.model,
-        temperature: 0.2,
-        response_format: { type: "json_object" },
-        messages: [
-          { role: "system", content: systemPrompt },
-          { role: "user", content: prompt },
-        ],
-      }),
-    });
+    const body = {
+      model: cfg.model,
+      temperature: 0.2,
+      messages: [
+        { role: "system", content: systemPrompt },
+        { role: "user", content: prompt },
+      ],
+    };
+
+    // Only add response_format for providers known to support it
+    const supportsJsonMode = /openai\.com|openrouter\.ai|groq\.com|together\.xyz|x\.ai|mistral\.ai/i.test(endpoint);
+    if (supportsJsonMode) {
+      body.response_format = { type: "json_object" };
+    }
+
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 60000);
+
+    let response;
+    try {
+      response = await fetch(endpoint, {
+        method: "POST",
+        headers: buildLlmRequestHeaders(cfg),
+        body: JSON.stringify(body),
+        signal: controller.signal,
+      });
+    } catch (err) {
+      clearTimeout(timeoutId);
+      if (err.name === "AbortError") {
+        throw new Error("LLM request timed out (60s). Check your provider and try again.");
+      }
+      throw new Error(`Network error: ${err.message}. Check your LLM endpoint URL.`);
+    }
+    clearTimeout(timeoutId);
 
     let data;
     try {
       data = await response.json();
     } catch {
-      data = null;
+      throw new Error(`LLM returned non-JSON response (${response.status}). Check your endpoint URL.`);
     }
 
     if (!response.ok) {
       const detail = data?.error?.message || data?.error || `Request failed (${response.status})`;
+      if (response.status === 401 || response.status === 403) {
+        throw new Error(`Auth failed: ${detail}. Check your API key in Settings.`);
+      }
+      if (response.status === 429) {
+        throw new Error(`Rate limited: ${detail}. Wait a moment and try again.`);
+      }
       throw new Error(String(detail));
     }
 
     let rawContent = data?.choices?.[0]?.message?.content;
+    if (rawContent == null) {
+      throw new Error("LLM returned empty response. Try rephrasing your prompt.");
+    }
     if (Array.isArray(rawContent)) {
       rawContent = rawContent
         .map((item) => {
@@ -4011,10 +4156,63 @@
     }
     const parsed = extractJsonObjectFromText(rawContent);
     if (!parsed) {
-      throw new Error("LLM returned invalid JSON flow payload.");
+      throw new Error("LLM response was not valid JSON. Try simplifying your request or switching models.");
     }
 
     return normalizeGeneratedPayload(parsed, prompt);
+  }
+
+  /** Conversational chat via LLM. Returns assistant reply text. */
+  async function chatViaLlm(userText, conversationHistory) {
+    const cfg = getLlmConfig();
+    if (!cfg.endpoint || !cfg.apiKey || !cfg.model) {
+      return "LLM not configured. Go to **Settings** and set up a provider (OpenAI, Groq, etc.) with an API key.";
+    }
+
+    const endpoint = cfg.endpoint.trim();
+    const isHttps = endpoint.startsWith("https://");
+    const isHttpLocalhost = endpoint.startsWith("http://localhost") || endpoint.startsWith("http://127.0.0.1");
+    if (!isHttps && !isHttpLocalhost) {
+      return "LLM endpoint must use HTTPS (or localhost).";
+    }
+
+    const messages = [{ role: "system", content: buildChatSystemPrompt() }];
+    const recent = (conversationHistory || []).slice(-12);
+    for (const msg of recent) {
+      if (msg.role === "user" || msg.role === "assistant") {
+        messages.push({ role: msg.role, content: msg.content });
+      }
+    }
+    messages.push({ role: "user", content: userText });
+
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 30000);
+
+    try {
+      const response = await fetch(endpoint, {
+        method: "POST",
+        headers: buildLlmRequestHeaders(cfg),
+        body: JSON.stringify({ model: cfg.model, temperature: 0.7, max_tokens: 1024, messages }),
+        signal: controller.signal,
+      });
+      clearTimeout(timeoutId);
+
+      const data = await response.json();
+      if (!response.ok) {
+        const detail = data?.error?.message || data?.error || `Error ${response.status}`;
+        return `Error: ${detail}`;
+      }
+
+      let content = data?.choices?.[0]?.message?.content;
+      if (Array.isArray(content)) {
+        content = content.map(item => typeof item === "string" ? item : item?.text || item?.content || "").join("\n");
+      }
+      return String(content || "No response received. Try again.").trim();
+    } catch (err) {
+      clearTimeout(timeoutId);
+      if (err.name === "AbortError") return "Chat timed out. Try again.";
+      return `Network error: ${err.message}`;
+    }
   }
 
   async function generateFlowPayload(prompt) {
@@ -4023,6 +4221,12 @@
   }
 
   function applyGeneratedFlow(data) {
+    // Validate payload
+    if (!data || !data.drawflow || !data.drawflow.drawflow) {
+      console.warn("applyGeneratedFlow: invalid payload, skipping import");
+      return;
+    }
+
     clearEditor();
     if (editor) editor.import(data.drawflow);
     resetNodeRuntime();
@@ -4032,9 +4236,28 @@
       flowNameText.textContent = data.name;
     }
 
-    state.currentFlowId = "";
     state.selectedNodeId = "";
     refreshNodeInspector();
+
+    // Auto-save generated flow so it's not lost on reload
+    try {
+      const flowId = `flow_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 8)}`;
+      const now = new Date().toISOString();
+      const flow = {
+        id: flowId,
+        name: data.name || "Generated Flow",
+        drawflow: editor ? editor.export() : data.drawflow,
+        createdAt: now,
+        updatedAt: now,
+      };
+      saveLocalFlowRecord(flow);
+      state.currentFlowId = flowId;
+      openFlowTab(flowId, flow.name);
+      refreshFlowList().catch(() => {});
+    } catch (err) {
+      console.warn("Auto-save generated flow failed:", err);
+      state.currentFlowId = "";
+    }
   }
 
   async function generateFlow(prompt) {
@@ -4114,21 +4337,21 @@
       renderDrawerMessages();
     }
     updateLayoutToggleIcons();
-    try { localStorage.setItem("voyager_chat_drawer_open", state.isChatDrawerOpen ? "1" : "0"); } catch {}
+    try { localStorage.setItem("akompani_chat_drawer_open", state.isChatDrawerOpen ? "1" : "0"); } catch {}
     setTimeout(() => refreshCanvasConnections(), 130);
   }
 
   function toggleLeftPanelSide() {
     state.isLeftPanelFlipped = !state.isLeftPanelFlipped;
     document.body.classList.toggle("left-panel-flipped", state.isLeftPanelFlipped);
-    try { localStorage.setItem("voyager_left_panel_flipped", state.isLeftPanelFlipped ? "1" : "0"); } catch {}
+    try { localStorage.setItem("akompani_left_panel_flipped", state.isLeftPanelFlipped ? "1" : "0"); } catch {}
     setTimeout(() => refreshCanvasConnections(), 130);
   }
 
   function toggleChatLogCollapsed() {
     state.isChatLogCollapsed = !state.isChatLogCollapsed;
     document.body.classList.toggle("chat-log-collapsed", state.isChatLogCollapsed);
-    try { localStorage.setItem("voyager_chat_log_collapsed", state.isChatLogCollapsed ? "1" : "0"); } catch {}
+    try { localStorage.setItem("akompani_chat_log_collapsed", state.isChatLogCollapsed ? "1" : "0"); } catch {}
   }
 
   /* ===== Flow Name Display + Dropdown ===== */
@@ -4411,23 +4634,36 @@
     appendMessage("user", text);
 
     const thinkingId1 = showThinkingIndicator(buildChatMessages);
-    const thinkingId2 = showThinkingIndicator(pillChatMessages);
+    const thinkingId2 = pillChatMessages ? showThinkingIndicator(pillChatMessages) : null;
+
+    const intent = detectChatIntent(text);
 
     try {
-      const data = await generateFlowPayload(text);
-      removeThinkingIndicator(thinkingId1);
-      removeThinkingIndicator(thinkingId2);
-      applyGeneratedFlow(data);
-      appendMessage("assistant", generationSummaryText(data), { type: "flow_generation" });
-      if (runStatus) runStatus.textContent = "Flow generated from chat.";
+      if (intent === "flow") {
+        // Flow generation mode
+        const data = await generateFlowPayload(text);
+        removeThinkingIndicator(thinkingId1);
+        if (thinkingId2) removeThinkingIndicator(thinkingId2);
+        applyGeneratedFlow(data);
+        appendMessage("assistant", generationSummaryText(data), { type: "flow_generation" });
+        if (runStatus) runStatus.textContent = "Flow generated from chat.";
 
-      // Auto-switch to canvas after generation
-      if (state.editorMode === "chat") {
-        setTimeout(() => switchMode("canvas"), 800);
+        // Auto-switch to canvas after generation
+        if (state.editorMode === "chat") {
+          setTimeout(() => switchMode("canvas"), 800);
+        }
+      } else {
+        // Conversational chat mode
+        const conv = getActiveConversation();
+        const history = conv ? conv.messages : [];
+        const reply = await chatViaLlm(text, history);
+        removeThinkingIndicator(thinkingId1);
+        if (thinkingId2) removeThinkingIndicator(thinkingId2);
+        appendMessage("assistant", reply, { type: "chat" });
       }
     } catch (error) {
       removeThinkingIndicator(thinkingId1);
-      removeThinkingIndicator(thinkingId2);
+      if (thinkingId2) removeThinkingIndicator(thinkingId2);
       appendMessage("assistant", `Error: ${error.message}`, { type: "error" });
     }
   }
@@ -4445,7 +4681,11 @@
     for (const conv of state.conversations) {
       const item = document.createElement("div");
       item.className = "chat-log-item" + (conv.id === state.activeConversationId ? " active" : "");
-      const timeStr = conv.createdAt ? new Date(conv.createdAt).toLocaleDateString() : "";
+      let timeStr = "";
+      if (conv.createdAt) {
+        const d = new Date(conv.createdAt);
+        timeStr = isNaN(d.getTime()) ? "" : d.toLocaleDateString();
+      }
       item.innerHTML = `
         <div class="chat-log-item-icon"></div>
         <div class="chat-log-item-text">${escapeHtml(conv.title || "New conversation")}</div>
@@ -4481,17 +4721,17 @@
     try {
       // Keep max 50 conversations, trim old ones
       const trimmed = state.conversations.slice(0, 50);
-      localStorage.setItem("voyager_conversations", JSON.stringify(trimmed));
-      localStorage.setItem("voyager_active_conversation", state.activeConversationId);
+      localStorage.setItem("akompani_conversations", JSON.stringify(trimmed));
+      localStorage.setItem("akompani_active_conversation", state.activeConversationId);
     } catch {}
   }
 
   function restoreConversations() {
     try {
-      const saved = JSON.parse(localStorage.getItem("voyager_conversations") || "[]");
+      const saved = JSON.parse(localStorage.getItem("akompani_conversations") || "[]");
       if (saved.length > 0) {
         state.conversations = saved;
-        state.activeConversationId = localStorage.getItem("voyager_active_conversation") || saved[0]?.id || "";
+        state.activeConversationId = localStorage.getItem("akompani_active_conversation") || saved[0]?.id || "";
       }
     } catch {}
   }
@@ -4754,8 +4994,8 @@
       agents.unshift(agent);
       writeJsonArrayToLocalStorage(STORAGE_KEYS.localAgents, agents.slice(0, 200));
       if (deployStatus) { deployStatus.textContent = `Agent "${name}" saved locally (${agent.id}).`; deployStatus.className = "deploy-status success"; }
-      if (typeof CANARIAToast !== "undefined") {
-        CANARIAToast.success({ title: "Saved locally", message: `${name} is ready for deploy.` });
+      if (typeof AkompaniToast !== "undefined") {
+        AkompaniToast.success({ title: "Saved locally", message: `${name} is ready for deploy.` });
       }
     } catch (error) {
       if (deployStatus) { deployStatus.textContent = `Error: ${error.message}`; deployStatus.className = "deploy-status error"; }
@@ -4842,15 +5082,15 @@
     try {
       const login = await validateGithubToken(trimmed);
       writeSession(STORAGE_KEYS.oauthGithubToken, trimmed);
-      if (typeof CANARIAToast !== "undefined") {
-        CANARIAToast.success({ title: "GitHub connected", message: `Signed in as ${login}` });
+      if (typeof AkompaniToast !== "undefined") {
+        AkompaniToast.success({ title: "GitHub connected", message: `Signed in as ${login}` });
       }
       refreshDeployConnectionState();
       updateAuthUiNavSignals();
       await loadGithubRepos();
     } catch (error) {
-      if (typeof CANARIAToast !== "undefined") {
-        CANARIAToast.error({ title: "GitHub connect failed", message: error.message || "Token rejected." });
+      if (typeof AkompaniToast !== "undefined") {
+        AkompaniToast.error({ title: "GitHub connect failed", message: error.message || "Token rejected." });
       }
     }
   }
@@ -4867,14 +5107,14 @@
       if (deployCfAccountIdInput?.value?.trim()) {
         writeLocal(STORAGE_KEYS.cloudflareAccountId, deployCfAccountIdInput.value);
       }
-      if (typeof CANARIAToast !== "undefined") {
-        CANARIAToast.success({ title: "Cloudflare connected", message: "Token verified for this browser session." });
+      if (typeof AkompaniToast !== "undefined") {
+        AkompaniToast.success({ title: "Cloudflare connected", message: "Token verified for this browser session." });
       }
       refreshDeployConnectionState();
       updateAuthUiNavSignals();
     } catch (error) {
-      if (typeof CANARIAToast !== "undefined") {
-        CANARIAToast.error({ title: "Cloudflare connect failed", message: error.message || "Token rejected." });
+      if (typeof AkompaniToast !== "undefined") {
+        AkompaniToast.error({ title: "Cloudflare connect failed", message: error.message || "Token rejected." });
       }
     }
   }
@@ -4883,8 +5123,8 @@
     writeSession(STORAGE_KEYS.oauthGithubToken, "");
     refreshDeployConnectionState();
     updateAuthUiNavSignals();
-    if (typeof CANARIAToast !== "undefined") {
-      CANARIAToast.info({ title: "GitHub disconnected", message: "Session token removed." });
+    if (typeof AkompaniToast !== "undefined") {
+      AkompaniToast.info({ title: "GitHub disconnected", message: "Session token removed." });
     }
   }
 
@@ -4892,8 +5132,8 @@
     writeSession(STORAGE_KEYS.oauthCloudflareToken, "");
     refreshDeployConnectionState();
     updateAuthUiNavSignals();
-    if (typeof CANARIAToast !== "undefined") {
-      CANARIAToast.info({ title: "Cloudflare disconnected", message: "Session token removed." });
+    if (typeof AkompaniToast !== "undefined") {
+      AkompaniToast.info({ title: "Cloudflare disconnected", message: "Session token removed." });
     }
   }
 
@@ -5009,7 +5249,7 @@
     }
   }
 
-  function sanitizeWorkerName(input, fallback = "canaria-agent") {
+  function sanitizeWorkerName(input, fallback = "akompani-agent") {
     const normalized = String(input || "")
       .trim()
       .toLowerCase()
@@ -5169,7 +5409,7 @@
   async function createVercelDeployment(params) {
     const token = String(params?.token || "").trim();
     const deployObject = params?.deployObject;
-    const deployName = sanitizeWorkerName(String(params?.name || deployObject?.rootDir || "canaria-app"));
+    const deployName = sanitizeWorkerName(String(params?.name || deployObject?.rootDir || "akompani-app"));
     const files = (Array.isArray(deployObject?.files) ? deployObject.files : [])
       .map((row) => ({
         file: String(row?.path || "").replace(/^\/+/, ""),
@@ -5186,7 +5426,7 @@
       target: "production",
       files,
       meta: {
-        source: "canaria-static-ide",
+        source: "akompani-static-ide",
       },
     };
     const project = String(params?.project || "").trim();
@@ -5360,7 +5600,7 @@
   function buildDeployObjectForCurrentFlow(name, description, targetId, endpointMode = "both") {
     const drawflowData = editor ? editor.export() : {};
     const runtime = getIdeRuntime();
-    const workerName = sanitizeWorkerName(name || "canaria-agent");
+    const workerName = sanitizeWorkerName(name || "akompani-agent");
     const resolvedEndpointMode = normalizeEndpointMode(endpointMode);
     if (runtime?.buildDeployObject) {
       return runtime.buildDeployObject({
@@ -5429,13 +5669,13 @@
       navigator.clipboard
         .writeText(deployUrl)
         .then(() => {
-          if (typeof CANARIAToast !== "undefined") {
-            CANARIAToast.success({ title: "Copied", message: "Deployment URL copied to clipboard." });
+          if (typeof AkompaniToast !== "undefined") {
+            AkompaniToast.success({ title: "Copied", message: "Deployment URL copied to clipboard." });
           }
         })
         .catch(() => {
-          if (typeof CANARIAToast !== "undefined") {
-            CANARIAToast.warning({ title: "Copy failed", message: "Clipboard access is not available in this browser context." });
+          if (typeof AkompaniToast !== "undefined") {
+            AkompaniToast.warning({ title: "Copy failed", message: "Clipboard access is not available in this browser context." });
           }
         });
     });
@@ -5460,7 +5700,7 @@
     if (workerInput) workerInput.value = workerName;
 
     if (!name || !workerName) {
-      if (typeof CANARIAToast !== "undefined") CANARIAToast.warning({ title: "Missing fields", message: "Agent name and worker name are required." });
+      if (typeof AkompaniToast !== "undefined") AkompaniToast.warning({ title: "Missing fields", message: "Agent name and worker name are required." });
       return;
     }
 
@@ -5513,8 +5753,8 @@
             deployObject,
           });
           loadDeployments();
-          if (typeof CANARIAToast !== "undefined") {
-            CANARIAToast.info({ title: "Deploy object ready", message: "Add Vercel token in Settings for direct browser deploy." });
+          if (typeof AkompaniToast !== "undefined") {
+            AkompaniToast.info({ title: "Deploy object ready", message: "Add Vercel token in Settings for direct browser deploy." });
           }
           return;
         }
@@ -5547,8 +5787,8 @@
           deployObject,
         });
         loadDeployments();
-        if (typeof CANARIAToast !== "undefined") {
-          CANARIAToast.success({
+        if (typeof AkompaniToast !== "undefined") {
+          AkompaniToast.success({
             title: "Vercel deploy started",
             message: url || `Deployment ${deployResult.id || "created"}`,
           });
@@ -5578,8 +5818,8 @@
           deployObject,
         });
         loadDeployments();
-        if (typeof CANARIAToast !== "undefined") {
-          CANARIAToast.info({ title: "Deploy object ready", message: "Download JSON or push to GitHub." });
+        if (typeof AkompaniToast !== "undefined") {
+          AkompaniToast.info({ title: "Deploy object ready", message: "Download JSON or push to GitHub." });
         }
         return;
       }
@@ -5663,8 +5903,8 @@
         deployObject,
       });
       loadDeployments();
-      if (typeof CANARIAToast !== "undefined") {
-          CANARIAToast.success({
+      if (typeof AkompaniToast !== "undefined") {
+          AkompaniToast.success({
             title: "Deployed",
             message: `${url} (${uploadResult.strategy})`,
           });
@@ -5692,8 +5932,8 @@
         deployObject,
       });
       loadDeployments();
-      if (typeof CANARIAToast !== "undefined") {
-        CANARIAToast.warning({
+      if (typeof AkompaniToast !== "undefined") {
+        AkompaniToast.warning({
           title: "Direct deploy failed",
           message,
         });
@@ -5821,17 +6061,17 @@
     const description = descInput ? descInput.value.trim() : "";
     const repoFullName = repoSelect ? repoSelect.value : "";
     const branch = branchInput ? branchInput.value.trim() : "main";
-    const message = messageInput ? messageInput.value.trim() : "Deploy agent via CANARIA";
+    const message = messageInput ? messageInput.value.trim() : "Deploy agent via Akompani";
     const targetId = getSelectedDeployTarget();
 
     if (!name || !repoFullName) {
-      if (typeof CANARIAToast !== "undefined") CANARIAToast.warning({ title: "Missing fields", message: "Agent name and repository are required." });
+      if (typeof AkompaniToast !== "undefined") AkompaniToast.warning({ title: "Missing fields", message: "Agent name and repository are required." });
       return;
     }
 
     const token = getGithubToken();
     if (!token) {
-      if (typeof CANARIAToast !== "undefined") CANARIAToast.warning({ title: "Missing settings", message: "Set a GitHub token in Settings." });
+      if (typeof AkompaniToast !== "undefined") AkompaniToast.warning({ title: "Missing settings", message: "Set a GitHub token in Settings." });
       return;
     }
 
@@ -5842,7 +6082,15 @@
     if (result) { result.style.display = "none"; result.className = "deploy-result"; }
     if (btn) { btn.disabled = true; btn.textContent = "Pushing..."; }
 
-    const [owner, repo] = repoFullName.split("/");
+    const parts = repoFullName.split("/");
+    const owner = parts[0] || "";
+    const repo = parts[1] || "";
+    if (!owner || !repo) {
+      if (result) { result.textContent = "Invalid repo: expected 'owner/repo' format."; result.style.display = ""; result.classList.add("error"); }
+      if (btn) { btn.disabled = false; btn.textContent = "Push to GitHub"; }
+      if (progress) progress.style.display = "none";
+      return;
+    }
     try {
       const endpointMode = normalizeEndpointMode(
         deployEndpointModeInput?.value || readLocal(STORAGE_KEYS.deployEndpointMode) || "both",
@@ -5887,14 +6135,14 @@
         deployObject,
       });
       loadDeployments();
-      if (typeof CANARIAToast !== "undefined") CANARIAToast.success({ title: "Pushed to GitHub", message: repoFullName });
+      if (typeof AkompaniToast !== "undefined") AkompaniToast.success({ title: "Pushed to GitHub", message: repoFullName });
     } catch (err) {
       if (result) {
         result.className = "deploy-result error";
         result.textContent = err.message;
         result.style.display = "";
       }
-      if (typeof CANARIAToast !== "undefined") CANARIAToast.error({ title: "Push failed", message: err.message });
+      if (typeof AkompaniToast !== "undefined") AkompaniToast.error({ title: "Push failed", message: err.message });
     } finally {
       if (progress) progress.style.display = "none";
       if (btn) { btn.disabled = false; btn.textContent = "Push to GitHub"; }
@@ -5967,6 +6215,11 @@
 
   function updateAuthUiNavSignals() {
     try {
+      window.dispatchEvent(new Event("akompani-auth-change"));
+    } catch {
+      // no-op
+    }
+    try {
       window.dispatchEvent(new StorageEvent("storage"));
     } catch {
       // no-op
@@ -6017,7 +6270,7 @@
     if (summary) summary.style.display = "none";
     updateScratchBlockVars(id);
     // Update SVG path size after expand
-    if (editor._updateBlockPath) editor._updateBlockPath(Number(id));
+    if (editor?._updateBlockPath) editor._updateBlockPath(Number(id));
   }
 
   function collapseScratchBlock(id) {
@@ -6035,7 +6288,7 @@
     // Update summary text from current data
     updateScratchBlockSummary(id);
     // Update SVG path size after collapse
-    if (editor._updateBlockPath) editor._updateBlockPath(Number(id));
+    if (editor?._updateBlockPath) editor._updateBlockPath(Number(id));
   }
 
   function updateScratchBlockVars(id) {
@@ -6043,6 +6296,7 @@
     if (!el) return;
     const varsEl = el.querySelector(".scratch-block-vars");
     if (!varsEl) return;
+    if (!editor) return;
     const node = editor.getNodeFromId(Number(id));
     if (!node) return;
     const hints = collectVariableHints(node);
@@ -6060,6 +6314,7 @@
     if (!el) return;
     const summaryEl = el.querySelector(".scratch-block-summary");
     if (!summaryEl) return;
+    if (!editor) return;
     const node = editor.getNodeFromId(Number(id));
     if (!node) return;
     const def = NODE_CATALOG[node.name];
@@ -6200,8 +6455,8 @@
       document.body.style.cursor = "";
       document.body.style.userSelect = "";
       try {
-        localStorage.setItem("voyager_panel_left_w", String(state._leftW || 280));
-        localStorage.setItem("voyager_panel_chat_w", String(state._chatW || 360));
+        localStorage.setItem("akompani_panel_left_w", String(state._leftW || 280));
+        localStorage.setItem("akompani_panel_chat_w", String(state._chatW || 360));
       } catch {}
     }
 
@@ -6212,8 +6467,8 @@
 
     // Restore persisted widths via CSS custom properties
     try {
-      const savedL = parseInt(localStorage.getItem("voyager_panel_left_w"), 10);
-      const savedC = parseInt(localStorage.getItem("voyager_panel_chat_w"), 10);
+      const savedL = parseInt(localStorage.getItem("akompani_panel_left_w"), 10);
+      const savedC = parseInt(localStorage.getItem("akompani_panel_chat_w"), 10);
       if (savedL >= MIN_PANEL && savedL <= MAX_PANEL) {
         state._leftW = savedL;
         canvasLayout.style.setProperty("--col-blocks", savedL + "px");
@@ -6226,24 +6481,26 @@
   })();
 
   function bindEvents() {
-    editor.on("nodeSelected", (id) => {
-      state.selectedNodeId = String(id);
-      expandScratchBlock(id);
-    });
+    if (editor) {
+      editor.on("nodeSelected", (id) => {
+        state.selectedNodeId = String(id);
+        expandScratchBlock(id);
+      });
 
-    editor.on("nodeUnselected", () => {
-      if (state.selectedNodeId) collapseScratchBlock(state.selectedNodeId);
-      state.selectedNodeId = "";
-    });
+      editor.on("nodeUnselected", () => {
+        if (state.selectedNodeId) collapseScratchBlock(state.selectedNodeId);
+        state.selectedNodeId = "";
+      });
 
-    editor.on("connectionCreated", () => {
-      // Variable hints may have changed — update expanded block if any
-      if (state.selectedNodeId) updateScratchBlockVars(state.selectedNodeId);
-    });
+      editor.on("connectionCreated", () => {
+        // Variable hints may have changed — update expanded block if any
+        if (state.selectedNodeId) updateScratchBlockVars(state.selectedNodeId);
+      });
 
-    editor.on("connectionRemoved", () => {
-      if (state.selectedNodeId) updateScratchBlockVars(state.selectedNodeId);
-    });
+      editor.on("connectionRemoved", () => {
+        if (state.selectedNodeId) updateScratchBlockVars(state.selectedNodeId);
+      });
+    }
 
     if (blockSearch) {
       blockSearch.addEventListener("input", () => {
@@ -6355,7 +6612,7 @@
           if (!nodeEl) return;
           const nodeId = nodeEl.dataset.nodeId || nodeEl.id.replace("snode-", "").replace("node-", "");
           if (action === "duplicate") {
-            const node = editor.getNodeFromId(Number(nodeId));
+            const node = editor?.getNodeFromId ? editor.getNodeFromId(Number(nodeId)) : null;
             if (node) {
               const cloneId = addNode(node.name, Number(node.pos_x || 180) + 50, Number(node.pos_y || 160) + 40, node.data || {});
               if (cloneId) {
@@ -6446,8 +6703,8 @@
           if (runStatus) {
             runStatus.textContent = `Import error: ${error.message}`;
           }
-          if (typeof CANARIAToast !== "undefined") {
-            CANARIAToast.error({ title: "Import failed", message: error.message || "Could not import flow." });
+          if (typeof AkompaniToast !== "undefined") {
+            AkompaniToast.error({ title: "Import failed", message: error.message || "Could not import flow." });
           }
         }
       });
@@ -6540,13 +6797,13 @@
     }
 
     // Snap to grid
-    let snapToGrid = localStorage.getItem("voyager_snap_grid") === "1";
+    let snapToGrid = localStorage.getItem("akompani_snap_grid") === "1";
     if (snapGridBtn) {
       if (snapToGrid) snapGridBtn.classList.add("is-active");
       snapGridBtn.addEventListener("click", () => {
         snapToGrid = !snapToGrid;
         snapGridBtn.classList.toggle("is-active", snapToGrid);
-        localStorage.setItem("voyager_snap_grid", snapToGrid ? "1" : "0");
+        localStorage.setItem("akompani_snap_grid", snapToGrid ? "1" : "0");
       });
     }
 
@@ -6615,13 +6872,13 @@
         if (locationMode) {
           state.editorMode = locationMode;
         } else {
-          const savedMode = normalizeEditorMode(localStorage.getItem("voyager_editor_mode"));
+          const savedMode = normalizeEditorMode(localStorage.getItem("akompani_editor_mode"));
           state.editorMode = savedMode || "chat";
         }
-        state.isLeftCollapsed = localStorage.getItem("voyager_left_collapsed") === "1";
-        state.isChatDrawerOpen = localStorage.getItem("voyager_chat_drawer_open") === "1";
-        state.isLeftPanelFlipped = localStorage.getItem("voyager_left_panel_flipped") === "1";
-        state.isChatLogCollapsed = localStorage.getItem("voyager_chat_log_collapsed") === "1";
+        state.isLeftCollapsed = localStorage.getItem("akompani_left_collapsed") === "1";
+        state.isChatDrawerOpen = localStorage.getItem("akompani_chat_drawer_open") === "1";
+        state.isLeftPanelFlipped = localStorage.getItem("akompani_left_panel_flipped") === "1";
+        state.isChatLogCollapsed = localStorage.getItem("akompani_chat_log_collapsed") === "1";
       } catch {
         state.editorMode = "chat";
         state.isLeftCollapsed = false;

@@ -14,11 +14,11 @@
 
 class ScratchCanvas {
   /* ─── Shape constants ─── */
-  static BLOCK_W = 300;
-  static TAB_W = 16;
-  static TAB_H = 6;
-  static NOTCH_INSET = 30;
-  static CORNER_R = 6;
+  static BLOCK_W = 260;
+  static TAB_W = 20;
+  static TAB_H = 12;
+  static NOTCH_INSET = 24;
+  static CORNER_R = 8;
   static HEADER_H = 34;
   static MIN_BODY_H = 10;
   static ARM_INDENT = 24;
@@ -64,11 +64,11 @@ class ScratchCanvas {
     this._svg.style.inset = "0";
     this._svg.style.overflow = "visible";
 
-    // Defs for filters
+    // Defs for filters + gradients
     const defs = document.createElementNS("http://www.w3.org/2000/svg", "defs");
     defs.innerHTML = `
       <filter id="scratchShadow" x="-10%" y="-10%" width="140%" height="140%">
-        <feDropShadow dx="0" dy="3" stdDeviation="2" flood-opacity="0.18"/>
+        <feDropShadow dx="0" dy="1" stdDeviation="2.5" flood-opacity="0.10"/>
       </filter>
       <filter id="scratchGlow" x="-20%" y="-20%" width="140%" height="140%">
         <feDropShadow dx="0" dy="0" stdDeviation="6" flood-color="#6366f1" flood-opacity="0.5"/>
@@ -115,7 +115,7 @@ class ScratchCanvas {
 
   /* ─── Zoom property ─── */
   get zoom() { return this._zoom; }
-  set zoom(v) { this._zoom = v; this._updateTransform(); }
+  set zoom(v) { this._zoom = Math.max(0.1, Math.min(5, Number(v) || 1)); this._updateTransform(); }
 
   /* ─── Drawflow compat: drawflow.drawflow.Home.data ─── */
   get drawflow() {
@@ -313,6 +313,12 @@ class ScratchCanvas {
     // Auto-snap if they're close and not already stacked
     this._tryAutoSnap(sid, tid, sourcePort);
 
+    // Reposition stack so snapped blocks are visually connected
+    const sourceNode = this._nodes.get(sid);
+    if (sourceNode && (sourceNode.next === tid || (sourceNode.branches && sourceNode.branches.includes(tid)))) {
+      this._repositionStack(this._findStackRoot(sid));
+    }
+
     // Defer render if in batch mode (e.g. during import)
     if (!this._batchMode) {
       this._renderConnections();
@@ -488,7 +494,8 @@ class ScratchCanvas {
     const ni = ScratchCanvas.NOTCH_INSET;
     const tw = ScratchCanvas.TAB_W;
     const th = ScratchCanvas.TAB_H;
-    return `h ${ni} l ${tw / 4} ${th} h ${tw / 2} l ${tw / 4} ${-th} h ${w - ni - tw}`;
+    // Smooth U-shaped scoop using cubic beziers
+    return `h ${ni} c 0,0 0,${th} ${tw / 2},${th} c ${tw / 2},0 ${tw / 2},${-th} ${tw / 2},${-th} h ${w - ni - tw}`;
   }
 
   /**
@@ -499,7 +506,8 @@ class ScratchCanvas {
     const ni = ScratchCanvas.NOTCH_INSET;
     const tw = ScratchCanvas.TAB_W;
     const th = ScratchCanvas.TAB_H;
-    return `h ${-(w - ni - tw)} l ${-tw / 4} ${th} h ${-tw / 2} l ${-tw / 4} ${-th} h ${-ni}`;
+    // Smooth bump protrusion using cubic beziers (right-to-left)
+    return `h ${-(w - ni - tw)} c 0,0 0,${th} ${-tw / 2},${th} c ${-tw / 2},0 ${-tw / 2},${-th} ${-tw / 2},${-th} h ${-ni}`;
   }
 
   /**
@@ -513,8 +521,10 @@ class ScratchCanvas {
       `Q 0 0 ${hatR} 0`,
       `h ${w - 2 * hatR}`,
       `Q ${w} 0 ${w} ${hatR}`,
-      `v ${h - hatR}`,
-      ScratchCanvas._tabBottom(0, w),
+      `v ${h - hatR - r}`,
+      `a ${r} ${r} 0 0 1 ${-r} ${r}`,
+      ScratchCanvas._tabBottom(0, w - 2 * r),
+      `a ${r} ${r} 0 0 1 ${-r} ${-r}`,
       `Z`
     ].join(" ");
   }
@@ -525,10 +535,14 @@ class ScratchCanvas {
   static capPath(w, h) {
     const r = ScratchCanvas.CORNER_R;
     return [
-      `M 0 0`,
-      ScratchCanvas._notchTop(0, w),
-      `v ${h}`,
-      `h ${-w}`,
+      `M 0 ${r}`,
+      `a ${r} ${r} 0 0 1 ${r} ${-r}`,
+      ScratchCanvas._notchTop(0, w - 2 * r),
+      `a ${r} ${r} 0 0 1 ${r} ${r}`,
+      `v ${h - 2 * r}`,
+      `a ${r} ${r} 0 0 1 ${-r} ${r}`,
+      `h ${-(w - 2 * r)}`,
+      `a ${r} ${r} 0 0 1 ${-r} ${-r}`,
       `Z`
     ].join(" ");
   }
@@ -537,11 +551,16 @@ class ScratchCanvas {
    * Stack block path — notch on top + tab on bottom.
    */
   static stackPath(w, h) {
+    const r = ScratchCanvas.CORNER_R;
     return [
-      `M 0 0`,
-      ScratchCanvas._notchTop(0, w),
-      `v ${h}`,
-      ScratchCanvas._tabBottom(0, w),
+      `M 0 ${r}`,
+      `a ${r} ${r} 0 0 1 ${r} ${-r}`,
+      ScratchCanvas._notchTop(0, w - 2 * r),
+      `a ${r} ${r} 0 0 1 ${r} ${r}`,
+      `v ${h - 2 * r}`,
+      `a ${r} ${r} 0 0 1 ${-r} ${r}`,
+      ScratchCanvas._tabBottom(0, w - 2 * r),
+      `a ${r} ${r} 0 0 1 ${-r} ${-r}`,
       `Z`
     ].join(" ");
   }
@@ -560,25 +579,31 @@ class ScratchCanvas {
   }
 
   /**
-   * C-block path using absolute coordinates for clarity.
+   * C-block path using absolute coordinates with rounded corners + smooth bezier notches/tabs.
    */
   static _cBlockPathAbsolute(w, hdrH, armHeights, barH) {
     const indent = ScratchCanvas.ARM_INDENT;
     const ni = ScratchCanvas.NOTCH_INSET;
     const tw = ScratchCanvas.TAB_W;
     const th = ScratchCanvas.TAB_H;
-    const hatR = 0;
+    const r = ScratchCanvas.CORNER_R;
+    const ri = Math.min(r, 4); // Inner arm corner radius
 
     let y = 0;
     const d = [];
 
-    // --- Top edge with notch ---
-    d.push(`M 0,${y}`);
+    // --- Top-left rounded corner ---
+    d.push(`M 0,${y + r}`);
+    d.push(`A ${r} ${r} 0 0 1 ${r},${y}`);
+
+    // --- Top edge: smooth notch ---
     d.push(`L ${ni},${y}`);
-    d.push(`L ${ni + tw / 4},${y + th}`);
-    d.push(`L ${ni + tw * 3 / 4},${y + th}`);
-    d.push(`L ${ni + tw},${y}`);
-    d.push(`L ${w},${y}`);
+    d.push(`C ${ni},${y} ${ni},${y + th} ${ni + tw / 2},${y + th}`);
+    d.push(`C ${ni + tw},${y + th} ${ni + tw},${y} ${ni + tw},${y}`);
+
+    // --- Top-right rounded corner ---
+    d.push(`L ${w - r},${y}`);
+    d.push(`A ${r} ${r} 0 0 1 ${w},${y + r}`);
 
     // --- Right side: down to first arm ---
     y += hdrH;
@@ -587,43 +612,56 @@ class ScratchCanvas {
     for (let i = 0; i < armHeights.length; i++) {
       const armH = Math.max(ScratchCanvas.ARM_MIN_H, armHeights[i]);
 
-      // --- Arm opening: go left to indent ---
-      d.push(`L ${indent},${y}`);
+      // --- Arm opening: go left with rounded inner corner ---
+      d.push(`L ${indent + ri},${y}`);
+      d.push(`A ${ri} ${ri} 0 0 0 ${indent},${y + ri}`);
 
-      // --- Inner notch at top of arm cavity ---
-      d.push(`L ${indent + ni},${y}`);
-      d.push(`L ${indent + ni + tw / 4},${y + th}`);
-      d.push(`L ${indent + ni + tw * 3 / 4},${y + th}`);
-      d.push(`L ${indent + ni + tw},${y}`);
-      d.push(`L ${w},${y}`);
+      // --- Inner arm notch (smooth bezier) ---
+      const ny = y + ri; // notch Y after corner
+      d.push(`L ${indent + ni},${ny}`);
+      d.push(`C ${indent + ni},${ny} ${indent + ni},${ny + th} ${indent + ni + tw / 2},${ny + th}`);
+      d.push(`C ${indent + ni + tw},${ny + th} ${indent + ni + tw},${ny} ${indent + ni + tw},${ny}`);
 
-      // --- Go down the arm cavity (right side stays at w) ---
+      // --- Back out to right edge ---
+      d.push(`L ${w},${ny}`);
+
+      // --- Go down the arm cavity ---
       y += armH;
       d.push(`L ${w},${y}`);
 
-      // --- Arm bottom: close back to indent ---
-      d.push(`L ${indent},${y}`);
+      // --- Arm bottom: step back to indent with rounded corner ---
+      d.push(`L ${indent + ri},${y}`);
+      d.push(`A ${ri} ${ri} 0 0 0 ${indent},${y + ri}`);
 
-      // --- Arm bar (go down and out to full width for next arm or bottom) ---
+      // --- Arm bar (separator) ---
       y += barH;
-      d.push(`L ${indent},${y}`);
+      d.push(`L ${indent},${y - ri}`);
+      d.push(`A ${ri} ${ri} 0 0 0 ${indent + ri},${y}`);
 
       if (i < armHeights.length - 1) {
-        // Inter-arm separator: go back to full width for next arm header
+        // Inter-arm: go back to full width for next arm
         d.push(`L ${w},${y}`);
       }
     }
 
-    // --- Bottom edge: go out to full width then bottom tab ---
-    d.push(`L ${w},${y}`);
+    // --- Bottom edge: go out to full width ---
+    d.push(`L ${w - r},${y}`);
+    d.push(`A ${r} ${r} 0 0 1 ${w},${y + r}`);
 
-    // Bottom tab (protrusion down)
-    const tabY = y;
-    d.push(`L ${ni + tw},${tabY}`);
-    d.push(`L ${ni + tw * 3 / 4},${tabY + th}`);
-    d.push(`L ${ni + tw / 4},${tabY + th}`);
-    d.push(`L ${ni},${tabY}`);
-    d.push(`L 0,${tabY}`);
+    // Small bottom section
+    const bottomH = r * 2;
+    y += bottomH;
+    d.push(`L ${w},${y - r}`);
+    d.push(`A ${r} ${r} 0 0 1 ${w - r},${y}`);
+
+    // --- Bottom tab (smooth bezier protrusion) ---
+    d.push(`L ${ni + tw},${y}`);
+    d.push(`C ${ni + tw},${y} ${ni + tw},${y + th} ${ni + tw / 2},${y + th}`);
+    d.push(`C ${ni},${y + th} ${ni},${y} ${ni},${y}`);
+
+    // --- Bottom-left rounded corner ---
+    d.push(`L ${r},${y}`);
+    d.push(`A ${r} ${r} 0 0 1 0,${y - r}`);
 
     d.push(`Z`);
 
@@ -652,7 +690,7 @@ class ScratchCanvas {
       // Measure actual HTML content height
       const rect = foBody.getBoundingClientRect();
       if (rect.height > 0) {
-        bodyH = Math.max(bodyH, (rect.height / this._zoom) - hdr);
+        bodyH = Math.max(bodyH, (rect.height / (this._zoom || 1)) - hdr);
       }
     }
 
@@ -660,7 +698,9 @@ class ScratchCanvas {
       const armHeights = this._calcArmHeights(id, visited);
       node._armHeights = armHeights;
       const totalArms = armHeights.reduce((s, h) => s + h + ScratchCanvas.ARM_BAR_H, 0);
-      node._totalH = hdr + totalArms;
+      const cHdrH = Math.max(hdr, hdr + bodyH); // Full content height for C-block header
+      node._cHeaderH = cHdrH;
+      node._totalH = cHdrH + totalArms;
     } else {
       node._totalH = hdr + bodyH;
     }
@@ -685,7 +725,7 @@ class ScratchCanvas {
       while (cur && safety-- > 0) {
         const child = this._nodes.get(cur);
         if (!child) break;
-        h += this._calcBlockHeight(cur, visited) + ScratchCanvas.TAB_H;
+        h += this._calcBlockHeight(cur, visited);
         cur = child.next;
       }
       return Math.max(ScratchCanvas.ARM_MIN_H, h);
@@ -714,27 +754,33 @@ class ScratchCanvas {
 
     // Parse color from HTML or use default
     const colorMatch = node.html?.match(/--node-color:\s*([#\w]+)/);
-    const color = colorMatch ? colorMatch[1] : "#666";
+    const color = colorMatch ? colorMatch[1] : "#888";
 
     // Shape path
     const shape = this._getShapeType(node.name);
     let bodyH;
 
-    // Create initial path (will be updated after measuring content)
+    // Create main shape path — neutral card fill (CSS sets actual color via class)
     const path = document.createElementNS("http://www.w3.org/2000/svg", "path");
     path.setAttribute("class", "scratch-shape");
-    path.setAttribute("fill", color);
-    path.setAttribute("stroke", "rgba(0,0,0,0.15)");
+    path.setAttribute("fill", "var(--scratch-card-bg, #f5f7fb)");
+    path.setAttribute("stroke", "var(--scratch-card-border, rgba(0,0,0,0.10))");
     path.setAttribute("stroke-width", "1");
     path.setAttribute("filter", "url(#scratchShadow)");
     g.appendChild(path);
 
-    // Shadow path (slightly offset, darker)
-    const shadowPath = document.createElementNS("http://www.w3.org/2000/svg", "path");
-    shadowPath.setAttribute("class", "scratch-shadow-shape");
-    shadowPath.setAttribute("fill", "rgba(0,0,0,0.12)");
-    shadowPath.setAttribute("transform", "translate(0,4)");
-    g.insertBefore(shadowPath, path);
+    // Left accent bar — colored stripe on left edge
+    const accent = document.createElementNS("http://www.w3.org/2000/svg", "rect");
+    accent.setAttribute("class", "scratch-accent");
+    accent.setAttribute("x", "0");
+    accent.setAttribute("y", "0");
+    accent.setAttribute("width", "4");
+    accent.setAttribute("height", "400"); // refined by _updateBlockPath
+    accent.setAttribute("rx", `${ScratchCanvas.CORNER_R}`);
+    accent.setAttribute("fill", color);
+    accent.setAttribute("opacity", "0.82");
+    accent.setAttribute("pointer-events", "none");
+    g.appendChild(accent);
 
     // ForeignObject for HTML content
     const fo = document.createElementNS("http://www.w3.org/2000/svg", "foreignObject");
@@ -775,7 +821,7 @@ class ScratchCanvas {
     if (foBody) {
       const block = foBody.querySelector(".scratch-block");
       if (block) {
-        contentH = block.offsetHeight || contentH;
+        contentH = block.offsetHeight > 0 ? block.offsetHeight : contentH;
       }
     }
 
@@ -792,8 +838,12 @@ class ScratchCanvas {
       case "c-block": {
         const armHeights = this._calcArmHeights(id);
         node._armHeights = armHeights;
-        pathD = ScratchCanvas._cBlockPathAbsolute(w, ScratchCanvas.HEADER_H, armHeights, ScratchCanvas.ARM_BAR_H);
-        totalH = ScratchCanvas.HEADER_H + armHeights.reduce((s, h) => s + h + ScratchCanvas.ARM_BAR_H, 0);
+        // Use measured content height as header so arms start below all HTML content
+        const cHdrH = Math.max(ScratchCanvas.HEADER_H, contentH);
+        node._cHeaderH = cHdrH;
+        pathD = ScratchCanvas._cBlockPathAbsolute(w, cHdrH, armHeights, ScratchCanvas.ARM_BAR_H);
+        const bottomSection = ScratchCanvas.CORNER_R * 2;
+        totalH = cHdrH + armHeights.reduce((s, h) => s + h + ScratchCanvas.ARM_BAR_H, 0) + bottomSection;
         break;
       }
       default:
@@ -804,13 +854,40 @@ class ScratchCanvas {
     node._totalH = totalH;
 
     const pathEl = g.querySelector(".scratch-shape");
-    const shadowEl = g.querySelector(".scratch-shadow-shape");
     if (pathEl) pathEl.setAttribute("d", pathD);
-    if (shadowEl) shadowEl.setAttribute("d", pathD);
+
+    // Update accent bar height
+    const accentEl = g.querySelector(".scratch-accent");
+    if (accentEl) accentEl.setAttribute("height", totalH);
 
     // Update foreignObject height
     const fo = g.querySelector("foreignObject");
     if (fo) fo.setAttribute("height", totalH + 20);
+
+    // C-block: add/update arm cavity backgrounds
+    g.querySelectorAll(".scratch-arm-bg").forEach(el => el.remove());
+    if (shape === "c-block" && node._armHeights) {
+      const indent = ScratchCanvas.ARM_INDENT;
+      const ri = Math.min(ScratchCanvas.CORNER_R, 4);
+      let armY = (node._cHeaderH || ScratchCanvas.HEADER_H) + ri;
+      for (let i = 0; i < node._armHeights.length; i++) {
+        const armH = Math.max(ScratchCanvas.ARM_MIN_H, node._armHeights[i]) - ri;
+        const rect = document.createElementNS("http://www.w3.org/2000/svg", "rect");
+        rect.setAttribute("class", "scratch-arm-bg");
+        rect.setAttribute("x", indent);
+        rect.setAttribute("y", armY);
+        rect.setAttribute("width", w - indent);
+        rect.setAttribute("height", armH);
+        rect.setAttribute("rx", ri);
+        rect.setAttribute("fill", "var(--scratch-arm-cavity, rgba(0,0,0,0.06))");
+        rect.setAttribute("pointer-events", "none");
+        // Insert after the main shape path but before foreignObject
+        const foEl = g.querySelector("foreignObject");
+        if (foEl) g.insertBefore(rect, foEl);
+        else g.appendChild(rect);
+        armY += armH + ri + ScratchCanvas.ARM_BAR_H;
+      }
+    }
 
     // Update stacked positions
     this._repositionStack(id);
@@ -1002,20 +1079,21 @@ class ScratchCanvas {
     const g = document.getElementById(`snode-${id}`);
     if (g) g.setAttribute("transform", `translate(${x},${y})`);
 
-    let nextY = y + (node._totalH || ScratchCanvas.HEADER_H + ScratchCanvas.MIN_BODY_H) + ScratchCanvas.TAB_H;
+    let nextY = y + (node._totalH != null ? node._totalH : ScratchCanvas.HEADER_H + ScratchCanvas.MIN_BODY_H);
 
     // Position C-block children inside arms
     if (node.branches) {
-      let armY = y + ScratchCanvas.HEADER_H;
+      const cHdrH = node._cHeaderH || ScratchCanvas.HEADER_H;
+      let armY = y + cHdrH;
       for (let i = 0; i < node.branches.length; i++) {
         const firstChild = node.branches[i];
         if (firstChild) {
           this._positionChain(firstChild, x + ScratchCanvas.ARM_INDENT, armY, visited);
         }
-        const armH = node._armHeights ? node._armHeights[i] : ScratchCanvas.ARM_MIN_H;
+        const armH = node._armHeights && node._armHeights[i] != null ? node._armHeights[i] : ScratchCanvas.ARM_MIN_H;
         armY += armH + ScratchCanvas.ARM_BAR_H;
       }
-      nextY = armY + ScratchCanvas.TAB_H;
+      nextY = armY;
     }
 
     // Position next block in chain
@@ -1043,7 +1121,7 @@ class ScratchCanvas {
       // Skip if target is first child in a C-block arm of source
       if (source.branches && source.branches.includes(conn.targetId)) continue;
 
-      const sourceH = source._totalH || ScratchCanvas.HEADER_H;
+      const sourceH = source._totalH != null ? source._totalH : ScratchCanvas.HEADER_H;
       const sx = source.pos_x + ScratchCanvas.BLOCK_W / 2;
       const sy = source.pos_y + sourceH;
       const tx = target.pos_x + ScratchCanvas.BLOCK_W / 2;
@@ -1121,13 +1199,15 @@ class ScratchCanvas {
     this._svg.addEventListener("touchstart", (e) => {
       if (e.touches.length === 1) {
         const t = e.touches[0];
-        this._onMouseDown({ clientX: t.clientX, clientY: t.clientY, target: document.elementFromPoint(t.clientX, t.clientY), preventDefault: () => e.preventDefault() });
+        const target = document.elementFromPoint(t.clientX, t.clientY) || this._svg;
+        this._onMouseDown({ clientX: t.clientX, clientY: t.clientY, target, preventDefault: () => e.preventDefault() });
       }
     }, { passive: false });
     this._svg.addEventListener("touchmove", (e) => {
       if (e.touches.length === 1) {
         const t = e.touches[0];
-        this._onMouseMove({ clientX: t.clientX, clientY: t.clientY, target: document.elementFromPoint(t.clientX, t.clientY), preventDefault: () => e.preventDefault() });
+        const target = document.elementFromPoint(t.clientX, t.clientY) || this._svg;
+        this._onMouseMove({ clientX: t.clientX, clientY: t.clientY, target, preventDefault: () => e.preventDefault() });
       }
     }, { passive: false });
     this._svg.addEventListener("touchend", (e) => {
@@ -1186,18 +1266,20 @@ class ScratchCanvas {
 
   _clientToCanvas(clientX, clientY) {
     const rect = this._svg.getBoundingClientRect();
+    const z = this._zoom || 1;
     return {
-      x: (clientX - rect.left - this._panX) / this._zoom,
-      y: (clientY - rect.top - this._panY) / this._zoom,
+      x: (clientX - rect.left - this._panX) / z,
+      y: (clientY - rect.top - this._panY) / z,
     };
   }
 
   _onMouseDown(e) {
+    const target = e?.target || this._svg;
     // Don't intercept form elements
-    const tag = e.target.tagName?.toLowerCase();
+    const tag = target.tagName?.toLowerCase();
     if (tag === "input" || tag === "textarea" || tag === "select" || tag === "button") return;
 
-    const nodeG = e.target.closest?.(".scratch-node");
+    const nodeG = target.closest ? target.closest(".scratch-node") : null;
 
     if (nodeG) {
       // Start dragging a block
@@ -1342,7 +1424,7 @@ class ScratchCanvas {
     const mx = e.clientX - rect.left;
     const my = e.clientY - rect.top;
 
-    const ratio = newZoom / this._zoom;
+    const ratio = newZoom / (this._zoom || 1);
     this._panX = mx - (mx - this._panX) * ratio;
     this._panY = my - (my - this._panY) * ratio;
 
@@ -1366,16 +1448,17 @@ class ScratchCanvas {
     if (g) g.setAttribute("transform", `translate(${x},${y})`);
 
     // Move children in stack
-    let nextY = y + (node._totalH || ScratchCanvas.HEADER_H) + ScratchCanvas.TAB_H;
+    let nextY = y + (node._totalH != null ? node._totalH : ScratchCanvas.HEADER_H);
 
     // C-block arm children
     if (node.branches) {
-      let armY = y + ScratchCanvas.HEADER_H;
+      const cHdrH = node._cHeaderH || ScratchCanvas.HEADER_H;
+      let armY = y + cHdrH;
       for (let i = 0; i < node.branches.length; i++) {
         if (node.branches[i]) {
           this._moveChain(node.branches[i], x + ScratchCanvas.ARM_INDENT, armY, visited);
         }
-        const armH = node._armHeights?.[i] || ScratchCanvas.ARM_MIN_H;
+        const armH = node._armHeights?.[i] != null ? node._armHeights[i] : ScratchCanvas.ARM_MIN_H;
         armY += armH + ScratchCanvas.ARM_BAR_H;
       }
     }
@@ -1405,12 +1488,12 @@ class ScratchCanvas {
       // Don't snap to blocks that are in the drag chain
       if (this._isInChain(id, dragId)) continue;
 
-      const nodeH = node._totalH || ScratchCanvas.HEADER_H;
+      const nodeH = node._totalH != null ? node._totalH : ScratchCanvas.HEADER_H;
 
       // Check snap below this node (can't snap below cap blocks)
       if (!node.next && !ScratchCanvas.CAP_TYPES.has(node.name)) {
         const tabX = node.pos_x;
-        const tabY = node.pos_y + nodeH + ScratchCanvas.TAB_H;
+        const tabY = node.pos_y + nodeH;
         const d = Math.hypot(dragX - tabX, dragY - tabY);
         if (d < bestDist) {
           bestDist = d;
@@ -1420,7 +1503,8 @@ class ScratchCanvas {
 
       // Check snap into C-block arms
       if (node.branches) {
-        let armY = node.pos_y + ScratchCanvas.HEADER_H;
+        const cHdrH = node._cHeaderH || ScratchCanvas.HEADER_H;
+        let armY = node.pos_y + cHdrH;
         for (let bi = 0; bi < node.branches.length; bi++) {
           if (!node.branches[bi]) {
             const armX = node.pos_x + ScratchCanvas.ARM_INDENT;
@@ -1430,7 +1514,7 @@ class ScratchCanvas {
               best = { type: "c-arm", targetId: id, branchIndex: bi, x: armX, y: armY };
             }
           }
-          const armH = node._armHeights?.[bi] || ScratchCanvas.ARM_MIN_H;
+          const armH = node._armHeights?.[bi] != null ? node._armHeights[bi] : ScratchCanvas.ARM_MIN_H;
           armY += armH + ScratchCanvas.ARM_BAR_H;
         }
       }
@@ -1560,19 +1644,70 @@ class ScratchCanvas {
 
   /**
    * Sanitize HTML to prevent XSS from imported flows.
-   * Strips <script>, on* attributes, javascript: URLs, <iframe>, <object>, <embed>.
+   * Strips executable elements/attributes and dangerous protocols after entity decoding.
    */
   static _sanitizeHtml(html) {
     if (!html) return "";
-    // Remove script tags and their content
-    let safe = html.replace(/<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/gi, "");
-    // Remove event handler attributes (on*)
-    safe = safe.replace(/\s+on\w+\s*=\s*(?:"[^"]*"|'[^']*'|[^\s>]+)/gi, "");
-    // Remove javascript: and data: URLs in href/src/action
-    safe = safe.replace(/(href|src|action)\s*=\s*["']?\s*(?:javascript|data)\s*:/gi, "$1=\"#\"");
-    // Remove iframe, object, embed, form elements
-    safe = safe.replace(/<\/?(iframe|object|embed|form|meta|link)\b[^>]*>/gi, "");
-    return safe;
+    const template = document.createElement("template");
+    template.innerHTML = String(html);
+    const decodeContainer = document.createElement("textarea");
+
+    const isDangerousHeader = (name) => {
+      const lowered = String(name || "").toLowerCase();
+      return lowered === "__proto__" || lowered === "constructor" || lowered === "prototype";
+    };
+
+    const decodeEntities = (value) => {
+      decodeContainer.innerHTML = String(value || "");
+      return decodeContainer.value;
+    };
+
+    const hasDangerousProtocol = (value) => {
+      const normalized = decodeEntities(value).replace(/[\u0000-\u001F\u007F\s]+/g, "").toLowerCase();
+      return normalized.startsWith("javascript:") || normalized.startsWith("data:");
+    };
+
+    template.content
+      .querySelectorAll("script, iframe, object, embed, form, meta, link, base")
+      .forEach((node) => node.remove());
+
+    for (const el of template.content.querySelectorAll("*")) {
+      for (const attr of Array.from(el.attributes)) {
+        const attrName = String(attr.name || "");
+        const lowered = attrName.toLowerCase();
+        if (isDangerousHeader(lowered)) {
+          el.removeAttribute(attrName);
+          continue;
+        }
+
+        if (lowered.startsWith("on")) {
+          el.removeAttribute(attrName);
+          continue;
+        }
+
+        if (lowered === "style") {
+          const normalizedStyle = String(attr.value || "").replace(/\s+/g, "").toLowerCase();
+          if (
+            normalizedStyle.includes("expression(") ||
+            normalizedStyle.includes("url(") ||
+            normalizedStyle.includes("javascript:")
+          ) {
+            el.removeAttribute(attrName);
+          }
+          continue;
+        }
+
+        if (["href", "src", "action", "xlink:href", "formaction"].includes(lowered) && hasDangerousProtocol(attr.value)) {
+          if (lowered === "href") {
+            el.setAttribute("href", "#");
+          } else {
+            el.removeAttribute(attrName);
+          }
+        }
+      }
+    }
+
+    return template.innerHTML;
   }
 
   /* ═══════════════════════════════════════════════════════════════════

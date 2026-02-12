@@ -1,8 +1,8 @@
 {
-  "name": "canaria",
+  "name": "akompani",
   "version": "0.1.0",
   "private": false,
-  "description": "CANARIA — static-first visual agent IDE.",
+  "description": "Akompani — static-first visual agent IDE.",
   "scripts": {
     "dev": "vite --host --port 3000",
     "build": "vite build",

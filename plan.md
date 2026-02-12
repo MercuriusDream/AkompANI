@@ -35,7 +35,7 @@ When a panel is collapsed it shrinks to a slim ~40px strip showing a rotated lab
 - **Both collapsed**: `40px 0px 1fr 0px 40px`
 
 ### 3. JS — `public/app.js`
-- Add `state.isLeftCollapsed` (persisted to `voyager_left_collapsed`)
+- Add `state.isLeftCollapsed` (persisted to `akompani_left_collapsed`)
 - Add `toggleLeftPanelCollapse()` mirroring the right panel toggle
 - Wire `#toggleLeftPanel` and `#toggleRightPanel` click handlers
 - Update `.active` class on buttons to reflect state

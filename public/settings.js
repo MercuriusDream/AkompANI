@@ -1,24 +1,24 @@
 /**
- * CANARIA Settings - localStorage/sessionStorage settings management
- * Includes multi-provider LLM profiles via window.CANARIA_IDE.
+ * Akompani Settings - localStorage/sessionStorage settings management
+ * Includes multi-provider LLM profiles via window.AKOMPANI_IDE.
  */
 (function () {
-  const runtime = window.CANARIA_IDE || null;
+  const runtime = window.AKOMPANI_IDE || null;
 
   const KEYS = {
-    githubPat: "voyager_oauth_github_token",
-    cfApiToken: "voyager_oauth_cloudflare_token",
-    cfAccountId: "voyager_cf_account_id",
-    vercelToken: "voyager_oauth_vercel_token",
-    vercelProject: "voyager_vercel_project",
-    vercelTeamId: "voyager_vercel_team_id",
-    openaiKey: "voyager_llm_api_key",
+    githubPat: "akompani_oauth_github_token",
+    cfApiToken: "akompani_oauth_cloudflare_token",
+    cfAccountId: "akompani_cf_account_id",
+    vercelToken: "akompani_oauth_vercel_token",
+    vercelProject: "akompani_vercel_project",
+    vercelTeamId: "akompani_vercel_team_id",
+    openaiKey: "akompani_llm_api_key",
   };
 
   const LEGACY_KEYS = {
-    githubPat: "voyager_github_pat",
-    cfApiToken: "voyager_cf_api_token",
-    openaiKey: "voyager_openai_key",
+    githubPat: "akompani_github_pat",
+    cfApiToken: "akompani_cf_api_token",
+    openaiKey: "akompani_openai_key",
   };
 
   const SESSION_SECRET_KEYS = new Set(["githubPat", "cfApiToken", "vercelToken", "openaiKey"]);
@@ -162,7 +162,7 @@
 
   function updateThemePicker() {
     if (!els.themePicker) return;
-    const stored = localStorage.getItem("voyager-theme");
+    const stored = localStorage.getItem("akompani-theme");
     const current = stored || "system";
     els.themePicker.querySelectorAll(".theme-option").forEach(function (opt) {
       opt.classList.toggle("active", opt.getAttribute("data-theme") === current);
@@ -518,7 +518,7 @@
     els.testGithub.addEventListener("click", function () {
       const pat = (els.githubPat && els.githubPat.value.trim()) || "";
       if (!pat) {
-        CANARIAToast.warning({ title: "Missing token", message: "Enter a GitHub Personal Access Token first." });
+        AkompaniToast.warning({ title: "Missing token", message: "Enter a GitHub Personal Access Token first." });
         return;
       }
       els.testGithub.disabled = true;
@@ -537,15 +537,15 @@
         })
         .then(function (res) {
           if (res.ok && res.data.login) {
-            CANARIAToast.success({ title: "GitHub connected", message: `Authenticated as ${res.data.login}` });
+            AkompaniToast.success({ title: "GitHub connected", message: `Authenticated as ${res.data.login}` });
             writeValue("githubPat", pat);
             updateStatuses();
           } else {
-            CANARIAToast.error({ title: "GitHub failed", message: res.data.message || "Invalid token" });
+            AkompaniToast.error({ title: "GitHub failed", message: res.data.message || "Invalid token" });
           }
         })
         .catch(function () {
-          CANARIAToast.error({ title: "Network error", message: "Could not reach GitHub API." });
+          AkompaniToast.error({ title: "Network error", message: "Could not reach GitHub API." });
         })
         .finally(function () {
           els.testGithub.disabled = false;
@@ -560,11 +560,11 @@
       const token = (els.cfApiToken && els.cfApiToken.value.trim()) || "";
       const accountId = (els.cfAccountId && els.cfAccountId.value.trim()) || "";
       if (!token) {
-        CANARIAToast.warning({ title: "Missing token", message: "Enter a Cloudflare API Token first." });
+        AkompaniToast.warning({ title: "Missing token", message: "Enter a Cloudflare API Token first." });
         return;
       }
       if (accountId && !isLikelyCloudflareAccountId(accountId)) {
-        CANARIAToast.warning({
+        AkompaniToast.warning({
           title: "Invalid account ID",
           message: "Cloudflare Account ID should be a 32-character hex string.",
         });
@@ -588,9 +588,9 @@
             writeValue("cfApiToken", token);
             if (accountId) {
               writeValue("cfAccountId", accountId);
-              CANARIAToast.success({ title: "Cloudflare connected", message: "API token is valid." });
+              AkompaniToast.success({ title: "Cloudflare connected", message: "API token is valid." });
             } else {
-              CANARIAToast.warning({ title: "Token valid", message: "Add your Account ID to enable deployments." });
+              AkompaniToast.warning({ title: "Token valid", message: "Add your Account ID to enable deployments." });
             }
             updateStatuses();
           } else {
@@ -598,11 +598,11 @@
               res.data && Array.isArray(res.data.errors) && res.data.errors[0]
                 ? res.data.errors[0].message
                 : "";
-            CANARIAToast.error({ title: "Cloudflare failed", message: firstError || "Invalid token" });
+            AkompaniToast.error({ title: "Cloudflare failed", message: firstError || "Invalid token" });
           }
         })
         .catch(function () {
-          CANARIAToast.error({ title: "Network error", message: "Could not reach Cloudflare API." });
+          AkompaniToast.error({ title: "Network error", message: "Could not reach Cloudflare API." });
         })
         .finally(function () {
           els.testCf.disabled = false;
@@ -618,7 +618,7 @@
       const project = (els.vercelProject && els.vercelProject.value.trim()) || "";
       const teamId = (els.vercelTeamId && els.vercelTeamId.value.trim()) || "";
       if (!token) {
-        CANARIAToast.warning({ title: "Missing token", message: "Enter a Vercel access token first." });
+        AkompaniToast.warning({ title: "Missing token", message: "Enter a Vercel access token first." });
         return;
       }
       els.testVercel.disabled = true;
@@ -642,18 +642,18 @@
             writeValue("vercelProject", project);
             writeValue("vercelTeamId", teamId);
             const label = String(user.username || user.name || user.email || "Vercel user");
-            CANARIAToast.success({ title: "Vercel connected", message: `Authenticated as ${label}` });
+            AkompaniToast.success({ title: "Vercel connected", message: `Authenticated as ${label}` });
             updateStatuses();
           } else {
             const msg =
               res.data?.error?.message ||
               res.data?.message ||
               "Invalid token";
-            CANARIAToast.error({ title: "Vercel failed", message: msg });
+            AkompaniToast.error({ title: "Vercel failed", message: msg });
           }
         })
         .catch(function () {
-          CANARIAToast.error({ title: "Network error", message: "Could not reach Vercel API." });
+          AkompaniToast.error({ title: "Network error", message: "Could not reach Vercel API." });
         })
         .finally(function () {
           els.testVercel.disabled = false;
@@ -672,11 +672,11 @@
       root.classList.add("theme-transition");
 
       if (theme === "system") {
-        localStorage.removeItem("voyager-theme");
+        localStorage.removeItem("akompani-theme");
         const sys = matchMedia("(prefers-color-scheme:dark)").matches ? "dark" : "light";
         root.setAttribute("data-theme", sys);
       } else {
-        localStorage.setItem("voyager-theme", theme);
+        localStorage.setItem("akompani-theme", theme);
         root.setAttribute("data-theme", theme);
       }
 
@@ -690,7 +690,7 @@
   // Clear settings.
   if (els.clearSettings) {
     els.clearSettings.addEventListener("click", function () {
-      if (!confirm("Clear all CANARIA settings? This removes stored API keys and preferences.")) return;
+      if (!confirm("Clear all Akompani settings? This removes stored API keys and preferences.")) return;
 
       Object.values(KEYS).forEach(function (key) {
         localStorage.removeItem(key);
@@ -710,9 +710,9 @@
         });
       }
 
-      localStorage.removeItem("voyager-theme");
-      localStorage.removeItem("voyager_editor_mode");
-      localStorage.removeItem("voyager_right_collapsed");
+      localStorage.removeItem("akompani-theme");
+      localStorage.removeItem("akompani_editor_mode");
+      localStorage.removeItem("akompani_right_collapsed");
 
       Object.keys(KEYS).forEach(function (id) {
         if (els[id]) {
@@ -732,7 +732,7 @@
       document.documentElement.setAttribute("data-theme", sys);
       updateThemePicker();
 
-      CANARIAToast.info({ title: "Cleared", message: "All settings have been removed." });
+      AkompaniToast.info({ title: "Cleared", message: "All settings have been removed." });
     });
   }
 

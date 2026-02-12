@@ -1,6 +1,6 @@
 {
-  "name": "CANARIA IDE",
-  "short_name": "CANARIA",
+  "name": "Akompani IDE",
+  "short_name": "Akompani",
   "description": "Visual agent builder — build, run, deploy agentic workflows",
   "start_url": "./app/",
   "display": "standalone",

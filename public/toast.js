@@ -1,10 +1,10 @@
 /**
- * CANARIA Toast Notification System
- * Usage: CANARIAToast.show({ title, message, type, duration })
- *   or:  CANARIAToast.success('Title', 'Message')
- *   or:  CANARIAToast.success({ title: 'Title', message: 'Message' })
+ * Akompani Toast Notification System
+ * Usage: AkompaniToast.show({ title, message, type, duration })
+ *   or:  AkompaniToast.success('Title', 'Message')
+ *   or:  AkompaniToast.success({ title: 'Title', message: 'Message' })
  */
-const CANARIAToast = (() => {
+const AkompaniToast = (() => {
   let container = null;
 
   function ensureContainer() {

@@ -1,4 +1,4 @@
-# CANARIA Deep Dive (Frontend-Only)
+# Akompani Deep Dive (Frontend-Only)
 
 This repository now ships as a frontend-only static IDE.
 
