@@ -718,6 +718,15 @@ const DEFAULT_LLM_AUTH_HEADER = ${JSON.stringify(defaultAuthHeader)};
 const DEFAULT_LLM_AUTH_PREFIX = ${JSON.stringify(defaultAuthPrefix)};
 const DEFAULT_LLM_EXTRA_HEADERS = ${JSON.stringify(defaultExtraHeaders, null, 2)};
 const ENDPOINT_MODE = ${JSON.stringify(endpointMode)};
+const DEFAULT_RUNTIME_SYSTEM_PROMPT = [
+  "You are Agent Builder Runtime, an execution assistant for deployed flow-based agents.",
+  "Priority order: (1) safety and correctness, (2) explicit tool usage when provided, (3) concise user-facing output.",
+  "When tools are provided, prefer calling tools for factual or external-data tasks instead of fabricating answers.",
+  "Do not expose secrets, API keys, hidden tokens, or internal headers.",
+  "If a request is ambiguous, ask one focused clarification question.",
+  "If constraints prevent completion, explain the exact blocker and suggest the smallest viable next step.",
+  "Keep responses practical, deterministic, and deployment-friendly.",
+].join("\\n");
 
 function readEnvValue(source, key) {
   if (source && typeof source === "object" && typeof source[key] === "string") {
@@ -812,11 +821,11 @@ function buildChatWebUiPage() {
   const safeDesc = escHtml(AGENT_DESCRIPTION);
   return "<!doctype html><html><head><meta charset=\\"utf-8\\" /><meta name=\\"viewport\\" content=\\"width=device-width,initial-scale=1\\" /><title>" +
     safeName +
-    " Chat</title><style>body{font-family:ui-sans-serif,system-ui,-apple-system,sans-serif;max-width:860px;margin:24px auto;padding:0 16px;color:#111}textarea,input,button{font:inherit}textarea{width:100%;min-height:100px;padding:10px}#log{margin-top:14px;padding:12px;border:1px solid #ddd;border-radius:10px;white-space:pre-wrap;background:#fafafa}button{padding:10px 14px;border:0;border-radius:8px;background:#111;color:#fff;cursor:pointer}small{color:#666}</style></head><body><h1>" +
+    " Chat</title><style>body{font-family:ui-sans-serif,system-ui,-apple-system,sans-serif;max-width:900px;margin:24px auto;padding:0 16px;color:#111}textarea,input,button{font:inherit}textarea,input{width:100%;padding:10px;border:1px solid #ddd;border-radius:10px;box-sizing:border-box}textarea{min-height:110px}#log{margin-top:14px;padding:12px;border:1px solid #ddd;border-radius:10px;white-space:pre-wrap;background:#fafafa;min-height:120px}button{padding:10px 14px;border:0;border-radius:8px;background:#111;color:#fff;cursor:pointer}small{color:#666;display:block;margin-top:8px}.row{display:grid;gap:8px;margin-top:8px}</style></head><body><h1>" +
     safeName +
     "</h1><p>" +
     safeDesc +
-    "</p><textarea id=\\"prompt\\" placeholder=\\"Ask your agent...\\"></textarea><div style=\\"margin-top:8px\\"><button id=\\"send\\">Send</button></div><div id=\\"log\\">Ready.</div><small>Auth-enabled deployments require x-worker-token via custom client/script.</small><script>const b=document.getElementById('send');const p=document.getElementById('prompt');const log=document.getElementById('log');b.onclick=async()=>{const prompt=String(p.value||'').trim();if(!prompt){log.textContent='Enter a prompt.';return;}log.textContent='Running...';try{const r=await fetch('/invoke',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({prompt})});const d=await r.json();log.textContent=JSON.stringify(d,null,2);}catch(e){log.textContent=String(e&&e.message||e);}};</script></body></html>";
+    "</p><div class=\\"row\\"><label for=\\"token\\"><small>Optional worker token (for WORKER_AUTH_TOKEN protected deployments)</small></label><input id=\\"token\\" placeholder=\\"x-worker-token (optional)\\" /><textarea id=\\"prompt\\" placeholder=\\"Ask your agent...\\"></textarea></div><div style=\\"margin-top:8px\\"><button id=\\"send\\">Send</button></div><div id=\\"log\\">Ready.</div><small>This UI calls /v1/chat/completions with OpenAI-style stream mode for ChatKit-compatible clients.</small><script>const b=document.getElementById('send');const p=document.getElementById('prompt');const t=document.getElementById('token');const log=document.getElementById('log');async function readSse(response){const reader=response.body&&response.body.getReader?response.body.getReader():null;if(!reader){const text=await response.text();return text||'';}const dec=new TextDecoder();let buf='';let out='';for(;;){const {done,value}=await reader.read();if(done)break;buf+=dec.decode(value,{stream:true});const parts=buf.split('\\\\n\\\\n');buf=parts.pop()||'';for(const raw of parts){const line=raw.split('\\\\n').find(l=>l.startsWith('data: '));if(!line)continue;const payload=line.slice(6).trim();if(payload==='[DONE]')continue;try{const json=JSON.parse(payload);const delta=json&&json.choices&&json.choices[0]&&json.choices[0].delta||{};if(typeof delta.content==='string')out+=delta.content;if(Array.isArray(delta.tool_calls)&&delta.tool_calls.length){out+=out?'\\\\n':'';out+='[tool_calls] '+JSON.stringify(delta.tool_calls);} }catch{} }}return out.trim();}b.onclick=async()=>{const prompt=String(p.value||'').trim();if(!prompt){log.textContent='Enter a prompt.';return;}log.textContent='Running...';try{const headers={'content-type':'application/json'};const token=String(t.value||'').trim();if(token)headers['x-worker-token']=token;const r=await fetch('/v1/chat/completions',{method:'POST',headers,body:JSON.stringify({model:'runtime-default',stream:true,messages:[{role:'user',content:prompt}]})});if(!r.ok){let err='Request failed ('+r.status+')';try{const j=await r.json();err=(j&&j.error&&j.error.message)||j&&j.error||err;}catch{}throw new Error(String(err));}const text=await readSse(r);log.textContent=text||'No response';}catch(e){log.textContent=String(e&&e.message||e);}};</script></body></html>";
 }
 
 function safeStringify(value) {
@@ -843,6 +852,262 @@ function buildPromptFromInput(input) {
   return safeStringify(input);
 }
 
+function extractTextFromMessageContent(content) {
+  if (typeof content === "string") return content;
+  if (Array.isArray(content)) {
+    return content
+      .map((piece) => {
+        if (typeof piece === "string") return piece;
+        if (piece && typeof piece.text === "string") return piece.text;
+        if (piece && typeof piece.content === "string") return piece.content;
+        return "";
+      })
+      .join("\\n")
+      .trim();
+  }
+  if (content && typeof content === "object") {
+    return safeStringify(content);
+  }
+  return "";
+}
+
+function normalizeIncomingMessages(input, prompt) {
+  const source = Array.isArray(input?.messages) ? input.messages : [];
+  const normalized = [];
+  for (const row of source) {
+    if (!row || typeof row !== "object") continue;
+    const role = String(row.role || "").trim();
+    if (!role) continue;
+    const next = { role };
+    if (row.name && typeof row.name === "string") {
+      next.name = row.name;
+    }
+    if (row.tool_call_id && typeof row.tool_call_id === "string") {
+      next.tool_call_id = row.tool_call_id;
+    }
+    if (Array.isArray(row.tool_calls)) {
+      next.tool_calls = row.tool_calls;
+    }
+    if (role === "assistant" || role === "user" || role === "system" || role === "tool") {
+      if (row.content !== undefined) {
+        next.content = row.content;
+      } else if (!next.tool_calls) {
+        next.content = "";
+      }
+      normalized.push(next);
+    }
+  }
+  if (!normalized.length) {
+    normalized.push({
+      role: "user",
+      content: JSON.stringify(
+        {
+          agent: AGENT_NAME,
+          description: AGENT_DESCRIPTION,
+          flowSummary: FLOW_SUMMARY,
+          prompt,
+          input: input || {},
+        },
+        null,
+        2,
+      ),
+    });
+  }
+  return normalized;
+}
+
+function normalizeToolsArray(tools) {
+  if (!Array.isArray(tools)) return undefined;
+  const next = [];
+  for (const tool of tools) {
+    if (!tool || typeof tool !== "object") continue;
+    if (String(tool.type || "") !== "function") continue;
+    if (!tool.function || typeof tool.function !== "object") continue;
+    const functionName = String(tool.function.name || "").trim();
+    if (!functionName) continue;
+    next.push(tool);
+    if (next.length >= 32) break;
+  }
+  return next.length ? next : undefined;
+}
+
+function normalizeToolChoice(toolChoice) {
+  if (!toolChoice) return undefined;
+  if (typeof toolChoice === "string") return toolChoice;
+  if (toolChoice && typeof toolChoice === "object") return toolChoice;
+  return undefined;
+}
+
+function buildRuntimeSystemPrompt(input, prompt) {
+  const hint = String(input?.runtimePrompt || "").trim();
+  const parts = [
+    DEFAULT_RUNTIME_SYSTEM_PROMPT,
+    "Agent: " + AGENT_NAME,
+    AGENT_DESCRIPTION ? "Agent description: " + AGENT_DESCRIPTION : "",
+    "Flow summary: " + safeStringify(FLOW_SUMMARY),
+    "Current user prompt: " + prompt,
+    hint ? "Runtime override: " + hint : "",
+  ].filter(Boolean);
+  return clampText(parts.join("\\n\\n"), 12000);
+}
+
+function toFiniteNumber(value, fallback) {
+  const num = Number(value);
+  return Number.isFinite(num) ? num : fallback;
+}
+
+function buildUpstreamPayload(input, resolvedModel, prompt) {
+  const requestBody = input && typeof input === "object" ? input : {};
+  const payload = {
+    model: resolvedModel,
+    messages: [
+      {
+        role: "system",
+        content: buildRuntimeSystemPrompt(requestBody, prompt),
+      },
+      ...normalizeIncomingMessages(requestBody, prompt),
+    ],
+    temperature: toFiniteNumber(requestBody.temperature, 0.2),
+  };
+
+  if (requestBody.top_p !== undefined) payload.top_p = toFiniteNumber(requestBody.top_p, 1);
+  if (requestBody.max_tokens !== undefined) payload.max_tokens = Math.max(1, Math.floor(toFiniteNumber(requestBody.max_tokens, 512)));
+  if (requestBody.max_completion_tokens !== undefined && payload.max_tokens === undefined) {
+    payload.max_tokens = Math.max(1, Math.floor(toFiniteNumber(requestBody.max_completion_tokens, 512)));
+  }
+  if (requestBody.frequency_penalty !== undefined) {
+    payload.frequency_penalty = toFiniteNumber(requestBody.frequency_penalty, 0);
+  }
+  if (requestBody.presence_penalty !== undefined) {
+    payload.presence_penalty = toFiniteNumber(requestBody.presence_penalty, 0);
+  }
+  if (requestBody.stop !== undefined) payload.stop = requestBody.stop;
+  if (requestBody.response_format && typeof requestBody.response_format === "object") {
+    payload.response_format = requestBody.response_format;
+  }
+
+  const tools = normalizeToolsArray(requestBody.tools);
+  if (tools) payload.tools = tools;
+  const toolChoice = normalizeToolChoice(requestBody.tool_choice);
+  if (toolChoice !== undefined) payload.tool_choice = toolChoice;
+  if (requestBody.parallel_tool_calls !== undefined) {
+    payload.parallel_tool_calls = Boolean(requestBody.parallel_tool_calls);
+  }
+
+  return payload;
+}
+
+function normalizeCompletionMessage(message, fallbackPayload) {
+  const source = message && typeof message === "object" ? message : {};
+  const content = extractTextFromMessageContent(source.content);
+  const toolCalls = Array.isArray(source.tool_calls) ? source.tool_calls : [];
+  if (toolCalls.length) {
+    return {
+      role: "assistant",
+      content: content || "",
+      tool_calls: toolCalls,
+    };
+  }
+  if (content) {
+    return {
+      role: "assistant",
+      content,
+    };
+  }
+  return {
+    role: "assistant",
+    content: safeStringify(fallbackPayload || {}),
+  };
+}
+
+function buildOpenAiCompletionPayload(completion) {
+  const created = Math.floor(Date.now() / 1000);
+  const message = completion?.message || { role: "assistant", content: completion?.reply || "" };
+  const finishReason = completion?.finishReason || (Array.isArray(message.tool_calls) && message.tool_calls.length ? "tool_calls" : "stop");
+  const response = {
+    id: "chatcmpl_agent_builder",
+    object: "chat.completion",
+    created,
+    model: completion?.model || DEFAULT_LLM_MODEL || "agent-builder-sim",
+    choices: [
+      {
+        index: 0,
+        finish_reason: finishReason,
+        message,
+      },
+    ],
+  };
+  if (completion?.usage && typeof completion.usage === "object") {
+    response.usage = completion.usage;
+  }
+  return response;
+}
+
+function buildOpenAiStreamResponse(completion) {
+  const payload = buildOpenAiCompletionPayload(completion);
+  const choice = payload.choices?.[0] || {};
+  const message = choice.message || {};
+  const created = payload.created || Math.floor(Date.now() / 1000);
+  const model = payload.model || DEFAULT_LLM_MODEL || "agent-builder-sim";
+  const encoder = new TextEncoder();
+
+  const chunks = [];
+  chunks.push({
+    id: payload.id,
+    object: "chat.completion.chunk",
+    created,
+    model,
+    choices: [{ index: 0, delta: { role: "assistant" }, finish_reason: null }],
+  });
+
+  const hasToolCalls = Array.isArray(message.tool_calls) && message.tool_calls.length > 0;
+  if (hasToolCalls) {
+    chunks.push({
+      id: payload.id,
+      object: "chat.completion.chunk",
+      created,
+      model,
+      choices: [{ index: 0, delta: { tool_calls: message.tool_calls }, finish_reason: null }],
+    });
+  } else if (typeof message.content === "string" && message.content) {
+    chunks.push({
+      id: payload.id,
+      object: "chat.completion.chunk",
+      created,
+      model,
+      choices: [{ index: 0, delta: { content: message.content }, finish_reason: null }],
+    });
+  }
+
+  chunks.push({
+    id: payload.id,
+    object: "chat.completion.chunk",
+    created,
+    model,
+    choices: [{ index: 0, delta: {}, finish_reason: choice.finish_reason || "stop" }],
+  });
+
+  return new Response(
+    new ReadableStream({
+      start(controller) {
+        for (const chunk of chunks) {
+          controller.enqueue(encoder.encode("data: " + JSON.stringify(chunk) + "\\n\\n"));
+        }
+        controller.enqueue(encoder.encode("data: [DONE]\\n\\n"));
+        controller.close();
+      },
+    }),
+    {
+      status: 200,
+      headers: {
+        "content-type": "text/event-stream; charset=utf-8",
+        "cache-control": "no-store",
+        "x-accel-buffering": "no",
+      },
+    },
+  );
+}
+
 async function readResponsePayload(response) {
   const raw = await response.text().catch(() => "");
   if (!raw) return null;
@@ -854,16 +1119,25 @@ async function readResponsePayload(response) {
 }
 
 async function callConfiguredLlm(input, envSource) {
+  const requestBody = input && typeof input === "object" ? input : {};
   const endpoint = readEnvValue(envSource, "LLM_ENDPOINT") || DEFAULT_LLM_ENDPOINT;
-  const model = readEnvValue(envSource, "LLM_MODEL") || DEFAULT_LLM_MODEL;
+  const configuredModel = readEnvValue(envSource, "LLM_MODEL") || DEFAULT_LLM_MODEL;
+  const requestedModel = String(requestBody.model || "").trim();
+  const resolvedModel = requestedModel || configuredModel;
   const apiKey = readEnvValue(envSource, "LLM_API_KEY");
-  const prompt = clampText(buildPromptFromInput(input));
+  const prompt = clampText(buildPromptFromInput(requestBody));
 
-  if (!endpoint || !model || !apiKey) {
+  if (!endpoint || !resolvedModel || !apiKey) {
     return {
       mode: "static",
       note: "LLM_ENDPOINT, LLM_MODEL, and LLM_API_KEY are required for live inference.",
       prompt,
+      model: resolvedModel || configuredModel || "",
+      reply: "Runtime is in static mode. Configure provider env vars for live inference.",
+      message: {
+        role: "assistant",
+        content: "Runtime is in static mode. Configure provider env vars for live inference.",
+      },
     };
   }
 
@@ -875,33 +1149,11 @@ async function callConfiguredLlm(input, envSource) {
   const timer = setTimeout(() => controller.abort(), 30000);
   let response;
   try {
+    const payload = buildUpstreamPayload(requestBody, resolvedModel, prompt);
     response = await fetch(endpoint, {
       method: "POST",
       headers: buildLlmRequestHeaders(envSource, apiKey),
-      body: JSON.stringify({
-        model,
-        temperature: 0.2,
-        messages: [
-          {
-            role: "system",
-            content: "You are an agent runtime for an Elysia+Bun IDE deployment. Reply with practical execution guidance.",
-          },
-          {
-            role: "user",
-            content: JSON.stringify(
-              {
-                agent: AGENT_NAME,
-                description: AGENT_DESCRIPTION,
-                flowSummary: FLOW_SUMMARY,
-                input,
-                prompt,
-              },
-              null,
-              2,
-            ),
-          },
-        ],
-      }),
+      body: JSON.stringify(payload),
       signal: controller.signal,
     });
   } catch (error) {
@@ -924,24 +1176,18 @@ async function callConfiguredLlm(input, envSource) {
     throw new Error(String(detail));
   }
 
-  let content = data?.choices?.[0]?.message?.content;
-  if (Array.isArray(content)) {
-    content = content
-      .map((piece) => {
-        if (typeof piece === "string") return piece;
-        if (piece && typeof piece.text === "string") return piece.text;
-        if (piece && typeof piece.content === "string") return piece.content;
-        return "";
-      })
-      .join("\\n")
-      .trim();
-  }
+  const message = normalizeCompletionMessage(data?.choices?.[0]?.message, data || payload);
+  const finishReason = String(data?.choices?.[0]?.finish_reason || (Array.isArray(message.tool_calls) && message.tool_calls.length ? "tool_calls" : "stop"));
 
   return {
     mode: "live",
-    model,
+    model: resolvedModel,
     endpoint,
-    reply: typeof content === "string" && content ? content : safeStringify(data || payload),
+    reply: message.content || "",
+    message,
+    finishReason,
+    usage: data?.usage && typeof data.usage === "object" ? data.usage : null,
+    raw: data || payload,
   };
 }
 
@@ -972,6 +1218,34 @@ const app = new Elysia()
       description: AGENT_DESCRIPTION,
       flow: FLOW,
       summary: FLOW_SUMMARY,
+    };
+  })
+  .get("/v1/models", ({ set, store, request }) => {
+    if (!hasOpenAiEndpoint()) {
+      set.status = 404;
+      return {
+        error: "Not found.",
+      };
+    }
+
+    if (!hasWorkerAccess(request.headers, store)) {
+      set.status = 401;
+      return {
+        error: "Unauthorized. Invalid x-worker-token.",
+      };
+    }
+
+    const configured = readEnvValue(store, "LLM_MODEL") || DEFAULT_LLM_MODEL || "agent-builder-sim";
+    return {
+      object: "list",
+      data: [
+        {
+          id: configured,
+          object: "model",
+          created: Math.floor(Date.now() / 1000),
+          owned_by: "agent-builder-runtime",
+        },
+      ],
     };
   })
   .get("/chat", ({ set }) => {
@@ -1034,22 +1308,11 @@ const app = new Elysia()
 
     try {
       const completion = await callConfiguredLlm(body, store);
-      return {
-        id: "chatcmpl_agent_builder",
-        object: "chat.completion",
-        created: Math.floor(Date.now() / 1000),
-        model: completion.model || DEFAULT_LLM_MODEL || "agent-builder-sim",
-        choices: [
-          {
-            index: 0,
-            finish_reason: "stop",
-            message: {
-              role: "assistant",
-              content: completion.reply || JSON.stringify(completion),
-            },
-          },
-        ],
-      };
+      const wantsStream = Boolean(body && typeof body === "object" && body.stream);
+      if (wantsStream) {
+        return buildOpenAiStreamResponse(completion);
+      }
+      return buildOpenAiCompletionPayload(completion);
     } catch (error) {
       set.status = 500;
       return {
@@ -1120,6 +1383,15 @@ const ENDPOINT_MODE = ${JSON.stringify(normalizeEndpointMode(options.endpointMod
 const DEFAULT_LLM_AUTH_HEADER = ${JSON.stringify(defaultAuthHeader)};
 const DEFAULT_LLM_AUTH_PREFIX = ${JSON.stringify(defaultAuthPrefix)};
 const DEFAULT_LLM_EXTRA_HEADERS = ${JSON.stringify(defaultExtraHeaders, null, 2)};
+const DEFAULT_RUNTIME_SYSTEM_PROMPT = [
+  "You are Agent Builder Runtime, an execution assistant for deployed flow-based agents.",
+  "Priority order: (1) safety and correctness, (2) explicit tool usage when provided, (3) concise user-facing output.",
+  "When tools are provided, prefer calling tools for factual or external-data tasks instead of fabricating answers.",
+  "Do not expose secrets, API keys, hidden tokens, or internal headers.",
+  "If a request is ambiguous, ask one focused clarification question.",
+  "If constraints prevent completion, explain the exact blocker and suggest the smallest viable next step.",
+  "Keep responses practical, deterministic, and deployment-friendly.",
+].join("\\n");
 
 function json(data, status = 200) {
   return new Response(JSON.stringify(data, null, 2), {
@@ -1211,11 +1483,11 @@ function buildChatWebUiPage() {
   const safeDesc = escHtml(AGENT_DESCRIPTION);
   return "<!doctype html><html><head><meta charset=\\"utf-8\\" /><meta name=\\"viewport\\" content=\\"width=device-width,initial-scale=1\\" /><title>" +
     safeName +
-    " Chat</title><style>body{font-family:ui-sans-serif,system-ui,-apple-system,sans-serif;max-width:860px;margin:24px auto;padding:0 16px;color:#111}textarea,input,button{font:inherit}textarea{width:100%;min-height:100px;padding:10px}#log{margin-top:14px;padding:12px;border:1px solid #ddd;border-radius:10px;white-space:pre-wrap;background:#fafafa}button{padding:10px 14px;border:0;border-radius:8px;background:#111;color:#fff;cursor:pointer}small{color:#666}</style></head><body><h1>" +
+    " Chat</title><style>body{font-family:ui-sans-serif,system-ui,-apple-system,sans-serif;max-width:900px;margin:24px auto;padding:0 16px;color:#111}textarea,input,button{font:inherit}textarea,input{width:100%;padding:10px;border:1px solid #ddd;border-radius:10px;box-sizing:border-box}textarea{min-height:110px}#log{margin-top:14px;padding:12px;border:1px solid #ddd;border-radius:10px;white-space:pre-wrap;background:#fafafa;min-height:120px}button{padding:10px 14px;border:0;border-radius:8px;background:#111;color:#fff;cursor:pointer}small{color:#666;display:block;margin-top:8px}.row{display:grid;gap:8px;margin-top:8px}</style></head><body><h1>" +
     safeName +
     "</h1><p>" +
     safeDesc +
-    "</p><textarea id=\\"prompt\\" placeholder=\\"Ask your agent...\\"></textarea><div style=\\"margin-top:8px\\"><button id=\\"send\\">Send</button></div><div id=\\"log\\">Ready.</div><small>Auth-enabled deployments require x-worker-token via custom client/script.</small><script>const b=document.getElementById('send');const p=document.getElementById('prompt');const log=document.getElementById('log');b.onclick=async()=>{const prompt=String(p.value||'').trim();if(!prompt){log.textContent='Enter a prompt.';return;}log.textContent='Running...';try{const r=await fetch('/invoke',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({prompt})});const d=await r.json();log.textContent=JSON.stringify(d,null,2);}catch(e){log.textContent=String(e&&e.message||e);}};</script></body></html>";
+    "</p><div class=\\"row\\"><label for=\\"token\\"><small>Optional worker token (for WORKER_AUTH_TOKEN protected deployments)</small></label><input id=\\"token\\" placeholder=\\"x-worker-token (optional)\\" /><textarea id=\\"prompt\\" placeholder=\\"Ask your agent...\\"></textarea></div><div style=\\"margin-top:8px\\"><button id=\\"send\\">Send</button></div><div id=\\"log\\">Ready.</div><small>This UI calls /v1/chat/completions with OpenAI-style stream mode for ChatKit-compatible clients.</small><script>const b=document.getElementById('send');const p=document.getElementById('prompt');const t=document.getElementById('token');const log=document.getElementById('log');async function readSse(response){const reader=response.body&&response.body.getReader?response.body.getReader():null;if(!reader){const text=await response.text();return text||'';}const dec=new TextDecoder();let buf='';let out='';for(;;){const {done,value}=await reader.read();if(done)break;buf+=dec.decode(value,{stream:true});const parts=buf.split('\\\\n\\\\n');buf=parts.pop()||'';for(const raw of parts){const line=raw.split('\\\\n').find(l=>l.startsWith('data: '));if(!line)continue;const payload=line.slice(6).trim();if(payload==='[DONE]')continue;try{const json=JSON.parse(payload);const delta=json&&json.choices&&json.choices[0]&&json.choices[0].delta||{};if(typeof delta.content==='string')out+=delta.content;if(Array.isArray(delta.tool_calls)&&delta.tool_calls.length){out+=out?'\\\\n':'';out+='[tool_calls] '+JSON.stringify(delta.tool_calls);} }catch{} }}return out.trim();}b.onclick=async()=>{const prompt=String(p.value||'').trim();if(!prompt){log.textContent='Enter a prompt.';return;}log.textContent='Running...';try{const headers={'content-type':'application/json'};const token=String(t.value||'').trim();if(token)headers['x-worker-token']=token;const r=await fetch('/v1/chat/completions',{method:'POST',headers,body:JSON.stringify({model:'runtime-default',stream:true,messages:[{role:'user',content:prompt}]})});if(!r.ok){let err='Request failed ('+r.status+')';try{const j=await r.json();err=(j&&j.error&&j.error.message)||j&&j.error||err;}catch{}throw new Error(String(err));}const text=await readSse(r);log.textContent=text||'No response';}catch(e){log.textContent=String(e&&e.message||e);}};</script></body></html>";
 }
 
 function safeStringify(value) {
@@ -1230,6 +1502,334 @@ function clampText(value, max = 12000) {
   const text = String(value || "");
   if (text.length <= max) return text;
   return text.slice(0, max);
+}
+
+function buildPromptFromInput(input) {
+  if (!input || typeof input !== "object") {
+    return "Run this flow using default behavior.";
+  }
+  const text = String(input.prompt || input.message || "").trim();
+  if (text) return text;
+  return safeStringify(input);
+}
+
+function extractTextFromMessageContent(content) {
+  if (typeof content === "string") return content;
+  if (Array.isArray(content)) {
+    return content
+      .map((piece) => {
+        if (typeof piece === "string") return piece;
+        if (piece && typeof piece.text === "string") return piece.text;
+        if (piece && typeof piece.content === "string") return piece.content;
+        return "";
+      })
+      .join("\\n")
+      .trim();
+  }
+  if (content && typeof content === "object") {
+    return safeStringify(content);
+  }
+  return "";
+}
+
+function normalizeIncomingMessages(input, prompt) {
+  const source = Array.isArray(input?.messages) ? input.messages : [];
+  const normalized = [];
+  for (const row of source) {
+    if (!row || typeof row !== "object") continue;
+    const role = String(row.role || "").trim();
+    if (!role) continue;
+    const next = { role };
+    if (row.name && typeof row.name === "string") next.name = row.name;
+    if (row.tool_call_id && typeof row.tool_call_id === "string") next.tool_call_id = row.tool_call_id;
+    if (Array.isArray(row.tool_calls)) next.tool_calls = row.tool_calls;
+    if (row.content !== undefined) {
+      next.content = row.content;
+    } else if (!next.tool_calls) {
+      next.content = "";
+    }
+    if (role === "assistant" || role === "user" || role === "system" || role === "tool") {
+      normalized.push(next);
+    }
+  }
+
+  if (!normalized.length) {
+    normalized.push({
+      role: "user",
+      content: JSON.stringify(
+        {
+          agent: AGENT_NAME,
+          description: AGENT_DESCRIPTION,
+          flowSummary: FLOW_SUMMARY,
+          prompt,
+          input: input || {},
+        },
+        null,
+        2,
+      ),
+    });
+  }
+  return normalized;
+}
+
+function normalizeToolsArray(tools) {
+  if (!Array.isArray(tools)) return undefined;
+  const next = [];
+  for (const tool of tools) {
+    if (!tool || typeof tool !== "object") continue;
+    if (String(tool.type || "") !== "function") continue;
+    if (!tool.function || typeof tool.function !== "object") continue;
+    const functionName = String(tool.function.name || "").trim();
+    if (!functionName) continue;
+    next.push(tool);
+    if (next.length >= 32) break;
+  }
+  return next.length ? next : undefined;
+}
+
+function normalizeToolChoice(toolChoice) {
+  if (!toolChoice) return undefined;
+  if (typeof toolChoice === "string") return toolChoice;
+  if (toolChoice && typeof toolChoice === "object") return toolChoice;
+  return undefined;
+}
+
+function buildRuntimeSystemPrompt(input, prompt) {
+  const hint = String(input?.runtimePrompt || "").trim();
+  const parts = [
+    DEFAULT_RUNTIME_SYSTEM_PROMPT,
+    "Agent: " + AGENT_NAME,
+    AGENT_DESCRIPTION ? "Agent description: " + AGENT_DESCRIPTION : "",
+    "Flow summary: " + safeStringify(FLOW_SUMMARY),
+    "Current user prompt: " + prompt,
+    hint ? "Runtime override: " + hint : "",
+  ].filter(Boolean);
+  return clampText(parts.join("\\n\\n"), 12000);
+}
+
+function toFiniteNumber(value, fallback) {
+  const num = Number(value);
+  return Number.isFinite(num) ? num : fallback;
+}
+
+function buildUpstreamPayload(input, resolvedModel, prompt) {
+  const requestBody = input && typeof input === "object" ? input : {};
+  const payload = {
+    model: resolvedModel,
+    messages: [
+      {
+        role: "system",
+        content: buildRuntimeSystemPrompt(requestBody, prompt),
+      },
+      ...normalizeIncomingMessages(requestBody, prompt),
+    ],
+    temperature: toFiniteNumber(requestBody.temperature, 0.2),
+  };
+
+  if (requestBody.top_p !== undefined) payload.top_p = toFiniteNumber(requestBody.top_p, 1);
+  if (requestBody.max_tokens !== undefined) payload.max_tokens = Math.max(1, Math.floor(toFiniteNumber(requestBody.max_tokens, 512)));
+  if (requestBody.max_completion_tokens !== undefined && payload.max_tokens === undefined) {
+    payload.max_tokens = Math.max(1, Math.floor(toFiniteNumber(requestBody.max_completion_tokens, 512)));
+  }
+  if (requestBody.frequency_penalty !== undefined) payload.frequency_penalty = toFiniteNumber(requestBody.frequency_penalty, 0);
+  if (requestBody.presence_penalty !== undefined) payload.presence_penalty = toFiniteNumber(requestBody.presence_penalty, 0);
+  if (requestBody.stop !== undefined) payload.stop = requestBody.stop;
+  if (requestBody.response_format && typeof requestBody.response_format === "object") {
+    payload.response_format = requestBody.response_format;
+  }
+
+  const tools = normalizeToolsArray(requestBody.tools);
+  if (tools) payload.tools = tools;
+  const toolChoice = normalizeToolChoice(requestBody.tool_choice);
+  if (toolChoice !== undefined) payload.tool_choice = toolChoice;
+  if (requestBody.parallel_tool_calls !== undefined) {
+    payload.parallel_tool_calls = Boolean(requestBody.parallel_tool_calls);
+  }
+  return payload;
+}
+
+function normalizeCompletionMessage(message, fallbackPayload) {
+  const source = message && typeof message === "object" ? message : {};
+  const content = extractTextFromMessageContent(source.content);
+  const toolCalls = Array.isArray(source.tool_calls) ? source.tool_calls : [];
+  if (toolCalls.length) {
+    return {
+      role: "assistant",
+      content: content || "",
+      tool_calls: toolCalls,
+    };
+  }
+  if (content) {
+    return {
+      role: "assistant",
+      content,
+    };
+  }
+  return {
+    role: "assistant",
+    content: safeStringify(fallbackPayload || {}),
+  };
+}
+
+function buildOpenAiCompletionPayload(completion) {
+  const created = Math.floor(Date.now() / 1000);
+  const message = completion?.message || { role: "assistant", content: completion?.reply || "" };
+  const finishReason = completion?.finishReason || (Array.isArray(message.tool_calls) && message.tool_calls.length ? "tool_calls" : "stop");
+  const response = {
+    id: "chatcmpl_agent_builder",
+    object: "chat.completion",
+    created,
+    model: completion?.model || String(completion?.raw?.model || "") || "agent-builder-sim",
+    choices: [
+      {
+        index: 0,
+        finish_reason: finishReason,
+        message,
+      },
+    ],
+  };
+  if (completion?.usage && typeof completion.usage === "object") {
+    response.usage = completion.usage;
+  }
+  return response;
+}
+
+function buildOpenAiStreamResponse(completion) {
+  const payload = buildOpenAiCompletionPayload(completion);
+  const choice = payload.choices?.[0] || {};
+  const message = choice.message || {};
+  const created = payload.created || Math.floor(Date.now() / 1000);
+  const model = payload.model || "agent-builder-sim";
+  const encoder = new TextEncoder();
+
+  const chunks = [];
+  chunks.push({
+    id: payload.id,
+    object: "chat.completion.chunk",
+    created,
+    model,
+    choices: [{ index: 0, delta: { role: "assistant" }, finish_reason: null }],
+  });
+
+  const hasToolCalls = Array.isArray(message.tool_calls) && message.tool_calls.length > 0;
+  if (hasToolCalls) {
+    chunks.push({
+      id: payload.id,
+      object: "chat.completion.chunk",
+      created,
+      model,
+      choices: [{ index: 0, delta: { tool_calls: message.tool_calls }, finish_reason: null }],
+    });
+  } else if (typeof message.content === "string" && message.content) {
+    chunks.push({
+      id: payload.id,
+      object: "chat.completion.chunk",
+      created,
+      model,
+      choices: [{ index: 0, delta: { content: message.content }, finish_reason: null }],
+    });
+  }
+
+  chunks.push({
+    id: payload.id,
+    object: "chat.completion.chunk",
+    created,
+    model,
+    choices: [{ index: 0, delta: {}, finish_reason: choice.finish_reason || "stop" }],
+  });
+
+  return new Response(
+    new ReadableStream({
+      start(controller) {
+        for (const chunk of chunks) {
+          controller.enqueue(encoder.encode("data: " + JSON.stringify(chunk) + "\\n\\n"));
+        }
+        controller.enqueue(encoder.encode("data: [DONE]\\n\\n"));
+        controller.close();
+      },
+    }),
+    {
+      status: 200,
+      headers: {
+        "content-type": "text/event-stream; charset=utf-8",
+        "cache-control": "no-store",
+        "x-accel-buffering": "no",
+        "access-control-allow-origin": "*",
+      },
+    },
+  );
+}
+
+async function callConfiguredLlm(input, env) {
+  const requestBody = input && typeof input === "object" ? input : {};
+  const endpoint = String(env.LLM_ENDPOINT || "").trim();
+  const configuredModel = String(env.LLM_MODEL || "").trim();
+  const requestedModel = String(requestBody.model || "").trim();
+  const resolvedModel = requestedModel || configuredModel;
+  const apiKey = String(env.LLM_API_KEY || "").trim();
+  const prompt = clampText(buildPromptFromInput(requestBody));
+
+  if (!endpoint || !resolvedModel || !apiKey) {
+    return {
+      mode: "static",
+      note: "LLM_ENDPOINT, LLM_MODEL, and LLM_API_KEY are required for live inference.",
+      model: resolvedModel || configuredModel || "",
+      prompt,
+      reply: "Runtime is in static mode. Configure provider env vars for live inference.",
+      message: {
+        role: "assistant",
+        content: "Runtime is in static mode. Configure provider env vars for live inference.",
+      },
+    };
+  }
+
+  if (!isAllowedEndpoint(endpoint)) {
+    throw new Error("LLM endpoint must use HTTPS (or localhost in local mode).");
+  }
+
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), 30000);
+  let response;
+  try {
+    const payload = buildUpstreamPayload(requestBody, resolvedModel, prompt);
+    response = await fetch(endpoint, {
+      method: "POST",
+      headers: buildLlmRequestHeaders(env, apiKey),
+      body: JSON.stringify(payload),
+      signal: controller.signal,
+    });
+  } catch (error) {
+    if (error && typeof error === "object" && error.name === "AbortError") {
+      throw new Error("LLM request timed out.");
+    }
+    throw error;
+  } finally {
+    clearTimeout(timer);
+  }
+
+  const payload = await readResponsePayload(response);
+  const data = payload && typeof payload === "object" ? payload : null;
+  if (!response.ok) {
+    const detail =
+      data?.error?.message ||
+      data?.error ||
+      (typeof payload === "string" ? payload : "") ||
+      "LLM request failed (" + response.status + ")";
+    throw new Error(String(detail));
+  }
+
+  const message = normalizeCompletionMessage(data?.choices?.[0]?.message, data || payload);
+  const finishReason = String(data?.choices?.[0]?.finish_reason || (Array.isArray(message.tool_calls) && message.tool_calls.length ? "tool_calls" : "stop"));
+  return {
+    mode: "live",
+    model: resolvedModel,
+    endpoint,
+    reply: message.content || "",
+    message,
+    finishReason,
+    usage: data?.usage && typeof data.usage === "object" ? data.usage : null,
+    raw: data || payload,
+  };
 }
 
 async function readResponsePayload(response) {
@@ -1281,8 +1881,30 @@ export default {
         endpoints: [
           "/health",
           "/flow (debug token required)",
+          ...(hasOpenAiEndpoint() ? ["/v1/models"] : []),
           ...(hasChatWebUiEndpoint() ? ["/chat", "/invoke"] : []),
           ...(hasOpenAiEndpoint() ? ["/v1/chat/completions"] : []),
+        ],
+      });
+    }
+
+    if (url.pathname === "/v1/models") {
+      if (!hasOpenAiEndpoint()) {
+        return json({ error: "Not found" }, 404);
+      }
+      if (!hasWorkerAccess(request, env)) {
+        return json({ error: "Unauthorized. Invalid x-worker-token." }, 401);
+      }
+      const model = String(env.LLM_MODEL || "").trim() || "agent-builder-sim";
+      return json({
+        object: "list",
+        data: [
+          {
+            id: model,
+            object: "model",
+            created: Math.floor(Date.now() / 1000),
+            owned_by: "agent-builder-runtime",
+          },
         ],
       });
     }
@@ -1308,107 +1930,17 @@ export default {
         // Keep empty input.
       }
 
-      const endpoint = String(env.LLM_ENDPOINT || "").trim();
-      const model = String(env.LLM_MODEL || "").trim();
-      const apiKey = String(env.LLM_API_KEY || "").trim();
-
-      if (!endpoint || !model || !apiKey) {
-        if (isOpenAiRoute) {
-          return json({ error: "Set LLM_ENDPOINT, LLM_MODEL, and LLM_API_KEY for live inference." }, 503);
-        }
-        return json({
-          ok: true,
-          mode: "static",
-          note: "Set LLM_ENDPOINT, LLM_MODEL, and LLM_API_KEY for live inference.",
-          input,
-          summary: FLOW_SUMMARY,
-        });
-      }
-
-      if (!isAllowedEndpoint(endpoint)) {
-        return json({ ok: false, error: "LLM endpoint must use HTTPS (or localhost for local mode)." }, 400);
-      }
-
       try {
-        const prompt = clampText(String(input?.prompt || input?.message || safeStringify(input || {})));
-        const controller = new AbortController();
-        const timer = setTimeout(() => controller.abort(), 30000);
-        let upstream;
-        try {
-          upstream = await fetch(endpoint, {
-            method: "POST",
-            headers: buildLlmRequestHeaders(env, apiKey),
-            body: JSON.stringify({
-              model,
-              temperature: 0.2,
-              messages: [
-                {
-                  role: "system",
-                  content: "You are a practical runtime assistant for a flow-based agent IDE.",
-                },
-                {
-                  role: "user",
-                  content: JSON.stringify({ input, prompt, summary: FLOW_SUMMARY }, null, 2),
-                },
-              ],
-            }),
-            signal: controller.signal,
-          });
-        } finally {
-          clearTimeout(timer);
-        }
-
-        const payload = await readResponsePayload(upstream);
-        const llmData = payload && typeof payload === "object" ? payload : { raw: String(payload || "") };
-        if (!upstream.ok) {
-          return json(
-            {
-              ok: false,
-              error:
-                llmData?.error?.message ||
-                llmData?.error ||
-                (typeof payload === "string" ? payload : "") ||
-                "LLM request failed (" + upstream.status + ")",
-            },
-            502,
-          );
-        }
-
+        const completion = await callConfiguredLlm(input, env);
         if (isOpenAiRoute) {
-          const contentValue =
-            llmData?.choices?.[0]?.message?.content ||
-            llmData?.reply ||
-            safeStringify(llmData);
-          return json({
-            id: "chatcmpl_agent_builder",
-            object: "chat.completion",
-            created: Math.floor(Date.now() / 1000),
-            model: model,
-            choices: [
-              {
-                index: 0,
-                finish_reason: "stop",
-                message: {
-                  role: "assistant",
-                  content: String(contentValue || ""),
-                },
-              },
-            ],
-          });
+          const wantsStream = Boolean(input && typeof input === "object" && input.stream);
+          if (wantsStream) {
+            return buildOpenAiStreamResponse(completion);
+          }
+          return json(buildOpenAiCompletionPayload(completion));
         }
-
-        return json({ ok: true, agent: AGENT_NAME, llm: llmData, summary: FLOW_SUMMARY });
+        return json({ ok: true, agent: AGENT_NAME, completion, summary: FLOW_SUMMARY });
       } catch (error) {
-        if (error && typeof error === "object" && error.name === "AbortError") {
-          return json(
-            {
-              ok: false,
-              error: "LLM request timed out.",
-            },
-            504,
-          );
-        }
-
         return json(
           {
             ok: false,
@@ -1489,7 +2021,8 @@ export default {
     const endpointMode = normalizeEndpointMode(options.endpointMode || "both");
     const endpointLines = ["- /health", "- /flow (requires FLOW_DEBUG_TOKEN + x-debug-token)"];
     if (endpointMode === "openai" || endpointMode === "both") {
-      endpointLines.push("- /v1/chat/completions (OpenAI-style)");
+      endpointLines.push("- /v1/models (OpenAI model list)");
+      endpointLines.push("- /v1/chat/completions (OpenAI-style, supports stream + tools)");
     }
     if (endpointMode === "chat" || endpointMode === "both") {
       endpointLines.push("- /chat (web UI)", "- /invoke (chat submit endpoint)");
@@ -1537,6 +2070,7 @@ export default {
       "## Notes",
       "",
       "This object is generated in-browser and can be pushed to GitHub from the Deploy view.",
+      "OpenAI-style clients (including ChatKit-style frontends) can target /v1/chat/completions directly.",
       "Configure secrets and auth tokens in your platform dashboard (Cloudflare/Vercel/GitHub), not in the IDE.",
       "",
     );

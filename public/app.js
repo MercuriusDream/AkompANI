@@ -3999,6 +3999,8 @@
     return [
       "You are an expert workflow architect for Akompani, a visual block-based agent IDE.",
       "Your job is to design agent flows as structured JSON that the IDE can render.",
+      "Optimize for executable, debuggable flows that can be deployed without manual surgery.",
+      "Assume production-minded defaults: explicit data paths, safe retries, clear terminal outputs, and minimal hidden coupling.",
       "",
       "## Response Format",
       "Return ONLY valid JSON (no markdown fences, no explanation) with this structure:",
@@ -4055,17 +4057,36 @@
       "3. Use string IDs in connections: { \"node\": \"2\" }",
       "4. Space nodes: pos_x += 60, pos_y += 120",
       "5. Use {{variable}} in template expressions for dynamic values",
+      "6. Every flow must produce a deterministic value at end.returnExpr",
+      "7. Prefer explicit storeAs names over implicit chaining for any non-trivial step",
+      "8. For external calls, include at least one guard/validation step before end",
+      "9. Never include secrets, API keys, or real credentials in node data",
     ].join("\n");
   }
 
   /** Build the conversational chat system prompt. */
   function buildChatSystemPrompt() {
     return [
-      "You are Akompani AI, a helpful assistant for a visual agent-building IDE.",
-      "Help users understand their flows, debug issues, suggest improvements, and answer questions about building AI agents.",
-      "The user is working in a block-based visual editor where they drag and connect nodes to build agent workflows.",
-      "Be concise and helpful. Use markdown for formatting when useful.",
-      "If the user wants to create a flow, tell them to describe what they want (e.g. 'Build a flow that scrapes a website and summarizes the content').",
+      "You are Akompani Runtime Copilot, the in-IDE assistant for a visual flow-based agent builder.",
+      "Primary goals in order: correctness, practical debugging guidance, concise output, safe defaults.",
+      "Environment context: user edits block graphs (start/flow/ai/http/data/code nodes), deploys to Cloudflare/Vercel/local, and uses OpenAI-style APIs.",
+      "When helping with flows:",
+      "- identify root causes before suggesting edits",
+      "- propose concrete node-level changes (which node, which field, what value)",
+      "- call out missing connections, invalid expressions, schema mismatches, and deploy/runtime assumptions",
+      "- prefer deterministic, testable recommendations over vague best practices",
+      "When helping with deploy/runtime issues:",
+      "- verify endpoint compatibility (/v1/chat/completions, /v1/models, /invoke, /chat)",
+      "- verify auth requirements (x-worker-token, debug token) and required env vars",
+      "- distinguish local/BYOK issues vs deployed-worker issues",
+      "Security rules:",
+      "- never request or expose secrets in output",
+      "- redact key-like strings if they appear",
+      "- discourage unsafe endpoint schemes except localhost for development",
+      "Communication rules:",
+      "- keep responses direct and implementation-focused",
+      "- use markdown only when it improves readability",
+      "- if uncertainty is high, ask one precise clarification question",
     ].join(" ");
   }
 
@@ -4837,7 +4858,7 @@
             {
               role: "system",
               content:
-                "You are a concise assistant helping users validate and troubleshoot their deployed browser-generated agent workers.",
+                "You are a deployment validation assistant for browser-generated agents. Diagnose first, then prescribe fixes with concrete endpoint/auth/env checks. Prioritize OpenAI-compatible runtime behavior, tool-call correctness, and deploy reliability.",
             },
             {
               role: "user",
@@ -4943,9 +4964,17 @@
   }
 
   function appendDeploymentLog(entry) {
+    const resolveAgentIdByName = (name) => {
+      const clean = String(name || "").trim().toLowerCase();
+      if (!clean) return "";
+      const agents = readJsonArrayFromLocalStorage(STORAGE_KEYS.localAgents);
+      const matched = agents.find((agent) => String(agent?.name || "").trim().toLowerCase() === clean);
+      return String(matched?.id || "");
+    };
     const rows = readJsonArrayFromLocalStorage(STORAGE_KEYS.localDeployments);
     rows.unshift({
       id: entry.id || `deploy_${Date.now().toString(36)}`,
+      agentId: entry.agentId || resolveAgentIdByName(entry.name),
       name: entry.name || "Unnamed",
       target: entry.target || "unknown",
       status: entry.status || "generated",
@@ -6389,7 +6418,37 @@
         return;
       }
 
+      if (isMeta && key === "1") {
+        event.preventDefault();
+        switchMode("chat");
+        return;
+      }
+
+      if (isMeta && key === "2") {
+        event.preventDefault();
+        switchMode("canvas");
+        return;
+      }
+
+      if (isMeta && key === "3") {
+        event.preventDefault();
+        switchMode("deploy");
+        return;
+      }
+
       if (isTextEntryTarget(event.target)) return;
+
+      if (isMeta && key === "b" && state.editorMode === "canvas") {
+        event.preventDefault();
+        toggleLeftCollapse();
+        return;
+      }
+
+      if (isMeta && key === "j" && state.editorMode === "canvas") {
+        event.preventDefault();
+        toggleChatDrawer();
+        return;
+      }
 
       if (!isMeta && key === "r") {
         event.preventDefault();

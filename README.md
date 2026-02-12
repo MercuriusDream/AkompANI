@@ -12,6 +12,10 @@ Static-first browser IDE for building and deploying flow-based agents.
 - No project-owned backend API required for core IDE workflows
 - Generated agent endpoint mode selector: `openai`, `chat`, or `both`
 
+## Design Guidelines
+
+- See `docs/design-guidelines.md` for the current UI policy (`no-outline`, `no-drop-shadow`, static-shadow-only).
+
 Note: the app itself has no internal `/api/*` runtime. The only `/api/index.ts` path is inside generated Vercel deploy artifacts.
 
 ## Tech Stack

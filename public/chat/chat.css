@@ -666,7 +666,7 @@
 }
 
 [data-theme="dark"] .composer-input-wrap:focus-within {
-  box-shadow: 0 0 0 2px var(--brand-medium);
+  background: color-mix(in srgb, var(--brand-medium) 28%, var(--bg-tertiary));
 }
 
 /* Responsive */
