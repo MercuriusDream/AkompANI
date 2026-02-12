@@ -4,7 +4,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>CANARIA</title>
+  <title>Akompani</title>
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
@@ -18,13 +18,16 @@
   <!-- Navigation -->
   <nav class="top-nav landing-nav">
     <div class="top-nav-inner">
+      <a href="./" class="nav-brand">
+        <img src="./akompani.svg" alt="Akompani" class="nav-logo" />
+      </a>
       <div class="nav-links">
         <a href="./app/?mode=canvas" class="nav-link">Flow Editor</a>
         <a href="https://docs.voyager.dev" target="_blank" rel="noopener noreferrer" class="nav-link">Docs</a>
+        <a href="./app/?mode=chat" class="nav-link">Chat</a>
+        <a href="./app/?mode=deploy" class="nav-link">Deploy</a>
       </div>
       <div class="nav-actions">
-        <a href="./app/?mode=chat" class="btn btn-ghost btn-sm">Chat</a>
-        <a href="./app/?mode=deploy" class="btn btn-ghost btn-sm">Deploy</a>
         <a href="./app/?mode=settings" class="btn btn-ghost btn-icon btn-sm" title="Open settings" aria-label="Open settings">
           <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor"
             stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
@@ -71,6 +74,7 @@
   <header class="hero">
     <canvas class="hero-canvas" id="heroCanvas"></canvas>
     <canvas class="hero-particles" id="heroParticles"></canvas>
+    <pre class="hero-ascii" id="heroAscii" aria-hidden="true"></pre>
     <div class="container">
       <div class="hero-content">
         <h1 class="hero-title">
@@ -80,7 +84,7 @@
               Console</span></a><span class="hero-punct">,</span>
           <a href="./app/?mode=deploy" class="hero-word"><span class="hero-word-text">deploy</span><span class="hero-word-label">Ops
               Console</span></a><span class="hero-punct">.</span>
-          <br /><span class="hero-tagline">Build the Frontier.</span>
+          <br /><span class="hero-tagline">Accompanying<br />Agentic AI.</span>
         </h1>
         <div class="hero-actions">
           <a href="./app/?mode=chat" class="btn btn-primary btn-lg press-feedback">Get Started</a>
@@ -413,7 +417,7 @@
   <footer class="footer">
     <div class="container">
       <div class="footer-inner">
-        <p class="footer-copy">CANARIA</p>
+        <p class="footer-copy">Akompani</p>
         <div class="footer-links">
           <a href="./app/?mode=canvas">Editor</a>
           <a href="./app/?mode=chat">Chat</a>
@@ -473,7 +477,7 @@
       deploy: {
         title: 'One-Click Deploy',
         agenda: 'From local to 300+ edge locations in seconds',
-        body: `<p>When your agent is ready, click deploy and CANARIA generates a complete Cloudflare Worker project — fully configured, zero boilerplate. The output includes the Bun runtime, a Wrangler configuration, and an Elysia REST server with your agent's flow baked in.</p>
+        body: `<p>When your agent is ready, click deploy and Akompani generates a complete Cloudflare Worker project — fully configured, zero boilerplate. The output includes the Bun runtime, a Wrangler configuration, and an Elysia REST server with your agent's flow baked in.</p>
 <p>The generated project is a standard Cloudflare Worker that can be deployed with a single <code>wrangler deploy</code> command. It runs on Cloudflare's global edge network — 300+ data centers worldwide — with automatic scaling, zero cold starts, and built-in DDoS protection.</p>
 <p>Environment variables, secrets, and API keys are handled through Wrangler's native secrets management. Your agent's flow is compiled into an optimized bundle (typically under 50 KB) that loads instantly at the edge.</p>
 <p>The REST API exposes your agent as a simple HTTP endpoint. Send a POST request with your input, get the agent's output back. Compatible with any client, any language, any platform.</p>`
@@ -489,8 +493,8 @@
       oss: {
         title: 'Open Source',
         agenda: 'MIT licensed, zero strings attached',
-        body: `<p>Contrary to an alternative, operated by a private for-profit coporation, which claims to be an 'open' AI company, CANARIA, as a nonprofit OSS project, is offering everything for free.</p>
-<p>CANARIA is fully open source under the MIT license. Every line of code that touches your data is available for inspection, audit, and modification. There are no proprietary components, no phone-home telemetry, and no usage tracking.</p>
+        body: `<p>Contrary to an alternative, operated by a private for-profit coporation, which claims to be an 'open' AI company, Akompani, as a nonprofit OSS project, is offering everything for free.</p>
+<p>Akompani is fully open source under the MIT license. Every line of code that touches your data is available for inspection, audit, and modification. There are no proprietary components, no phone-home telemetry, and no usage tracking.</p>
 <p>The architecture is designed for extensibility. Add custom node types, legacy API's, inputs, outputs, and an execute function by simple function. The runtime handles the rest: scheduling, state management, error propagation, and status reporting.</p>
 <p>Swap out the executor if you need a different runtime model. Embed the flow runtime in your own product as a library. Fork the editor UI and restyle it to match your brand. The MIT license means you can do whatever you want with it.</p>
 <p>No vendor lock-in, no usage caps, no surprise pricing changes. Your agents, your data, your infrastructure, your rules.</p>`
@@ -772,6 +776,18 @@
       init();
       requestAnimationFrame(draw);
       window.addEventListener('resize', init);
+    })();
+
+    // Hero ASCII art — load and populate
+    (function () {
+      var el = document.getElementById('heroAscii');
+      if (!el) return;
+      fetch('./ascii_art.txt')
+        .then(function (r) { return r.ok ? r.text() : ''; })
+        .then(function (txt) {
+          if (txt) el.textContent = txt;
+        })
+        .catch(function () {});
     })();
 
     // Theme toggle — smooth transition

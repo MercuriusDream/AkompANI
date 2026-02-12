@@ -1,11 +1,13 @@
 (() => {
-  const flowSelect = document.getElementById("flowSelect");
-  const flowNameInput = document.getElementById("flowName");
-  const newFlowBtn = document.getElementById("newFlowBtn");
+  const flowNameDisplay = document.getElementById("flowNameDisplay");
+  const flowNameText = document.getElementById("flowNameText");
+  const flowDropdown = document.getElementById("flowDropdown");
+  const flowMenuRename = document.getElementById("flowMenuRename");
   const saveFlowBtn = document.getElementById("saveFlowBtn");
-  const deleteFlowBtn = document.getElementById("deleteFlowBtn");
-  const importFlowBtn = document.getElementById("importFlowBtn");
-  const exportFlowBtn = document.getElementById("exportFlowBtn");
+  // Legacy compat — null since elements removed
+  const flowSelect = null;
+  const flowNameInput = null;
+  // deleteFlowBtn, importFlowBtn, exportFlowBtn replaced by flow menu dropdown
   const flowImportInput = document.getElementById("flowImportInput");
   const blockSearch = document.getElementById("blockSearch");
   const palettePanel = document.getElementById("palettePanel");
@@ -30,7 +32,6 @@
   const drawflowEl = document.getElementById("drawflow");
   const modeChatTab = document.getElementById("modeChatTab");
   const modeCanvasTab = document.getElementById("modeCanvasTab");
-  const modeSettingsTab = document.getElementById("modeSettingsTab");
   const navCanvasControls = document.getElementById("navCanvasControls");
   const chatFullView = document.getElementById("chatFullView");
   const canvasView = document.getElementById("canvasView");
@@ -46,10 +47,11 @@
   const deployGhTab = document.getElementById("deployGhTab");
   const deployCfPanel = document.getElementById("deployCfPanel");
   const deployGhPanel = document.getElementById("deployGhPanel");
-  const chatPill = document.getElementById("chatPill");
-  const chatPillBtn = document.getElementById("chatPillBtn");
-  const chatPillWindow = document.getElementById("chatPillWindow");
-  const chatPillMinimize = document.getElementById("chatPillMinimize");
+  const chatDrawer = document.getElementById("chatDrawer");
+  const chatDrawerClose = document.getElementById("chatDrawerClose");
+  const toggleChatPanelBtn = document.getElementById("toggleChatPanel");
+  const chatLogToggle = document.getElementById("chatLogToggle");
+  const chatLogNewBtn = document.getElementById("chatLogNewBtn");
   const pillChatMessages = document.getElementById("pillChatMessages");
   const pillChatInput = document.getElementById("pillChatInput");
   const pillChatSend = document.getElementById("pillChatSend");
@@ -57,10 +59,16 @@
   const buildChatSend = document.getElementById("buildChatSend");
   const buildChatMessages = document.getElementById("buildChatMessages");
   const toggleInspectorBtn = document.getElementById("toggleInspectorBtn");
+  const toggleLeftPanelBtn = document.getElementById("toggleLeftPanel");
+  const toggleRightPanelBtn = document.getElementById("toggleRightPanel");
   const floatInspectorBtn = document.getElementById("floatInspectorBtn");
   const floatingInspector = document.getElementById("floatingInspector");
   const floatingInspectorBody = document.getElementById("floatingInspectorBody");
   const dockInspectorBtn = document.getElementById("dockInspectorBtn");
+  const leftPanelTabs = document.getElementById("leftPanelTabs");
+  const globalSearchInput = document.getElementById("globalSearch");
+  const globalSearchResults = document.getElementById("globalSearchResults");
+  const flowOutline = document.getElementById("flowOutline");
   const paletteHoverCard = document.getElementById("paletteHoverCard");
   const generateOverlay = document.getElementById("generateOverlay");
   const generatePrompt = document.getElementById("generatePrompt");
@@ -85,7 +93,7 @@
   const llmModelInput = document.getElementById("llmModel");
   const saveLlmConfigBtn = document.getElementById("saveLlmConfigBtn");
   const llmConfigStatus = document.getElementById("llmConfigStatus");
-  const modeTabs = [modeChatTab, modeCanvasTab, modeDeployTab, modeSettingsTab].filter(Boolean);
+  const modeTabs = [modeChatTab, modeCanvasTab, modeDeployTab].filter(Boolean);
   const modeViews = {
     chat: chatFullView,
     canvas: canvasView,
@@ -131,39 +139,9 @@
     }
   }
 
-  // Sliding mode indicator
-  const editorNavLinks = document.querySelector(".editor-nav-links");
-  let modeIndicator = null;
-  if (editorNavLinks) {
-    modeIndicator = document.createElement("div");
-    modeIndicator.className = "mode-indicator";
-    editorNavLinks.appendChild(modeIndicator);
-  }
-
-  function updateModeIndicator(mode) {
-    if (!modeIndicator || !editorNavLinks) return;
-    const activeTab = modeTabs.find((t) => t?.dataset?.mode === mode);
-    if (!activeTab) return;
-    // Use offsetLeft which is relative to the offsetParent (the nav-links container)
-    // This avoids fractional rounding issues with getBoundingClientRect
-    modeIndicator.style.width = activeTab.offsetWidth + "px";
-    modeIndicator.style.transform = "translateX(" + (activeTab.offsetLeft - 4) + "px)";
-  }
-
-  function updateEditorNavModeLinks(mode) {
-    for (const link of editorNavModeLinks) {
-      const linkMode = normalizeEditorMode(link.dataset.editorNavMode);
-      const isActive = Boolean(linkMode) && linkMode === mode;
-      link.classList.toggle("is-active", isActive);
-      if (isActive) {
-        link.setAttribute("aria-current", "page");
-      } else {
-        link.removeAttribute("aria-current");
-      }
-    }
-  }
-
-  window.addEventListener("resize", () => updateModeIndicator(state.editorMode));
+  // Mode indicator no longer needed — pill switcher handles active state via CSS
+  function updateModeIndicator() {}
+  function updateEditorNavModeLinks() {}
 
   const STORAGE_KEYS = {
     localFlows: "voyager_local_flows",
@@ -186,14 +164,17 @@
     deployEndpointMode: "voyager_deploy_endpoint_mode",
   };
 
-  const editor = new Drawflow(drawflowEl);
-  editor.reroute = true;
-  editor.reroute_fix_curvature = false;
-  editor.reroute_curvature = 0.35;
-  editor.reroute_curvature_start_end = 0.25;
-  editor.reroute_width = 8;
-  editor.line_path = 4;
-  editor.start();
+  let editor = null;
+  if (drawflowEl) {
+    editor = new Drawflow(drawflowEl);
+    editor.reroute = true;
+    editor.reroute_fix_curvature = false;
+    editor.reroute_curvature = 0.35;
+    editor.reroute_curvature_start_end = 0.25;
+    editor.reroute_width = 8;
+    editor.line_path = 4;
+    editor.start();
+  }
 
   const NODE_GROUPS = [
     {
@@ -204,22 +185,22 @@
     {
       id: "flow",
       label: "Flow Control",
-      types: ["start", "if", "while", "for_each", "delay", "assert", "end"],
+      types: ["start", "if", "switch_case", "while", "for_each", "try_catch", "merge", "parallel", "delay", "assert", "end"],
     },
     {
       id: "ai",
       label: "AI / LLM",
-      types: ["openai_structured", "template"],
+      types: ["openai_structured", "llm_chat", "embeddings", "classifier", "template"],
     },
     {
       id: "integrations",
       label: "Integrations",
-      types: ["http"],
+      types: ["http", "webhook", "websocket", "db_query", "email_send"],
     },
     {
       id: "data",
       label: "Data Processing",
-      types: ["set_var", "transform", "json_parse", "json_stringify", "array_push"],
+      types: ["set_var", "transform", "json_parse", "json_stringify", "array_push", "map_filter", "regex", "cache"],
     },
     {
       id: "debug",
@@ -239,7 +220,7 @@
       label: "Vibe Agent Maker",
       icon: "Vibe",
       meta: "macro",
-      color: "#7c72ff",
+      color: "#978caf",
       ports: "macro: flow blueprint",
       description: "Generates a full multi-step vibe planning and execution flow using reusable core blocks.",
       inputs: 0,
@@ -254,7 +235,7 @@
       label: "Agent Flow Maker",
       icon: "Flow+",
       meta: "macro",
-      color: "#26b39d",
+      color: "#978caf",
       ports: "macro: flow blueprint",
       description: "Builds an end-to-end flow scaffold with branching, validation, and output routing.",
       inputs: 0,
@@ -269,7 +250,7 @@
       label: "Agent Block Maker",
       icon: "Block+",
       meta: "macro",
-      color: "#f59e0b",
+      color: "#978caf",
       ports: "macro: block chain",
       description: "Drops a reusable block-chain template for classify, tool call, and structured summary.",
       inputs: 0,
@@ -284,7 +265,7 @@
       label: "Chat Code -> Elysia",
       icon: "Ely",
       meta: "macro",
-      color: "#ef476f",
+      color: "#978caf",
       ports: "macro: chat runtime chain",
       description: "Adds chat+code conversion blocks tuned for Elysia+Bun deployment targets.",
       inputs: 0,
@@ -299,7 +280,7 @@
       label: "Start",
       icon: "Start",
       meta: "entry",
-      color: "#6366f1",
+      color: "#ef476f",
       ports: "out: next",
       description: "Entry point of the flow. Receives run input as context.input.",
       inputs: 0,
@@ -312,7 +293,7 @@
       label: "End",
       icon: "End",
       meta: "finish",
-      color: "#ef4444",
+      color: "#ef476f",
       ports: "in: input",
       description: "Stops execution and returns the value from returnExpr.",
       inputs: 1,
@@ -338,7 +319,7 @@
       label: "If / Else",
       icon: "If",
       meta: "branch",
-      color: "#ff9f0a",
+      color: "#ef476f",
       ports: "out1: true · out2: false",
       description: "Evaluates condition and branches to true/false outputs.",
       inputs: 1,
@@ -364,7 +345,7 @@
       label: "While",
       icon: "While",
       meta: "loop",
-      color: "#ff9f0a",
+      color: "#ef476f",
       ports: "out1: loop · out2: done",
       description: "Loops while condition is true. Includes max-iteration safety.",
       inputs: 1,
@@ -398,7 +379,7 @@
       label: "For Each",
       icon: "For",
       meta: "iterate",
-      color: "#ff9f0a",
+      color: "#ef476f",
       ports: "out1: loop · out2: done",
       description: "Iterates array items and exposes item/index variables.",
       inputs: 1,
@@ -441,7 +422,7 @@
       label: "Delay",
       icon: "Wait",
       meta: "pause",
-      color: "#6366f1",
+      color: "#ef476f",
       ports: "out: next",
       description: "Pauses execution for calculated milliseconds.",
       inputs: 1,
@@ -476,7 +457,7 @@
       label: "Assert",
       icon: "Guard",
       meta: "validate",
-      color: "#ef4444",
+      color: "#ef476f",
       ports: "out: next",
       description: "Throws error when condition is false.",
       inputs: 1,
@@ -511,7 +492,7 @@
       label: "OpenAI JSON",
       icon: "LLM",
       meta: "structured",
-      color: "#4ea1ff",
+      color: "#2da6be",
       ports: "out: next",
       description: "Calls OpenAI with strict JSON schema output.",
       inputs: 1,
@@ -588,7 +569,7 @@
       label: "Template",
       icon: "Tpl",
       meta: "render",
-      color: "#6366f1",
+      color: "#2da6be",
       ports: "out: next",
       description: "Renders template with runtime variables.",
       inputs: 1,
@@ -630,7 +611,7 @@
       label: "HTTP Request",
       icon: "HTTP",
       meta: "api",
-      color: "#4ea1ff",
+      color: "#0f8f67",
       ports: "out: next",
       description: "Performs HTTP call with optional templated body/headers.",
       inputs: 1,
@@ -690,7 +671,7 @@
       label: "Set Variable",
       icon: "Var",
       meta: "state",
-      color: "#6366f1",
+      color: "#bc7708",
       ports: "out: next",
       description: "Writes expression result into vars.<varName>.",
       inputs: 1,
@@ -724,7 +705,7 @@
       label: "Transform",
       icon: "Map",
       meta: "compute",
-      color: "#6366f1",
+      color: "#bc7708",
       ports: "out: next",
       description: "Calculates expression and sets it as last.",
       inputs: 1,
@@ -758,7 +739,7 @@
       label: "JSON Parse",
       icon: "Parse",
       meta: "json",
-      color: "#6366f1",
+      color: "#bc7708",
       ports: "out: next",
       description: "Parses JSON text from expression result.",
       inputs: 1,
@@ -800,7 +781,7 @@
       label: "JSON Stringify",
       icon: "String",
       meta: "json",
-      color: "#6366f1",
+      color: "#bc7708",
       ports: "out: next",
       description: "Stringifies value from expression with indentation.",
       inputs: 1,
@@ -841,7 +822,7 @@
       label: "Array Push",
       icon: "Push",
       meta: "collection",
-      color: "#6366f1",
+      color: "#bc7708",
       ports: "out: next",
       description: "Appends a value into vars.<arrayVar>.",
       inputs: 1,
@@ -893,7 +874,7 @@
       label: "Log",
       icon: "Log",
       meta: "trace",
-      color: "#6366f1",
+      color: "#ff5f57",
       ports: "out: next",
       description: "Emits log entry in run events.",
       inputs: 1,
@@ -919,7 +900,7 @@
       label: "Python Script",
       icon: "Py",
       meta: "script",
-      color: "#3776ab",
+      color: "#3178c6",
       ports: "out: next",
       description: "Runs custom Python code with access to input, vars, and last. Set `result` to output.",
       inputs: 1,
@@ -948,6 +929,330 @@
         { section: "Output", key: "storeAs", label: "Store as", type: "text", help: "Optional vars key.", example: "tsResult" },
       ],
     },
+
+    /* ── Flow Control additions ── */
+    switch_case: {
+      group: "flow",
+      label: "Switch",
+      icon: "Switch",
+      meta: "branch",
+      color: "#ef476f",
+      ports: "out1: case1 · out2: case2 · out3: default",
+      description: "Multi-branch switch. Evaluates expression and routes to matching case output.",
+      inputs: 1,
+      outputs: 3,
+      data: {
+        expression: "last.type",
+        cases: ["success", "error"],
+      },
+      fields: [
+        { section: "Switch", key: "expression", label: "Expression", type: "textarea", insertMode: "expression", help: "Value to match against cases.", example: "last.status" },
+        { section: "Switch", key: "cases", label: "Case values (JSON array)", type: "json", help: "Array of values. Last output is default.", example: '["success", "error"]' },
+      ],
+    },
+    try_catch: {
+      group: "flow",
+      label: "Try / Catch",
+      icon: "Try",
+      meta: "guard",
+      color: "#ef476f",
+      ports: "out1: success · out2: error",
+      description: "Wraps downstream execution. Routes to error output on failure.",
+      inputs: 1,
+      outputs: 2,
+      data: {
+        errorVar: "error",
+        retries: 0,
+      },
+      fields: [
+        { section: "Error Handling", key: "errorVar", label: "Error variable", type: "text", help: "Stores error object in vars.<name>.", example: "error" },
+        { section: "Error Handling", key: "retries", label: "Retries", type: "number", help: "Retry count before routing to error.", example: "0" },
+      ],
+    },
+    merge: {
+      group: "flow",
+      label: "Merge",
+      icon: "Merge",
+      meta: "join",
+      color: "#ef476f",
+      ports: "out: merged",
+      description: "Waits for multiple inputs, then combines results and continues.",
+      inputs: 3,
+      outputs: 1,
+      data: {
+        strategy: "all",
+        storeAs: "merged",
+      },
+      fields: [
+        { section: "Merge", key: "strategy", label: "Strategy", type: "select", options: ["all", "any", "first"], help: "'all' waits for every input, 'any' continues on first arrival." },
+        { section: "Output", key: "storeAs", label: "Store as", type: "text", help: "Stores merged array in vars.", example: "merged" },
+      ],
+    },
+    parallel: {
+      group: "flow",
+      label: "Parallel",
+      icon: "Par",
+      meta: "fork",
+      color: "#ef476f",
+      ports: "out1: branch1 · out2: branch2 · out3: branch3",
+      description: "Splits execution into parallel branches. Each output runs concurrently.",
+      inputs: 1,
+      outputs: 3,
+      data: {},
+      fields: [],
+    },
+
+    /* ── AI / LLM additions ── */
+    llm_chat: {
+      group: "ai",
+      label: "LLM Chat",
+      icon: "Chat",
+      meta: "multi-turn",
+      color: "#2da6be",
+      ports: "out: next",
+      description: "Multi-turn chat completion. Maintains message history across turns.",
+      inputs: 1,
+      outputs: 1,
+      data: {
+        model: "gpt-4.1-mini",
+        systemPrompt: "You are a helpful assistant.",
+        userPrompt: "{{input.message}}",
+        historyVar: "chatHistory",
+        maxTokens: 1024,
+        temperature: 0.7,
+        storeAs: "chatReply",
+      },
+      fields: [
+        { section: "Model", key: "model", label: "Model", type: "text", help: "OpenAI model id.", example: "gpt-4.1-mini", presets: ["gpt-4.1-mini", "gpt-4.1", "gpt-4o-mini"] },
+        { section: "Prompt", key: "systemPrompt", label: "System", type: "textarea", insertMode: "template", help: "System instruction." },
+        { section: "Prompt", key: "userPrompt", label: "User", type: "textarea", insertMode: "template", help: "User message. Supports {{input.*}}, {{vars.*}}." },
+        { section: "History", key: "historyVar", label: "History var", type: "text", help: "Vars key storing message history array.", example: "chatHistory" },
+        { section: "Parameters", key: "maxTokens", label: "Max tokens", type: "number", help: "Max response tokens.", example: "1024" },
+        { section: "Parameters", key: "temperature", label: "Temperature", type: "number", help: "0 = deterministic, 1 = creative.", example: "0.7" },
+        { section: "Output", key: "storeAs", label: "Store as", type: "text", help: "Saves reply text into vars.", example: "chatReply" },
+      ],
+    },
+    embeddings: {
+      group: "ai",
+      label: "Embeddings",
+      icon: "Emb",
+      meta: "vector",
+      color: "#2da6be",
+      ports: "out: next",
+      description: "Generates text embeddings for semantic search and similarity.",
+      inputs: 1,
+      outputs: 1,
+      data: {
+        model: "text-embedding-3-small",
+        inputExpr: "last.text || last",
+        storeAs: "embedding",
+      },
+      fields: [
+        { section: "Model", key: "model", label: "Model", type: "text", help: "Embedding model id.", example: "text-embedding-3-small", presets: ["text-embedding-3-small", "text-embedding-3-large"] },
+        { section: "Input", key: "inputExpr", label: "Input expression", type: "textarea", insertMode: "expression", help: "Text or array of texts to embed.", example: "last.text" },
+        { section: "Output", key: "storeAs", label: "Store as", type: "text", help: "Stores embedding vector(s) in vars.", example: "embedding" },
+      ],
+    },
+    classifier: {
+      group: "ai",
+      label: "Classifier",
+      icon: "Tag",
+      meta: "classify",
+      color: "#2da6be",
+      ports: "out: next",
+      description: "Classifies text into predefined labels using an LLM.",
+      inputs: 1,
+      outputs: 1,
+      data: {
+        model: "gpt-4.1-mini",
+        inputExpr: "last.text || last",
+        labels: ["positive", "negative", "neutral"],
+        multiLabel: false,
+        storeAs: "classification",
+      },
+      fields: [
+        { section: "Model", key: "model", label: "Model", type: "text", help: "LLM model for classification.", example: "gpt-4.1-mini" },
+        { section: "Input", key: "inputExpr", label: "Input expression", type: "textarea", insertMode: "expression", help: "Text to classify.", example: "last.text" },
+        { section: "Labels", key: "labels", label: "Labels (JSON array)", type: "json", help: "Possible classification labels.", example: '["positive", "negative", "neutral"]' },
+        { section: "Labels", key: "multiLabel", label: "Multi-label", type: "select", options: ["false", "true"], help: "Allow multiple labels per input." },
+        { section: "Output", key: "storeAs", label: "Store as", type: "text", help: "Stores label(s) in vars.", example: "classification" },
+      ],
+    },
+
+    /* ── Integration additions ── */
+    webhook: {
+      group: "integrations",
+      label: "Webhook",
+      icon: "Hook",
+      meta: "trigger",
+      color: "#0f8f67",
+      ports: "out: next",
+      description: "Listens for incoming HTTP webhook requests. Can be a flow trigger.",
+      inputs: 0,
+      outputs: 1,
+      data: {
+        path: "/webhook/my-hook",
+        method: "POST",
+        secret: "",
+        storeAs: "webhookData",
+      },
+      fields: [
+        { section: "Endpoint", key: "path", label: "Path", type: "text", help: "URL path to listen on.", example: "/webhook/my-hook" },
+        { section: "Endpoint", key: "method", label: "Method", type: "select", options: ["POST", "GET", "PUT"], help: "Accepted HTTP method." },
+        { section: "Security", key: "secret", label: "Signing secret", type: "text", help: "Optional HMAC secret for verification." },
+        { section: "Output", key: "storeAs", label: "Store as", type: "text", help: "Stores request body/headers in vars.", example: "webhookData" },
+      ],
+    },
+    websocket: {
+      group: "integrations",
+      label: "WebSocket",
+      icon: "WS",
+      meta: "realtime",
+      color: "#0f8f67",
+      ports: "out: next",
+      description: "Sends or receives messages over a WebSocket connection.",
+      inputs: 1,
+      outputs: 1,
+      data: {
+        url: "wss://echo.websocket.org",
+        action: "send",
+        message: "{{json last}}",
+        storeAs: "wsResult",
+      },
+      fields: [
+        { section: "Connection", key: "url", label: "URL", type: "text", insertMode: "template", help: "WebSocket server URL.", example: "wss://echo.websocket.org" },
+        { section: "Action", key: "action", label: "Action", type: "select", options: ["send", "receive", "send_receive"], help: "'send' pushes a message, 'receive' waits for one." },
+        { section: "Action", key: "message", label: "Message", type: "textarea", insertMode: "template", help: "Message to send (for send/send_receive)." },
+        { section: "Output", key: "storeAs", label: "Store as", type: "text", help: "Stores response in vars.", example: "wsResult" },
+      ],
+    },
+    db_query: {
+      group: "integrations",
+      label: "Database Query",
+      icon: "DB",
+      meta: "sql",
+      color: "#0f8f67",
+      ports: "out: next",
+      description: "Executes a database query. Supports SQL templates with parameter binding.",
+      inputs: 1,
+      outputs: 1,
+      data: {
+        driver: "postgres",
+        connectionExpr: "vars.dbUrl",
+        query: "SELECT * FROM users WHERE id = $1",
+        params: ["{{vars.userId}}"],
+        storeAs: "queryResult",
+      },
+      fields: [
+        { section: "Connection", key: "driver", label: "Driver", type: "select", options: ["postgres", "mysql", "sqlite", "mongodb"], help: "Database driver type." },
+        { section: "Connection", key: "connectionExpr", label: "Connection", type: "text", insertMode: "expression", help: "Connection string or vars reference.", example: "vars.dbUrl" },
+        { section: "Query", key: "query", label: "Query", type: "textarea", insertMode: "template", help: "SQL query with $1, $2 parameter placeholders." },
+        { section: "Query", key: "params", label: "Parameters (JSON)", type: "json", help: "Array of parameter values.", example: '["{{vars.userId}}"]' },
+        { section: "Output", key: "storeAs", label: "Store as", type: "text", help: "Stores query result rows.", example: "queryResult" },
+      ],
+    },
+    email_send: {
+      group: "integrations",
+      label: "Send Email",
+      icon: "Mail",
+      meta: "smtp",
+      color: "#0f8f67",
+      ports: "out: next",
+      description: "Sends an email via SMTP or API. Supports templated subject/body.",
+      inputs: 1,
+      outputs: 1,
+      data: {
+        to: "{{vars.recipientEmail}}",
+        subject: "Notification: {{vars.topic}}",
+        body: "Hello {{vars.name}},\n\n{{last.message}}",
+        provider: "smtp",
+        storeAs: "emailResult",
+      },
+      fields: [
+        { section: "Recipient", key: "to", label: "To", type: "text", insertMode: "template", help: "Recipient email address.", example: "user@example.com" },
+        { section: "Content", key: "subject", label: "Subject", type: "text", insertMode: "template", help: "Email subject line." },
+        { section: "Content", key: "body", label: "Body", type: "textarea", insertMode: "template", help: "Email body. Supports {{vars.*}}." },
+        { section: "Provider", key: "provider", label: "Provider", type: "select", options: ["smtp", "sendgrid", "ses", "resend"], help: "Email delivery provider." },
+        { section: "Output", key: "storeAs", label: "Store as", type: "text", help: "Stores send result.", example: "emailResult" },
+      ],
+    },
+
+    /* ── Data Processing additions ── */
+    map_filter: {
+      group: "data",
+      label: "Map / Filter",
+      icon: "Filter",
+      meta: "array",
+      color: "#bc7708",
+      ports: "out: next",
+      description: "Maps and/or filters an array using expressions.",
+      inputs: 1,
+      outputs: 1,
+      data: {
+        sourceExpr: "last",
+        mapExpr: "item",
+        filterExpr: "true",
+        storeAs: "mapped",
+      },
+      fields: [
+        { section: "Input", key: "sourceExpr", label: "Source array", type: "textarea", insertMode: "expression", help: "Expression returning an array.", example: "last.items" },
+        { section: "Transform", key: "mapExpr", label: "Map expression", type: "textarea", insertMode: "expression", help: "Transform each item. Use 'item' and 'index'.", example: "({ ...item, processed: true })" },
+        { section: "Transform", key: "filterExpr", label: "Filter expression", type: "textarea", insertMode: "expression", help: "Keep items where this is true.", example: "item.active === true" },
+        { section: "Output", key: "storeAs", label: "Store as", type: "text", help: "Stores result array in vars.", example: "mapped" },
+      ],
+    },
+    regex: {
+      group: "data",
+      label: "Regex",
+      icon: "Rx",
+      meta: "pattern",
+      color: "#bc7708",
+      ports: "out: next",
+      description: "Performs regex match, test, or replace on a string.",
+      inputs: 1,
+      outputs: 1,
+      data: {
+        sourceExpr: "last",
+        pattern: "\\b(\\w+)@(\\w+\\.\\w+)\\b",
+        flags: "gi",
+        action: "match",
+        replacement: "",
+        storeAs: "regexResult",
+      },
+      fields: [
+        { section: "Input", key: "sourceExpr", label: "Source", type: "textarea", insertMode: "expression", help: "String to apply regex to.", example: "last.text" },
+        { section: "Pattern", key: "pattern", label: "Pattern", type: "text", help: "Regular expression (without delimiters).", example: "\\b\\w+@\\w+\\.\\w+\\b" },
+        { section: "Pattern", key: "flags", label: "Flags", type: "text", help: "Regex flags.", example: "gi", presets: ["g", "gi", "gm", "i"] },
+        { section: "Action", key: "action", label: "Action", type: "select", options: ["match", "test", "replace", "split"], help: "What to do with the match." },
+        { section: "Action", key: "replacement", label: "Replacement", type: "text", insertMode: "template", help: "For replace action only." },
+        { section: "Output", key: "storeAs", label: "Store as", type: "text", help: "Stores result in vars.", example: "regexResult" },
+      ],
+    },
+    cache: {
+      group: "data",
+      label: "Cache",
+      icon: "Cache",
+      meta: "store",
+      color: "#bc7708",
+      ports: "out: next",
+      description: "Get or set cached values with optional TTL expiry.",
+      inputs: 1,
+      outputs: 1,
+      data: {
+        action: "get",
+        key: "{{vars.cacheKey}}",
+        valueExpr: "last",
+        ttl: 300,
+        storeAs: "cached",
+      },
+      fields: [
+        { section: "Cache", key: "action", label: "Action", type: "select", options: ["get", "set", "delete", "has"], help: "Cache operation to perform." },
+        { section: "Cache", key: "key", label: "Key", type: "text", insertMode: "template", help: "Cache key.", example: "user:{{vars.userId}}" },
+        { section: "Cache", key: "valueExpr", label: "Value (for set)", type: "textarea", insertMode: "expression", help: "Value to store. Only for 'set' action.", example: "last" },
+        { section: "Cache", key: "ttl", label: "TTL (seconds)", type: "number", help: "Time-to-live in seconds. 0 = no expiry.", example: "300" },
+        { section: "Output", key: "storeAs", label: "Store as", type: "text", help: "Stores result in vars.", example: "cached" },
+      ],
+    },
   };
 
   const state = {
@@ -970,14 +1275,139 @@
     lastRunningNodeId: "",
     collapsedGroups: {},
     editorMode: "chat",
+    isLeftCollapsed: false,
     isInspectorCollapsed: false,
     activeInspectorTab: "config",
     isInspectorFloating: false,
     floatingPos: { x: null, y: null },
+    // Flow tabs
+    openFlowTabs: [],   // [{ id, name }]
+    // Chat drawer (in-grid)
+    isChatDrawerOpen: false,
+    isChatLogCollapsed: false,
+    isLeftPanelFlipped: false,
+    // Unified conversations
+    conversations: [],   // [{ id, title, messages: [{role, content, timestamp, meta}], createdAt }]
+    activeConversationId: "",
   };
 
   function clone(value) {
     return JSON.parse(JSON.stringify(value));
+  }
+
+  /* ===== Flow Tabs ===== */
+  const flowTabsScroll = document.getElementById("flowTabsScroll");
+  const flowTabNew = document.getElementById("flowTabNew");
+
+  function renderFlowTabs() {
+    if (!flowTabsScroll) return;
+    flowTabsScroll.innerHTML = "";
+    for (const tab of state.openFlowTabs) {
+      const el = document.createElement("button");
+      el.className = "flow-tab" + (tab.id === state.currentFlowId ? " is-active" : "");
+      el.dataset.flowId = tab.id;
+      el.innerHTML =
+        '<span class="flow-tab-name">' + escapeHtml(tab.name || "Untitled") + '</span>' +
+        '<span class="flow-tab-close" data-close="true" title="Close tab">&times;</span>';
+      el.addEventListener("click", (e) => {
+        if (e.target.closest("[data-close]")) {
+          closeFlowTab(tab.id);
+        } else {
+          activateFlowTab(tab.id);
+        }
+      });
+      flowTabsScroll.appendChild(el);
+    }
+    // Re-append the new-tab button at the end (inside scroll container)
+    if (flowTabNew) flowTabsScroll.appendChild(flowTabNew);
+    persistFlowTabs();
+  }
+
+  function openFlowTab(id, name) {
+    const existing = state.openFlowTabs.find((t) => t.id === id);
+    if (existing) {
+      // Update name if provided and different
+      if (name && name !== existing.name) existing.name = name;
+    } else {
+      state.openFlowTabs.push({ id, name: name || "Untitled" });
+    }
+    state.currentFlowId = id;
+    renderFlowTabs();
+  }
+
+  function closeFlowTab(id) {
+    const idx = state.openFlowTabs.findIndex((t) => t.id === id);
+    if (idx === -1) return;
+    state.openFlowTabs.splice(idx, 1);
+    if (state.currentFlowId === id) {
+      // Switch to nearest tab or create new
+      if (state.openFlowTabs.length > 0) {
+        const next = state.openFlowTabs[Math.min(idx, state.openFlowTabs.length - 1)];
+        activateFlowTab(next.id);
+        return;
+      } else {
+        // No tabs left — create a new unsaved flow
+        createNewFlowTab();
+        return;
+      }
+    }
+    renderFlowTabs();
+  }
+
+  function activateFlowTab(id) {
+    if (id === state.currentFlowId) return;
+    state.currentFlowId = id;
+    try {
+      loadFlow(id);
+    } catch {
+      // Flow no longer exists — remove the stale tab
+      closeFlowTab(id);
+      return;
+    }
+    renderFlowTabs();
+  }
+
+  function createNewFlowTab() {
+    const id = "flow_" + Date.now().toString(36) + "_" + Math.random().toString(36).slice(2, 6);
+    const name = "Untitled Flow";
+    state.currentFlowId = id;
+    if (flowNameText) flowNameText.textContent = name;
+    createStarterFlow();
+    openFlowTab(id, name);
+  }
+
+  function updateFlowTabName(id, name) {
+    const tab = state.openFlowTabs.find((t) => t.id === id);
+    if (tab) {
+      tab.name = name;
+      renderFlowTabs();
+    }
+  }
+
+  function persistFlowTabs() {
+    try {
+      localStorage.setItem("voyager_open_flow_tabs", JSON.stringify(state.openFlowTabs));
+      localStorage.setItem("voyager_active_flow_tab", state.currentFlowId);
+    } catch {}
+  }
+
+  function restoreFlowTabs() {
+    try {
+      const tabs = JSON.parse(localStorage.getItem("voyager_open_flow_tabs") || "[]");
+      const activeId = localStorage.getItem("voyager_active_flow_tab") || "";
+      // Validate that referenced flows still exist in localStorage
+      const existingFlows = listLocalFlows();
+      const validTabs = tabs.filter((t) => existingFlows.some((f) => f.id === t.id));
+      if (validTabs.length > 0) {
+        state.openFlowTabs = validTabs;
+        const target = validTabs.find((t) => t.id === activeId) || validTabs[0];
+        state.currentFlowId = target.id;
+        try { loadFlow(target.id); } catch {}
+        renderFlowTabs();
+        return true;
+      }
+    } catch {}
+    return false;
   }
 
   function toBool(value) {
@@ -1548,6 +1978,24 @@
   const BLOCK_SVG_ICONS = {
     python_script: `<svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="16 18 22 12 16 6"/><polyline points="8 6 2 12 8 18"/><line x1="14" y1="4" x2="10" y2="20"/></svg>`,
     typescript_script: `<svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="16 18 22 12 16 6"/><polyline points="8 6 2 12 8 18"/><line x1="14" y1="4" x2="10" y2="20"/></svg>`,
+    // Flow control
+    switch_case: `<svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="2"/><line x1="14" y1="12" x2="22" y2="6"/><line x1="14" y1="12" x2="22" y2="12"/><line x1="14" y1="12" x2="22" y2="18"/><line x1="2" y1="12" x2="10" y2="12"/></svg>`,
+    try_catch: `<svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 9v4"/><path d="M12 17h.01"/><path d="M3 12a9 9 0 1 0 18 0 9 9 0 0 0-18 0"/></svg>`,
+    merge: `<svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 3v6"/><path d="M18 3v6"/><path d="M6 9c0 3 6 6 6 6s6-3 6-6"/><path d="M12 15v6"/></svg>`,
+    parallel: `<svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>`,
+    // AI / LLM
+    llm_chat: `<svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/><path d="M8 10h.01"/><path d="M12 10h.01"/><path d="M16 10h.01"/></svg>`,
+    embeddings: `<svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="6" cy="6" r="2"/><circle cx="18" cy="6" r="2"/><circle cx="6" cy="18" r="2"/><circle cx="18" cy="18" r="2"/><line x1="6" y1="8" x2="6" y2="16"/><line x1="18" y1="8" x2="18" y2="16"/><line x1="8" y1="6" x2="16" y2="6"/><line x1="8" y1="18" x2="16" y2="18"/></svg>`,
+    classifier: `<svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 7h16"/><path d="M4 15h16"/><path d="M7 3v4"/><path d="M12 3v4"/><path d="M7 15v6"/><path d="M17 15v6"/></svg>`,
+    // Integrations
+    webhook: `<svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 16.98h1a2 2 0 0 0 0-4h-1"/><path d="M2 12a10 10 0 0 1 18-6"/><path d="M2 16a10 10 0 0 0 18 2"/><circle cx="12" cy="12" r="2"/></svg>`,
+    websocket: `<svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14"/><path d="M12 5l7 7-7 7"/><circle cx="5" cy="12" r="2"/></svg>`,
+    db_query: `<svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><ellipse cx="12" cy="5" rx="9" ry="3"/><path d="M21 12c0 1.66-4 3-9 3s-9-1.34-9-3"/><path d="M3 5v14c0 1.66 4 3 9 3s9-1.34 9-3V5"/></svg>`,
+    email_send: `<svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="4" width="20" height="16" rx="2"/><path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7"/></svg>`,
+    // Data processing
+    map_filter: `<svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"/></svg>`,
+    regex: `<svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v18"/><path d="m5.5 7 13 10"/><path d="m5.5 17 13-10"/></svg>`,
+    cache: `<svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="2" width="20" height="20" rx="3"/><path d="M7 2v20"/><path d="M17 2v20"/><path d="M2 7h20"/><path d="M2 17h20"/></svg>`,
   };
 
   function blockIconHtml(type, def) {
@@ -1556,12 +2004,42 @@
     return escapeHtml(def.icon);
   }
 
+  function nodeInlineSummary(type, data) {
+    const d = data || {};
+    switch (type) {
+      case "http": return d.method && d.url ? `${d.method} ${String(d.url).substring(0, 40)}` : "";
+      case "openai_structured": return d.model || "";
+      case "llm_chat": return d.model ? `${d.model} · chat` : "";
+      case "embeddings": return d.model || "";
+      case "classifier": return d.model && Array.isArray(d.labels) ? `${d.model} · ${d.labels.length} labels` : "";
+      case "template": return d.template ? String(d.template).substring(0, 50) : "";
+      case "set_var": return d.varName ? `vars.${d.varName}` : "";
+      case "if": return d.condition ? String(d.condition).substring(0, 45) : "";
+      case "switch_case": return d.expression ? String(d.expression).substring(0, 40) : "";
+      case "while": return d.condition ? String(d.condition).substring(0, 40) : "";
+      case "for_each": return d.itemsExpr ? String(d.itemsExpr).substring(0, 40) : "";
+      case "try_catch": return d.retries ? `retries: ${d.retries}` : "";
+      case "merge": return d.strategy || "";
+      case "parallel": return "3 branches";
+      case "delay": return d.msExpr ? `${d.msExpr}ms` : "";
+      case "webhook": return d.path || "";
+      case "websocket": return d.action ? `${d.action} · ${String(d.url || "").substring(0, 30)}` : "";
+      case "db_query": return d.driver ? `${d.driver} · ${String(d.query || "").substring(0, 30)}` : "";
+      case "email_send": return d.to ? `→ ${String(d.to).substring(0, 30)}` : "";
+      case "regex": return d.pattern ? `/${String(d.pattern).substring(0, 30)}/` : "";
+      case "cache": return d.action && d.key ? `${d.action} · ${String(d.key).substring(0, 25)}` : "";
+      case "map_filter": return d.mapExpr && d.mapExpr !== "item" ? `map: ${String(d.mapExpr).substring(0, 30)}` : "";
+      case "python_script": case "typescript_script": return d.code ? String(d.code).split("\n").find(l => l.trim() && !l.trim().startsWith("//") && !l.trim().startsWith("#"))?.substring(0, 40) || "" : "";
+      default: return "";
+    }
+  }
+
   function nodeTemplate(type, nodeData, nodeId = "") {
     const def = NODE_CATALOG[type] || {
       label: type,
       icon: "Node",
       meta: "",
-      color: "#666",
+      color: "#bc7708",
       ports: "",
       description: "",
       fields: [],
@@ -1572,24 +2050,34 @@
     const statusClass = runtimeStatusClass(runtime.status);
     const statusText = runtimeStatusText(runtime.status);
     const hoverInfo = nodeHoverInfo(def);
-    const previewItems = nodePreviewItems(def, nodeData ?? def.data ?? {}).slice(0, 4);
-    const previewHtml = previewGridHtml(previewItems, "Settings", "No variable setup");
     const safeColor = sanitizeCssColor(def.color, "#666");
     const safeLabel = escapeHtml(def.label || type || "Node");
+    const safeMeta = escapeHtml(def.meta || "");
+    const inlineSummary = nodeInlineSummary(type, nodeData ?? def.data ?? {});
+    const summaryHtml = inlineSummary ? `<div class="node-inline-summary" title="${escapeHtml(inlineSummary)}">${escapeHtml(inlineSummary)}</div>` : "";
+
+    const portLabels = String(def.ports || "").split("·").map(p => p.trim()).filter(Boolean);
+    const portHtml = portLabels.length > 0
+      ? `<div class="node-port-labels">${portLabels.map(p => `<span class="port-label">${escapeHtml(p)}</span>`).join("")}</div>`
+      : "";
 
     return `
-      <div class="node-card" title="${escapeHtml(hoverInfo)}">
-        <div class="node-top-row">
-          <div class="node-title-wrap">
-            <div class="badge" style="background:${safeColor}">${blockIconHtml(type, def)}</div>
-            <div class="title">${safeLabel}</div>
+      <div class="node-card" title="${escapeHtml(hoverInfo)}" style="--node-color:${safeColor}">
+        <div class="node-color-strip" style="background:${safeColor}"></div>
+        <div class="node-card-body">
+          <div class="node-top-row">
+            <div class="node-title-wrap">
+              <div class="badge" style="background:${safeColor}">${blockIconHtml(type, def)}</div>
+              <div class="node-title-col">
+                <div class="title">${safeLabel}</div>
+                <div class="node-meta">${safeMeta}</div>
+              </div>
+            </div>
+            <div class="node-status ${statusClass}">${statusText}</div>
           </div>
-          <div class="node-status ${statusClass}">${statusText}</div>
+          ${summaryHtml}
+          ${portHtml}
         </div>
-        <div class="node-info-row">
-          ${ioChipsHtml(def)}
-        </div>
-        ${previewHtml}
       </div>
     `;
   }
@@ -1618,6 +2106,7 @@
   }
 
   function canvasPositionFromClient(clientX, clientY) {
+    if (!editor?.precanvas) return { x: 0, y: 0 };
     const rect = editor.precanvas.getBoundingClientRect();
     const scaleX = editor.precanvas.clientWidth / (editor.precanvas.clientWidth * editor.zoom);
     const scaleY = editor.precanvas.clientHeight / (editor.precanvas.clientHeight * editor.zoom);
@@ -1885,12 +2374,14 @@
   }
 
   function addNodeNearCanvasCenter(type) {
+    if (!drawflowEl) return;
     const rect = drawflowEl.getBoundingClientRect();
     const center = canvasPositionFromClient(rect.left + rect.width / 2, rect.top + rect.height / 2);
     addNode(type, center.x, center.y);
   }
 
   function clearEditor() {
+    if (!editor) return;
     if (typeof editor.clear === "function") {
       editor.clear();
       return;
@@ -2332,6 +2823,12 @@
 
     const label = document.createElement("label");
     label.textContent = field.label;
+    if (field.insertMode) {
+      const modeBadge = document.createElement("span");
+      modeBadge.className = "field-mode-badge";
+      modeBadge.textContent = field.insertMode;
+      label.appendChild(modeBadge);
+    }
     wrapper.appendChild(label);
 
     const fieldInputWrap = document.createElement("div");
@@ -2341,23 +2838,50 @@
     let input;
 
     if (field.type === "select") {
-      input = document.createElement("select");
-      for (const option of field.options || []) {
-        const opt = document.createElement("option");
-        opt.value = option;
-        opt.textContent = option;
-        input.appendChild(opt);
-      }
-      input.value = String(currentValue ?? field.options?.[0] ?? "");
-      input.addEventListener("change", () => {
-        patchSelectedNodeData((next) => {
-          if (field.options?.includes("true") && field.options?.includes("false")) {
-            next[field.key] = toBool(input.value);
-            return;
-          }
-          next[field.key] = input.value;
+      const options = field.options || [];
+      // Use pill buttons for short option lists (2-6 items)
+      if (options.length >= 2 && options.length <= 6 && options.every(o => String(o).length <= 12)) {
+        const pillGroup = document.createElement("div");
+        pillGroup.className = "field-pill-group";
+        const activeValue = String(currentValue ?? options[0] ?? "");
+        for (const option of options) {
+          const pill = document.createElement("button");
+          pill.type = "button";
+          pill.className = "field-pill" + (String(option) === activeValue ? " active" : "");
+          pill.textContent = option;
+          pill.addEventListener("click", () => {
+            pillGroup.querySelectorAll(".field-pill").forEach(p => p.classList.remove("active"));
+            pill.classList.add("active");
+            patchSelectedNodeData((next) => {
+              if (options.includes("true") && options.includes("false")) {
+                next[field.key] = toBool(option);
+                return;
+              }
+              next[field.key] = option;
+            });
+          });
+          pillGroup.appendChild(pill);
+        }
+        fieldInputWrap.appendChild(pillGroup);
+      } else {
+        input = document.createElement("select");
+        for (const option of options) {
+          const opt = document.createElement("option");
+          opt.value = option;
+          opt.textContent = option;
+          input.appendChild(opt);
+        }
+        input.value = String(currentValue ?? options[0] ?? "");
+        input.addEventListener("change", () => {
+          patchSelectedNodeData((next) => {
+            if (options.includes("true") && options.includes("false")) {
+              next[field.key] = toBool(input.value);
+              return;
+            }
+            next[field.key] = input.value;
+          });
         });
-      });
+      }
     } else if (field.type === "json") {
       const objectEditor = createJsonObjectEditor(currentValue, (nextObject) => {
         patchSelectedNodeData((next) => {
@@ -2366,11 +2890,29 @@
       });
       fieldInputWrap.appendChild(objectEditor);
     } else if (field.type === "textarea") {
+      const isCode = field.key === "code";
       input = document.createElement("textarea");
       input.value = toFormDisplay(currentValue, field.type);
       if (field.placeholder) {
         input.placeholder = field.placeholder;
       }
+      if (isCode) {
+        input.className = "code-textarea";
+        input.spellcheck = false;
+        input.rows = 8;
+      }
+
+      // Tab key inserts spaces instead of changing focus
+      input.addEventListener("keydown", (e) => {
+        if (e.key === "Tab") {
+          e.preventDefault();
+          const start = input.selectionStart;
+          const end = input.selectionEnd;
+          input.value = input.value.substring(0, start) + "  " + input.value.substring(end);
+          input.selectionStart = input.selectionEnd = start + 2;
+          input.dispatchEvent(new Event("change"));
+        }
+      });
 
       input.addEventListener("change", () => {
         patchSelectedNodeData((next) => {
@@ -2727,26 +3269,36 @@
       navCanvasControls.style.display = showCanvasControls ? "flex" : "none";
     }
 
-    // Show/hide chat pill (only in canvas mode)
-    if (chatPill) {
-      const showPill = resolvedMode === "canvas";
-      chatPill.classList.toggle("is-visible", showPill);
-      if (!showPill) {
-        if (chatPillWindow) chatPillWindow.style.display = "none";
-        if (chatPillBtn) chatPillBtn.style.display = "";
-      }
-    }
-
-    // Apply inspector collapse state in canvas mode
+    // Apply panel collapse states in canvas mode
     if (resolvedMode === "canvas") {
       document.body.classList.toggle("right-collapsed", state.isInspectorCollapsed);
+      document.body.classList.toggle("left-collapsed", state.isLeftCollapsed);
+      document.body.classList.toggle("chat-drawer-open", state.isChatDrawerOpen);
+      document.body.classList.toggle("left-panel-flipped", state.isLeftPanelFlipped);
+      // Apply persisted panel widths via CSS custom properties
+      if (canvasView) {
+        if (state._leftW) canvasView.style.setProperty("--col-blocks", state._leftW + "px");
+        if (state._rightW) canvasView.style.setProperty("--col-inspector", state._rightW + "px");
+        if (state.isChatDrawerOpen && state._chatW) canvasView.style.setProperty("--col-chat", state._chatW + "px");
+      }
       if (toggleInspectorBtn) {
         toggleInspectorBtn.classList.toggle("collapsed", state.isInspectorCollapsed);
         toggleInspectorBtn.title = state.isInspectorCollapsed ? "Expand panel" : "Collapse panel";
       }
     } else {
       document.body.classList.remove("right-collapsed");
+      document.body.classList.remove("left-collapsed");
+      document.body.classList.remove("chat-drawer-open");
+      document.body.classList.remove("left-panel-flipped");
     }
+
+    // Sync chat conversation when switching modes
+    if (resolvedMode === "canvas") {
+      renderDrawerMessages();
+    } else if (resolvedMode === "chat") {
+      renderChatFullMessages();
+    }
+    updateLayoutToggleIcons();
 
     // Load deployment data when entering deploy mode
     if (resolvedMode === "deploy") {
@@ -2771,9 +3323,43 @@
       toggleInspectorBtn.classList.toggle("collapsed", state.isInspectorCollapsed);
       toggleInspectorBtn.title = state.isInspectorCollapsed ? "Expand panel" : "Collapse panel";
     }
+    updateLayoutToggleIcons();
     hidePaletteHoverCard();
     persistEditorMode();
     setTimeout(() => refreshCanvasConnections(), 130);
+  }
+
+  function toggleLeftCollapse() {
+    state.isLeftCollapsed = !state.isLeftCollapsed;
+    document.body.classList.toggle("left-collapsed", state.isLeftCollapsed);
+    updateLayoutToggleIcons();
+    hidePaletteHoverCard();
+    try { localStorage.setItem("voyager_left_collapsed", state.isLeftCollapsed ? "1" : "0"); } catch {}
+    setTimeout(() => refreshCanvasConnections(), 130);
+  }
+
+  function updateLayoutToggleIcons() {
+    if (toggleLeftPanelBtn) {
+      toggleLeftPanelBtn.classList.toggle("is-collapsed", state.isLeftCollapsed);
+      toggleLeftPanelBtn.title = state.isLeftCollapsed ? "Show left sidebar" : "Hide left sidebar";
+      toggleLeftPanelBtn.innerHTML = state.isLeftCollapsed
+        ? '<svg width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg"><rect x="1" y="2" width="5" height="12" rx="1" stroke="currentColor" stroke-width="1.2" fill="none"/><rect x="7.5" y="2" width="7.5" height="12" rx="1" stroke="currentColor" stroke-width="1.2" fill="none"/></svg>'
+        : '<svg width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg"><rect x="1" y="2" width="5" height="12" rx="1" fill="currentColor" opacity="0.9"/><rect x="7.5" y="2" width="7.5" height="12" rx="1" stroke="currentColor" stroke-width="1.2" fill="none"/></svg>';
+    }
+    if (toggleRightPanelBtn) {
+      toggleRightPanelBtn.classList.toggle("is-collapsed", state.isInspectorCollapsed);
+      toggleRightPanelBtn.title = state.isInspectorCollapsed ? "Show right sidebar" : "Hide right sidebar";
+      toggleRightPanelBtn.innerHTML = state.isInspectorCollapsed
+        ? '<svg width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg"><rect x="1" y="2" width="7.5" height="12" rx="1" stroke="currentColor" stroke-width="1.2" fill="none"/><rect x="10" y="2" width="5" height="12" rx="1" stroke="currentColor" stroke-width="1.2" fill="none"/></svg>'
+        : '<svg width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg"><rect x="1" y="2" width="7.5" height="12" rx="1" stroke="currentColor" stroke-width="1.2" fill="none"/><rect x="10" y="2" width="5" height="12" rx="1" fill="currentColor" opacity="0.9"/></svg>';
+    }
+    if (toggleChatPanelBtn) {
+      toggleChatPanelBtn.classList.toggle("is-active", state.isChatDrawerOpen);
+      toggleChatPanelBtn.title = state.isChatDrawerOpen ? "Hide chat panel" : "Show chat panel";
+      toggleChatPanelBtn.innerHTML = state.isChatDrawerOpen
+        ? '<svg width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M2 3a1 1 0 011-1h10a1 1 0 011 1v7a1 1 0 01-1 1H5l-3 3V3z" fill="currentColor" opacity="0.9"/></svg>'
+        : '<svg width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M2 3a1 1 0 011-1h10a1 1 0 011 1v7a1 1 0 01-1 1H5l-3 3V3z" stroke="currentColor" stroke-width="1.2" fill="none"/></svg>';
+    }
   }
 
   function createBlockCard(type) {
@@ -2902,6 +3488,114 @@
     }
   }
 
+  /* ===== Left Panel Tabs ===== */
+  function initLeftPanelTabs() {
+    if (!leftPanelTabs) return;
+    const tabs = leftPanelTabs.querySelectorAll(".panel-tab");
+    tabs.forEach(tab => {
+      tab.addEventListener("click", () => {
+        const target = tab.dataset.panelTab;
+        tabs.forEach(t => t.classList.remove("active"));
+        tab.classList.add("active");
+        const contents = palettePanel?.querySelectorAll(".panel-tab-content") || [];
+        contents.forEach(c => {
+          c.classList.toggle("active", c.dataset.panelContent === target);
+        });
+        if (target === "outline") renderFlowOutline();
+      });
+    });
+  }
+
+  function renderFlowOutline() {
+    if (!flowOutline) return;
+    flowOutline.innerHTML = "";
+    const nodes = editor?.drawflow?.drawflow?.Home?.data || {};
+    if (Object.keys(nodes).length === 0) {
+      flowOutline.innerHTML = '<div class="panel-empty-state">No nodes in this flow.</div>';
+      return;
+    }
+    for (const [nodeId, node] of Object.entries(nodes)) {
+      const def = NODE_CATALOG[node.name];
+      if (!def) continue;
+      const item = document.createElement("div");
+      item.className = "outline-node" + (String(nodeId) === String(state.selectedNodeId) ? " active" : "");
+      const safeColor = sanitizeCssColor(def.color, "#666");
+      item.innerHTML = `
+        <div class="outline-node-icon" style="background:${safeColor}">${blockIconHtml(node.name, def)}</div>
+        <span class="outline-node-label">${escapeHtml(def.label)}</span>
+        <span class="outline-node-type">#${nodeId}</span>
+      `;
+      item.addEventListener("click", () => {
+        state.selectedNodeId = String(nodeId);
+        // Highlight the node in the drawflow canvas
+        const nodeEl = document.getElementById(`node-${nodeId}`);
+        if (nodeEl) {
+          document.querySelectorAll(".drawflow-node.selected").forEach(n => n.classList.remove("selected"));
+          nodeEl.classList.add("selected");
+        }
+        refreshNodeInspector();
+        renderFlowOutline();
+      });
+      flowOutline.appendChild(item);
+    }
+  }
+
+  function initGlobalSearch() {
+    if (!globalSearchInput || !globalSearchResults) return;
+    globalSearchInput.addEventListener("input", () => {
+      const query = globalSearchInput.value.trim().toLowerCase();
+      globalSearchResults.innerHTML = "";
+      if (!query) {
+        globalSearchResults.innerHTML = '<div class="panel-empty-state">Type to search across all flows and nodes.</div>';
+        return;
+      }
+
+      const flows = listLocalFlows();
+      let results = [];
+      for (const f of flows) {
+        try {
+          if (!f.drawflow) continue;
+          const nodes = f.drawflow?.drawflow?.Home?.data || f.drawflow?.Home?.data || {};
+          for (const [nodeId, node] of Object.entries(nodes)) {
+            const def = NODE_CATALOG[node.name];
+            if (!def) continue;
+            const haystack = `${def.label} ${def.icon} ${def.meta} ${def.description} ${JSON.stringify(node.data || {})}`.toLowerCase();
+            if (haystack.includes(query)) {
+              results.push({ flowId: f.id, flowName: f.name, nodeId, node, def });
+            }
+          }
+        } catch {}
+      }
+
+      if (results.length === 0) {
+        globalSearchResults.innerHTML = '<div class="panel-empty-state">No results found.</div>';
+        return;
+      }
+
+      for (const r of results.slice(0, 50)) {
+        const item = document.createElement("div");
+        item.className = "search-result-item";
+        const safeColor = sanitizeCssColor(r.def.color, "#666");
+        item.innerHTML = `
+          <div class="outline-node-icon" style="background:${safeColor}">${blockIconHtml(r.node.name, r.def)}</div>
+          <span class="outline-node-label">${escapeHtml(r.def.label)} #${r.nodeId}</span>
+          <span class="search-result-flow">${escapeHtml(r.flowName)}</span>
+        `;
+        item.addEventListener("click", () => {
+          if (r.flowId !== state.currentFlowId) {
+            loadFlow(r.flowId);
+            openFlowTab(r.flowId, r.flowName);
+          }
+          setTimeout(() => {
+            state.selectedNodeId = String(r.nodeId);
+            refreshNodeInspector();
+          }, 100);
+        });
+        globalSearchResults.appendChild(item);
+      }
+    });
+  }
+
   function pointInside(el, x, y) {
     if (!el) return false;
     const rect = el.getBoundingClientRect();
@@ -2920,6 +3614,7 @@
   }
 
   function attachDiscardDragBehavior() {
+    if (!drawflowEl) return;
     drawflowEl.addEventListener("mousedown", (event) => {
       const nodeEl = event.target.closest(".drawflow-node");
       if (!nodeEl) return;
@@ -2969,6 +3664,7 @@
   }
 
   function bindCanvasDropFromPalette() {
+    if (!drawflowEl) return;
     drawflowEl.addEventListener("dragover", (event) => {
       event.preventDefault();
       drawflowEl.classList.add("drag-over");
@@ -3018,26 +3714,12 @@
 
   async function refreshFlowList() {
     const flows = listLocalFlows();
-    const current = state.currentFlowId || flowSelect.value;
-
-    flowSelect.innerHTML = "";
-
-    const emptyOpt = document.createElement("option");
-    emptyOpt.value = "";
-    emptyOpt.textContent = "(new unsaved flow)";
-    flowSelect.appendChild(emptyOpt);
-
-    for (const flow of flows) {
-      const opt = document.createElement("option");
-      opt.value = flow.id;
-      opt.textContent = `${flow.name} (${new Date(flow.updatedAt).toLocaleString()})`;
-      flowSelect.appendChild(opt);
-    }
-
-    if (current && flows.some((f) => f.id === current)) {
-      flowSelect.value = current;
-    } else {
-      flowSelect.value = "";
+    flowListCache = flows;
+    // Update flow name display to reflect current flow
+    const current = state.currentFlowId;
+    if (current && flowNameText) {
+      const flow = flows.find(f => f.id === current);
+      if (flow) flowNameText.textContent = flow.name || "Untitled Flow";
     }
   }
 
@@ -3052,14 +3734,13 @@
     resetNodeRuntime();
 
     state.currentFlowId = flow.id;
-    flowNameInput.value = flow.name;
-    flowSelect.value = flow.id;
+    if (flowNameText) flowNameText.textContent = flow.name;
     state.selectedNodeId = "";
     refreshNodeInspector();
   }
 
   async function saveFlow() {
-    const name = (flowNameInput.value || "Untitled Flow").trim() || "Untitled Flow";
+    const name = ((flowNameText ? flowNameText.textContent : "") || "Untitled Flow").trim() || "Untitled Flow";
 
     const payload = {
       name,
@@ -3081,9 +3762,11 @@
     saveLocalFlowRecord(flow);
 
     state.currentFlowId = flow.id;
-    flowNameInput.value = flow.name;
+    if (flowNameText) flowNameText.textContent = flow.name;
     await refreshFlowList();
-    flowSelect.value = flow.id;
+
+    // Update flow tab (openFlowTab is idempotent — adds if not open, updates name)
+    openFlowTab(flow.id, flow.name);
 
     return flow;
   }
@@ -3091,16 +3774,16 @@
   async function deleteCurrentFlow() {
     if (!state.currentFlowId) return;
 
-    deleteLocalFlowById(state.currentFlowId);
+    const deletedId = state.currentFlowId;
+    deleteLocalFlowById(deletedId);
 
-    state.currentFlowId = "";
-    flowNameInput.value = "Untitled Flow";
-    createStarterFlow();
+    // Close the tab for the deleted flow and let closeFlowTab handle switching
+    closeFlowTab(deletedId);
     await refreshFlowList();
   }
 
   function buildFlowExportPayload() {
-    const name = (flowNameInput?.value || "Untitled Flow").trim() || "Untitled Flow";
+    const name = (flowNameText?.textContent || "Untitled Flow").trim() || "Untitled Flow";
     return {
       id: state.currentFlowId || "",
       name,
@@ -3191,11 +3874,10 @@
     saveLocalFlowRecord(record);
 
     state.currentFlowId = record.id;
-    flowNameInput.value = record.name;
+    if (flowNameText) flowNameText.textContent = record.name;
     state.selectedNodeId = "";
     refreshNodeInspector();
     await refreshFlowList();
-    if (flowSelect) flowSelect.value = record.id;
 
     if (runStatus) {
       runStatus.textContent = `Imported flow "${record.name}".`;
@@ -3244,11 +3926,11 @@
       const inputSummary = Object.keys(parsedInput || {}).length
         ? `Input keys: ${Object.keys(parsedInput).join(", ")}.`
         : "No input payload provided.";
-      runStatus.textContent =
+      if (runStatus) runStatus.textContent =
         `Static mode: local execution API is disabled. ${inputSummary} ` +
         "Deploy the generated target (Cloudflare/GitHub) to execute runtime requests.";
     } catch (error) {
-      runStatus.textContent = `Run error: ${error.message}`;
+      if (runStatus) runStatus.textContent = `Run error: ${error.message}`;
     }
   }
 
@@ -3267,30 +3949,29 @@
   }
 
   function showGenerateOverlay() {
-    generateOverlay.style.display = "";
-    generateError.style.display = "none";
-    generateError.textContent = "";
-    generatePrompt.value = "";
-    generatePrompt.focus();
+    if (generateOverlay) generateOverlay.style.display = "";
+    if (generateError) { generateError.style.display = "none"; generateError.textContent = ""; }
+    if (generatePrompt) { generatePrompt.value = ""; generatePrompt.focus(); }
   }
 
   function hideGenerateOverlay() {
-    generateOverlay.style.display = "none";
+    if (generateOverlay) generateOverlay.style.display = "none";
   }
 
   function setGenerateLoading(loading) {
+    if (!generateFlowBtn) return;
     const btnText = generateFlowBtn.querySelector(".generate-btn-text");
     const btnLoading = generateFlowBtn.querySelector(".generate-btn-loading");
     if (loading) {
-      btnText.style.display = "none";
-      btnLoading.style.display = "";
+      if (btnText) btnText.style.display = "none";
+      if (btnLoading) btnLoading.style.display = "";
       generateFlowBtn.disabled = true;
-      generatePrompt.disabled = true;
+      if (generatePrompt) generatePrompt.disabled = true;
     } else {
-      btnText.style.display = "";
-      btnLoading.style.display = "none";
+      if (btnText) btnText.style.display = "";
+      if (btnLoading) btnLoading.style.display = "none";
       generateFlowBtn.disabled = false;
-      generatePrompt.disabled = false;
+      if (generatePrompt) generatePrompt.disabled = false;
     }
   }
 
@@ -3500,12 +4181,12 @@
 
   function applyGeneratedFlow(data) {
     clearEditor();
-    editor.import(data.drawflow);
+    if (editor) editor.import(data.drawflow);
     resetNodeRuntime();
     refreshAllNodeCards();
 
-    if (data.name) {
-      flowNameInput.value = data.name;
+    if (data.name && flowNameText) {
+      flowNameText.textContent = data.name;
     }
 
     state.currentFlowId = "";
@@ -3517,16 +4198,15 @@
     if (!prompt.trim()) return;
 
     setGenerateLoading(true);
-    generateError.style.display = "none";
+    if (generateError) generateError.style.display = "none";
 
     try {
       const data = await generateFlowPayload(prompt);
       applyGeneratedFlow(data);
       hideGenerateOverlay();
-      runStatus.textContent = "Flow generated from prompt.";
+      if (runStatus) runStatus.textContent = "Flow generated from prompt.";
     } catch (error) {
-      generateError.textContent = error.message || "Generation failed.";
-      generateError.style.display = "";
+      if (generateError) { generateError.textContent = error.message || "Generation failed."; generateError.style.display = ""; }
     } finally {
       setGenerateLoading(false);
     }
@@ -3544,9 +4224,7 @@
     if (modeDeployTab) {
       modeDeployTab.addEventListener("click", () => switchMode("deploy"));
     }
-    if (modeSettingsTab) {
-      modeSettingsTab.addEventListener("click", () => switchMode("settings"));
-    }
+    // Settings is now accessed via settingsNavBtn (gear icon), not a mode tab
   }
 
   function bindEditorNavModeEvents() {
@@ -3568,162 +4246,425 @@
     for (const chip of chips) {
       chip.addEventListener("click", () => {
         const prompt = chip.dataset.prompt;
-        if (prompt && buildChatInput) {
-          buildChatInput.value = prompt;
-          sendBuildChatMessage();
+        if (prompt) {
+          // Hide welcome state
+          if (chatWelcome) chatWelcome.style.display = "none";
+          sendChatMessage(prompt);
         }
       });
     }
   }
 
-  /* ===== Chat Pill ===== */
+  /* ===== Chat Drawer (Grid-Integrated) ===== */
+
+  function toggleChatDrawer() {
+    state.isChatDrawerOpen = !state.isChatDrawerOpen;
+    document.body.classList.toggle("chat-drawer-open", state.isChatDrawerOpen);
+    // Manage inline --col-chat so it doesn't override the CSS 0px when closed
+    const layout = document.getElementById("canvasView");
+    if (!state.isChatDrawerOpen && layout) {
+      layout.style.removeProperty("--col-chat");
+    } else if (state.isChatDrawerOpen && layout && state._chatW) {
+      layout.style.setProperty("--col-chat", state._chatW + "px");
+    }
+    if (state.isChatDrawerOpen) {
+      renderDrawerMessages();
+    }
+    updateLayoutToggleIcons();
+    try { localStorage.setItem("voyager_chat_drawer_open", state.isChatDrawerOpen ? "1" : "0"); } catch {}
+    setTimeout(() => refreshCanvasConnections(), 130);
+  }
+
+  function toggleLeftPanelSide() {
+    state.isLeftPanelFlipped = !state.isLeftPanelFlipped;
+    document.body.classList.toggle("left-panel-flipped", state.isLeftPanelFlipped);
+    try { localStorage.setItem("voyager_left_panel_flipped", state.isLeftPanelFlipped ? "1" : "0"); } catch {}
+    setTimeout(() => refreshCanvasConnections(), 130);
+  }
+
+  function toggleChatLogCollapsed() {
+    state.isChatLogCollapsed = !state.isChatLogCollapsed;
+    document.body.classList.toggle("chat-log-collapsed", state.isChatLogCollapsed);
+    try { localStorage.setItem("voyager_chat_log_collapsed", state.isChatLogCollapsed ? "1" : "0"); } catch {}
+  }
+
+  /* ===== Flow Name Display + Dropdown ===== */
+
+  let flowListCache = []; // cached flow list for dropdown
+
+  function showFlowDropdown() {
+    if (!flowDropdown) return;
+    flowDropdown.innerHTML = "";
+    const flows = listLocalFlows();
+    flowListCache = flows;
+
+    if (flows.length === 0) {
+      const empty = document.createElement("div");
+      empty.className = "flow-dropdown-item disabled";
+      empty.textContent = "No saved flows";
+      flowDropdown.appendChild(empty);
+    } else {
+      for (const flow of flows) {
+        const item = document.createElement("div");
+        item.className = "flow-dropdown-item";
+        item.dataset.flowId = flow.id;
+        item.textContent = flow.name || "Untitled Flow";
+        if (flow.id === state.currentFlowId) item.classList.add("active");
+        item.addEventListener("click", () => {
+          hideFlowDropdown();
+          try {
+            loadFlow(flow.id);
+            openFlowTab(flow.id, flow.name);
+          } catch (err) {
+            if (runStatus) runStatus.textContent = `Load error: ${err.message}`;
+          }
+        });
+        flowDropdown.appendChild(item);
+      }
+    }
+
+    flowDropdown.style.display = "block";
+    // Close on outside click
+    setTimeout(() => {
+      document.addEventListener("mousedown", closeFlowDropdownOnOutside);
+    }, 0);
+  }
+
+  function hideFlowDropdown() {
+    if (flowDropdown) flowDropdown.style.display = "none";
+    document.removeEventListener("mousedown", closeFlowDropdownOnOutside);
+  }
+
+  function closeFlowDropdownOnOutside(e) {
+    if (flowDropdown?.contains(e.target)) return;
+    if (flowNameDisplay?.contains(e.target)) return;
+    hideFlowDropdown();
+  }
+
+  function startFlowNameEdit() {
+    if (!flowNameText || !flowNameDisplay) return;
+    const current = flowNameText.textContent || "Untitled Flow";
+    const input = document.createElement("input");
+    input.type = "text";
+    input.className = "flow-name-edit";
+    input.value = current;
+
+    flowNameText.style.display = "none";
+    const caret = flowNameDisplay.querySelector(".flow-name-caret");
+    if (caret) caret.style.display = "none";
+    flowNameDisplay.insertBefore(input, flowNameText.nextSibling);
+    input.focus();
+    input.select();
+
+    function finishEdit() {
+      const newName = (input.value || "").trim() || "Untitled Flow";
+      flowNameText.textContent = newName;
+      flowNameText.style.display = "";
+      if (caret) caret.style.display = "";
+      input.remove();
+      // Update the tab name
+      if (state.currentFlowId) {
+        updateFlowTabName(state.currentFlowId, newName);
+      }
+    }
+
+    input.addEventListener("blur", finishEdit);
+    input.addEventListener("keydown", (e) => {
+      if (e.key === "Enter") { e.preventDefault(); input.blur(); }
+      if (e.key === "Escape") { input.value = current; input.blur(); }
+    });
+  }
 
   function bindPillEvents() {
-    const isPillExpanded = () => Boolean(chatPillWindow && chatPillWindow.style.display !== "none");
-
-    if (chatPillBtn) {
-      chatPillBtn.addEventListener("click", () => {
-        const nextExpanded = !isPillExpanded();
-        if (chatPillWindow) chatPillWindow.style.display = nextExpanded ? "" : "none";
-        if (chatPillBtn) chatPillBtn.style.display = nextExpanded ? "none" : "";
+    // Chat drawer close button
+    if (chatDrawerClose) {
+      chatDrawerClose.addEventListener("click", () => {
+        if (state.isChatDrawerOpen) toggleChatDrawer();
       });
     }
 
-    if (chatPillMinimize) {
-      chatPillMinimize.addEventListener("click", () => {
-        if (chatPillWindow) chatPillWindow.style.display = "none";
-        if (chatPillBtn) chatPillBtn.style.display = "";
-      });
+    // Chat toggle button in layout-toggles
+    if (toggleChatPanelBtn) {
+      toggleChatPanelBtn.addEventListener("click", toggleChatDrawer);
     }
 
-    // Pill chat send - mirrors build chat logic for canvas context
+    // Chat-full-log toggle (close/open sidebar)
+    if (chatLogToggle) {
+      chatLogToggle.addEventListener("click", toggleChatLogCollapsed);
+    }
+
+    // New conversation button
+    if (chatLogNewBtn) {
+      chatLogNewBtn.addEventListener("click", () => createNewConversation());
+    }
+
+    // Drawer chat send
     if (pillChatSend) {
-      pillChatSend.addEventListener("click", () => sendPillChatMessage());
+      pillChatSend.addEventListener("click", async () => {
+        if (!pillChatInput) return;
+        const text = pillChatInput.value.trim();
+        if (!text) return;
+        pillChatInput.value = "";
+        await sendChatMessage(text);
+      });
     }
     if (pillChatInput) {
       pillChatInput.addEventListener("keydown", (event) => {
         if (event.key === "Enter" && !event.shiftKey) {
           event.preventDefault();
-          sendPillChatMessage();
+          if (!pillChatInput.value.trim()) return;
+          const text = pillChatInput.value.trim();
+          pillChatInput.value = "";
+          sendChatMessage(text);
         }
       });
     }
 
-    // Pill drag behavior
-    if (chatPill) {
-      let isDragging = false;
-      let startX = 0, startY = 0, startLeft = 0, startBottom = 0;
-
-      const header = document.getElementById("chatPillHeader");
-      if (header) {
-        header.addEventListener("mousedown", (e) => {
-          if (e.target.closest("button")) return;
-          isDragging = true;
-          startX = e.clientX;
-          startY = e.clientY;
-          const rect = chatPill.getBoundingClientRect();
-          startLeft = rect.left;
-          startBottom = window.innerHeight - rect.bottom;
-          chatPill.style.transition = "none";
-          e.preventDefault();
-        });
-      }
-
-      document.addEventListener("mousemove", (e) => {
-        if (!isDragging) return;
-        const dx = e.clientX - startX;
-        const dy = startY - e.clientY;
-        chatPill.style.left = (startLeft + dx) + "px";
-        chatPill.style.bottom = (startBottom + dy) + "px";
-        chatPill.style.right = "auto";
-      });
-
-      document.addEventListener("mouseup", () => {
-        if (isDragging) {
-          isDragging = false;
-          chatPill.style.transition = "";
+    // Flow name display — click to show dropdown
+    if (flowNameDisplay) {
+      flowNameDisplay.addEventListener("click", (e) => {
+        if (flowDropdown && flowDropdown.style.display === "block") {
+          hideFlowDropdown();
+        } else {
+          showFlowDropdown();
         }
       });
+
+      // Double-click to inline rename
+      flowNameDisplay.addEventListener("dblclick", (e) => {
+        e.preventDefault();
+        hideFlowDropdown();
+        startFlowNameEdit();
+      });
+    }
+
+    // Flow menu rename button
+    if (flowMenuRename) {
+      flowMenuRename.addEventListener("click", () => {
+        // Close the flow menu first
+        const menu = flowMenuRename.closest(".flow-menu-dropdown");
+        if (menu) menu.style.display = "none";
+        startFlowNameEdit();
+      });
     }
   }
 
-  function appendPillChatMessage(role, content) {
-    if (!pillChatMessages) return;
-    const empty = pillChatMessages.querySelector(".chat-pill-empty");
-    if (empty) empty.remove();
+  /* ===== Unified Conversation System ===== */
 
-    const msg = document.createElement("div");
-    msg.className = `chat-pill-msg ${role}`;
-    msg.textContent = content;
-    pillChatMessages.appendChild(msg);
-    pillChatMessages.scrollTop = pillChatMessages.scrollHeight;
+  function getActiveConversation() {
+    return state.conversations.find(c => c.id === state.activeConversationId);
   }
 
-  async function sendPillChatMessage() {
-    if (!pillChatInput) return;
-    const text = pillChatInput.value.trim();
-    if (!text) return;
-
-    appendPillChatMessage("user", text);
-    pillChatInput.value = "";
-
-    try {
-      const data = await generateFlowPayload(text);
-      applyGeneratedFlow(data);
-      appendPillChatMessage("assistant", generationSummaryText(data));
-    } catch (error) {
-      appendPillChatMessage("assistant", `Error: ${error.message}`);
+  function ensureActiveConversation() {
+    if (!getActiveConversation()) {
+      const conv = {
+        id: "conv_" + Date.now().toString(36) + "_" + Math.random().toString(36).slice(2, 6),
+        title: "New conversation",
+        messages: [],
+        createdAt: new Date().toISOString(),
+      };
+      state.conversations.unshift(conv);
+      state.activeConversationId = conv.id;
+      persistConversations();
+      updateConversationList();
     }
+    return getActiveConversation();
   }
 
-  /* ===== Build Chat (generate agent from prompt) ===== */
+  function appendMessage(role, content, meta = {}) {
+    const conv = ensureActiveConversation();
+    const msg = { role, content, timestamp: Date.now(), meta };
+    conv.messages.push(msg);
 
-  function appendBuildChatMessage(role, content) {
+    // Auto-title from first user message
+    if (role === "user" && conv.messages.filter(m => m.role === "user").length === 1) {
+      conv.title = content.slice(0, 60) + (content.length > 60 ? "…" : "");
+    }
+
+    renderMessageInChatFull(msg);
+    renderMessageInDrawer(msg);
+    updateConversationList();
+    persistConversations();
+  }
+
+  function renderMessageInChatFull(msg) {
     if (!buildChatMessages) return;
-
-    // Hide welcome state on first message
     if (chatWelcome) chatWelcome.style.display = "none";
 
-    const avatarLabel = role === "user" ? "You" : "AI";
-    const avatarClass = role === "user" ? "chat-msg-avatar user" : "chat-msg-avatar assistant";
+    const avatarLabel = msg.role === "user" ? "You" : "AI";
+    const avatarClass = msg.role === "user" ? "chat-msg-avatar user" : "chat-msg-avatar assistant";
 
-    const msg = document.createElement("div");
-    msg.className = `chat-msg ${role}`;
-    msg.innerHTML = `
+    const el = document.createElement("div");
+    el.className = `chat-msg ${msg.role}`;
+    el.innerHTML = `
       <div class="${avatarClass}">${avatarLabel[0]}</div>
       <div class="chat-msg-body">
         <span class="chat-msg-role">${avatarLabel}</span>
-        <div class="chat-msg-content">${escapeHtml(content)}</div>
+        <div class="chat-msg-content">${escapeHtml(msg.content)}</div>
       </div>
     `;
-    buildChatMessages.appendChild(msg);
-
-    // Scroll to bottom
+    buildChatMessages.appendChild(el);
     if (chatFullScroll) chatFullScroll.scrollTop = chatFullScroll.scrollHeight;
+  }
+
+  function renderMessageInDrawer(msg) {
+    if (!pillChatMessages) return;
+    const empty = pillChatMessages.querySelector(".chat-drawer-empty");
+    if (empty) empty.remove();
+
+    const el = document.createElement("div");
+    el.className = `chat-pill-msg ${msg.role}`;
+    el.textContent = msg.content;
+    pillChatMessages.appendChild(el);
+    pillChatMessages.scrollTop = pillChatMessages.scrollHeight;
+  }
+
+  function renderChatFullMessages() {
+    if (!buildChatMessages) return;
+    // Clear existing messages but keep welcome
+    const msgs = buildChatMessages.querySelectorAll(".chat-msg");
+    msgs.forEach(m => m.remove());
+
+    const conv = getActiveConversation();
+    if (!conv || conv.messages.length === 0) {
+      if (chatWelcome) chatWelcome.style.display = "";
+      return;
+    }
+    if (chatWelcome) chatWelcome.style.display = "none";
+    for (const msg of conv.messages) {
+      renderMessageInChatFull(msg);
+    }
+  }
+
+  function renderDrawerMessages() {
+    if (!pillChatMessages) return;
+    pillChatMessages.innerHTML = "";
+    const conv = getActiveConversation();
+    if (!conv || conv.messages.length === 0) {
+      pillChatMessages.innerHTML = '<div class="chat-drawer-empty">Ask me anything about your flow.</div>';
+      return;
+    }
+    for (const msg of conv.messages) {
+      renderMessageInDrawer(msg);
+    }
+  }
+
+  function showThinkingIndicator(container) {
+    const el = document.createElement("div");
+    el.className = "chat-msg-thinking";
+    el.id = "thinking-" + Date.now();
+    el.innerHTML = '<div class="thinking-dots"><span class="thinking-dot"></span><span class="thinking-dot"></span><span class="thinking-dot"></span></div><span>Thinking…</span>';
+    container?.appendChild(el);
+    return el.id;
+  }
+
+  function removeThinkingIndicator(id) {
+    const el = document.getElementById(id);
+    if (el) el.remove();
+  }
+
+  async function sendChatMessage(text) {
+    if (!text.trim()) return;
+    appendMessage("user", text);
+
+    const thinkingId1 = showThinkingIndicator(buildChatMessages);
+    const thinkingId2 = showThinkingIndicator(pillChatMessages);
+
+    try {
+      const data = await generateFlowPayload(text);
+      removeThinkingIndicator(thinkingId1);
+      removeThinkingIndicator(thinkingId2);
+      applyGeneratedFlow(data);
+      appendMessage("assistant", generationSummaryText(data), { type: "flow_generation" });
+      if (runStatus) runStatus.textContent = "Flow generated from chat.";
+
+      // Auto-switch to canvas after generation
+      if (state.editorMode === "chat") {
+        setTimeout(() => switchMode("canvas"), 800);
+      }
+    } catch (error) {
+      removeThinkingIndicator(thinkingId1);
+      removeThinkingIndicator(thinkingId2);
+      appendMessage("assistant", `Error: ${error.message}`, { type: "error" });
+    }
+  }
+
+  function updateConversationList() {
+    const chatLogList = document.getElementById("chatLogList");
+    if (!chatLogList) return;
+    chatLogList.innerHTML = "";
+
+    if (state.conversations.length === 0) {
+      chatLogList.innerHTML = '<div class="chat-log-empty">Your conversations will appear here.</div>';
+      return;
+    }
+
+    for (const conv of state.conversations) {
+      const item = document.createElement("div");
+      item.className = "chat-log-item" + (conv.id === state.activeConversationId ? " active" : "");
+      const timeStr = conv.createdAt ? new Date(conv.createdAt).toLocaleDateString() : "";
+      item.innerHTML = `
+        <div class="chat-log-item-icon"></div>
+        <div class="chat-log-item-text">${escapeHtml(conv.title || "New conversation")}</div>
+        <div class="chat-log-item-time">${timeStr}</div>
+      `;
+      item.addEventListener("click", () => {
+        state.activeConversationId = conv.id;
+        renderChatFullMessages();
+        renderDrawerMessages();
+        updateConversationList();
+      });
+      chatLogList.appendChild(item);
+    }
+  }
+
+  function createNewConversation() {
+    const conv = {
+      id: "conv_" + Date.now().toString(36) + "_" + Math.random().toString(36).slice(2, 6),
+      title: "New conversation",
+      messages: [],
+      createdAt: new Date().toISOString(),
+    };
+    state.conversations.unshift(conv);
+    state.activeConversationId = conv.id;
+    persistConversations();
+    renderChatFullMessages();
+    renderDrawerMessages();
+    updateConversationList();
+    if (chatWelcome) chatWelcome.style.display = "";
+  }
+
+  function persistConversations() {
+    try {
+      // Keep max 50 conversations, trim old ones
+      const trimmed = state.conversations.slice(0, 50);
+      localStorage.setItem("voyager_conversations", JSON.stringify(trimmed));
+      localStorage.setItem("voyager_active_conversation", state.activeConversationId);
+    } catch {}
+  }
+
+  function restoreConversations() {
+    try {
+      const saved = JSON.parse(localStorage.getItem("voyager_conversations") || "[]");
+      if (saved.length > 0) {
+        state.conversations = saved;
+        state.activeConversationId = localStorage.getItem("voyager_active_conversation") || saved[0]?.id || "";
+      }
+    } catch {}
+  }
+
+  // Legacy wrapper
+  function appendBuildChatMessage(role, content) {
+    appendMessage(role, content);
   }
 
   async function sendBuildChatMessage() {
     if (!buildChatInput) return;
     const text = buildChatInput.value.trim();
     if (!text) return;
-
-    appendBuildChatMessage("user", text);
     buildChatInput.value = "";
-
-    // Auto-resize textarea back
     buildChatInput.style.height = "auto";
-
-    try {
-      const data = await generateFlowPayload(text);
-      applyGeneratedFlow(data);
-      appendBuildChatMessage("assistant", generationSummaryText(data));
-      runStatus.textContent = "Flow generated from chat.";
-
-      // Auto-switch to canvas after generation
-      setTimeout(() => switchMode("canvas"), 800);
-    } catch (error) {
-      appendBuildChatMessage("assistant", `Error: ${error.message}`);
-    }
+    await sendChatMessage(text);
   }
 
   function bindBuildChatEvents() {
@@ -3737,7 +4678,6 @@
           sendBuildChatMessage();
         }
       });
-      // Auto-resize textarea
       buildChatInput.addEventListener("input", () => {
         buildChatInput.style.height = "auto";
         buildChatInput.style.height = Math.min(buildChatInput.scrollHeight, 160) + "px";
@@ -3885,8 +4825,8 @@
 
   function prefillDeployAgent() {
     const nameInput = document.getElementById("deployAgentName");
-    if (nameInput && flowNameInput && flowNameInput.value) {
-      nameInput.value = flowNameInput.value;
+    if (nameInput && flowNameText && flowNameText.textContent) {
+      nameInput.value = flowNameText.textContent;
     }
   }
 
@@ -5283,6 +6223,7 @@
   }
 
   function floatInspector() {
+    if (!inspectorPanel || !floatingInspector) return;
     state.isInspectorFloating = true;
 
     // Move inspector body content to floating container
@@ -5305,6 +6246,7 @@
   }
 
   function dockInspector() {
+    if (!inspectorPanel || !floatingInspector) return;
     state.isInspectorFloating = false;
 
     // Move inspector body back
@@ -5320,6 +6262,7 @@
   }
 
   function initFloatingDrag() {
+    if (!floatingInspector) return;
     const header = floatingInspector.querySelector(".floating-inspector-header");
     if (!header) return;
 
@@ -5416,9 +6359,9 @@
         event.preventDefault();
         try {
           await saveFlow();
-          runStatus.textContent = "Flow saved. (shortcut)";
+          if (runStatus) runStatus.textContent = "Flow saved. (shortcut)";
         } catch (error) {
-          runStatus.textContent = `Save error: ${error.message}`;
+          if (runStatus) runStatus.textContent = `Save error: ${error.message}`;
         }
         return;
       }
@@ -5438,9 +6381,9 @@
           if (state.currentFlowId) {
             await loadFlow(state.currentFlowId);
           }
-          runStatus.textContent = "Refreshed. (shortcut)";
+          if (runStatus) runStatus.textContent = "Refreshed. (shortcut)";
         } catch (error) {
-          runStatus.textContent = `Refresh error: ${error.message}`;
+          if (runStatus) runStatus.textContent = `Refresh error: ${error.message}`;
         }
       }
     });
@@ -5450,17 +6393,21 @@
   (function initPanelResize() {
     const handleLeft = document.getElementById("resizeHandleLeft");
     const handleRight = document.getElementById("resizeHandleRight");
+    const handleChat = document.getElementById("resizeHandleChat");
     const canvasLayout = document.getElementById("canvasView");
     if (!canvasLayout) return;
 
     const MIN_PANEL = 160;
     const MAX_PANEL = 480;
-    let dragging = null; // "left" | "right" | null
+    const MIN_CHAT = 240;
+    const MAX_CHAT = 560;
+    let dragging = null; // "left" | "right" | "chat" | null
 
     function onPointerDown(e, side) {
       e.preventDefault();
       dragging = side;
-      const handle = side === "left" ? handleLeft : handleRight;
+      const handles = { left: handleLeft, right: handleRight, chat: handleChat };
+      const handle = handles[side];
       if (handle) handle.classList.add("is-dragging");
       document.body.style.cursor = "col-resize";
       document.body.style.userSelect = "none";
@@ -5469,26 +6416,32 @@
     function onPointerMove(e) {
       if (!dragging) return;
       const rect = canvasLayout.getBoundingClientRect();
-      const totalW = rect.width;
 
       if (dragging === "left") {
         let leftW = Math.round(e.clientX - rect.left);
         leftW = Math.max(MIN_PANEL, Math.min(MAX_PANEL, leftW));
-        const rightCol = document.body.classList.contains("right-collapsed") ? "44px" : (state._rightW || 300) + "px";
-        canvasLayout.style.gridTemplateColumns = leftW + "px 4px 1fr 4px " + rightCol;
+        canvasLayout.style.setProperty("--col-blocks", leftW + "px");
         state._leftW = leftW;
-      } else {
-        let rightW = Math.round(rect.right - e.clientX);
+      } else if (dragging === "right") {
+        // Right panel: distance from right edge, but account for chat column
+        const chatW = state.isChatDrawerOpen ? (state._chatW || 360) : 0;
+        const chatResW = state.isChatDrawerOpen ? 4 : 0;
+        let rightW = Math.round(rect.right - e.clientX - chatW - chatResW);
         rightW = Math.max(MIN_PANEL, Math.min(MAX_PANEL, rightW));
-        const leftCol = (state._leftW || 280) + "px";
-        canvasLayout.style.gridTemplateColumns = leftCol + " 4px 1fr 4px " + rightW + "px";
+        canvasLayout.style.setProperty("--col-inspector", rightW + "px");
         state._rightW = rightW;
+      } else if (dragging === "chat") {
+        let chatW = Math.round(rect.right - e.clientX);
+        chatW = Math.max(MIN_CHAT, Math.min(MAX_CHAT, chatW));
+        canvasLayout.style.setProperty("--col-chat", chatW + "px");
+        state._chatW = chatW;
       }
     }
 
     function onPointerUp() {
       if (!dragging) return;
-      const handle = dragging === "left" ? handleLeft : handleRight;
+      const handles = { left: handleLeft, right: handleRight, chat: handleChat };
+      const handle = handles[dragging];
       if (handle) handle.classList.remove("is-dragging");
       dragging = null;
       document.body.style.cursor = "";
@@ -5496,24 +6449,32 @@
       try {
         localStorage.setItem("voyager_panel_left_w", String(state._leftW || 280));
         localStorage.setItem("voyager_panel_right_w", String(state._rightW || 300));
+        localStorage.setItem("voyager_panel_chat_w", String(state._chatW || 360));
       } catch {}
     }
 
     if (handleLeft) handleLeft.addEventListener("pointerdown", (e) => onPointerDown(e, "left"));
     if (handleRight) handleRight.addEventListener("pointerdown", (e) => onPointerDown(e, "right"));
+    if (handleChat) handleChat.addEventListener("pointerdown", (e) => onPointerDown(e, "chat"));
     document.addEventListener("pointermove", onPointerMove);
     document.addEventListener("pointerup", onPointerUp);
 
-    // Restore persisted widths
+    // Restore persisted widths via CSS custom properties
     try {
       const savedL = parseInt(localStorage.getItem("voyager_panel_left_w"), 10);
       const savedR = parseInt(localStorage.getItem("voyager_panel_right_w"), 10);
-      if (savedL >= MIN_PANEL && savedL <= MAX_PANEL) state._leftW = savedL;
-      if (savedR >= MIN_PANEL && savedR <= MAX_PANEL) state._rightW = savedR;
-      if (state._leftW || state._rightW) {
-        const l = (state._leftW || 280) + "px";
-        const r = (state._rightW || 300) + "px";
-        canvasLayout.style.gridTemplateColumns = l + " 4px 1fr 4px " + r;
+      const savedC = parseInt(localStorage.getItem("voyager_panel_chat_w"), 10);
+      if (savedL >= MIN_PANEL && savedL <= MAX_PANEL) {
+        state._leftW = savedL;
+        canvasLayout.style.setProperty("--col-blocks", savedL + "px");
+      }
+      if (savedR >= MIN_PANEL && savedR <= MAX_PANEL) {
+        state._rightW = savedR;
+        canvasLayout.style.setProperty("--col-inspector", savedR + "px");
+      }
+      if (savedC >= MIN_CHAT && savedC <= MAX_CHAT) {
+        state._chatW = savedC;
+        // Only apply if chat drawer is open (body class set later in boot)
       }
     } catch {}
   })();
@@ -5550,8 +6511,40 @@
     }
 
     if (toggleInspectorBtn) {
-      toggleInspectorBtn.addEventListener("click", () => {
+      toggleInspectorBtn.addEventListener("click", (e) => {
+        e.stopPropagation();
         toggleInspectorCollapse();
+      });
+    }
+
+    if (inspectorPanel) {
+      inspectorPanel.addEventListener("click", () => {
+        if (state.isInspectorCollapsed) {
+          toggleInspectorCollapse();
+        }
+      });
+    }
+
+    // Layout sidebar toggle buttons (VSCode-style)
+    if (toggleLeftPanelBtn) {
+      toggleLeftPanelBtn.addEventListener("click", (e) => {
+        e.stopPropagation();
+        if (state.editorMode === "canvas") toggleLeftCollapse();
+      });
+    }
+    if (toggleRightPanelBtn) {
+      toggleRightPanelBtn.addEventListener("click", (e) => {
+        e.stopPropagation();
+        if (state.editorMode === "canvas") toggleInspectorCollapse();
+      });
+    }
+
+    // Click collapsed left panel to expand
+    if (palettePanel) {
+      palettePanel.addEventListener("click", () => {
+        if (state.isLeftCollapsed) {
+          toggleLeftCollapse();
+        }
       });
     }
 
@@ -5582,7 +6575,7 @@
           updateNodeCard(state.selectedNodeId);
           refreshNodeInspector();
         } catch (error) {
-          runStatus.textContent = `Invalid node JSON: ${error.message}`;
+          if (runStatus) runStatus.textContent = `Invalid node JSON: ${error.message}`;
         }
       });
     }
@@ -5599,58 +6592,24 @@
       });
     }
 
-    if (newFlowBtn) {
-      newFlowBtn.addEventListener("click", () => {
-        state.currentFlowId = "";
-        if (flowSelect) flowSelect.value = "";
-        flowNameInput.value = "Untitled Flow";
-        createStarterFlow();
-      });
-    }
-
-    if (flowSelect) flowSelect.addEventListener("change", async () => {
-      const flowId = flowSelect.value;
-      if (!flowId) return;
-      try {
-        await loadFlow(flowId);
-      } catch (error) {
-        runStatus.textContent = `Load error: ${error.message}`;
-      }
-    });
+    // New flow creation is handled by flowTabNew (+ button in flow tabs)
+    // Flow switching is handled by flowNameDisplay dropdown
 
     if (saveFlowBtn) {
       saveFlowBtn.addEventListener("click", async () => {
         try {
           await saveFlow();
-          runStatus.textContent = "Flow saved.";
+          if (runStatus) runStatus.textContent = "Flow saved.";
         } catch (error) {
-          runStatus.textContent = `Save error: ${error.message}`;
+          if (runStatus) runStatus.textContent = `Save error: ${error.message}`;
         }
       });
     }
 
-    if (deleteFlowBtn) {
-      deleteFlowBtn.addEventListener("click", async () => {
-        try {
-          await deleteCurrentFlow();
-          runStatus.textContent = "Flow deleted.";
-        } catch (error) {
-          runStatus.textContent = `Delete error: ${error.message}`;
-        }
-      });
-    }
+    // delete/import/export now handled via flow menu dropdown (flowMenuDelete, flowMenuImport, flowMenuExport)
 
-    if (exportFlowBtn) {
-      exportFlowBtn.addEventListener("click", async () => {
-        await exportFlowToLocalFile();
-      });
-    }
-
-    if (importFlowBtn && flowImportInput) {
-      importFlowBtn.addEventListener("click", () => {
-        flowImportInput.value = "";
-        flowImportInput.click();
-      });
+    // Bind flowImportInput change handler unconditionally (import triggered via dropdown menu)
+    if (flowImportInput) {
       flowImportInput.addEventListener("change", async () => {
         try {
           await importFlowFromLocalFile(flowImportInput.files?.[0]);
@@ -5669,6 +6628,131 @@
       runFlowBtn.addEventListener("click", () => {
         runCurrentFlow();
       });
+    }
+
+    // Flow menu dropdown
+    const flowMenuBtn = document.getElementById("flowMenuBtn");
+    const flowMenu = document.getElementById("flowMenu");
+    const flowMenuImport = document.getElementById("flowMenuImport");
+    const flowMenuExport = document.getElementById("flowMenuExport");
+    const flowMenuDelete = document.getElementById("flowMenuDelete");
+
+    if (flowMenuBtn && flowMenu) {
+      flowMenuBtn.addEventListener("click", (e) => {
+        e.stopPropagation();
+        const isOpen = flowMenu.classList.toggle("is-open");
+        flowMenuBtn.setAttribute("aria-expanded", String(isOpen));
+      });
+      document.addEventListener("click", () => {
+        flowMenu.classList.remove("is-open");
+        flowMenuBtn.setAttribute("aria-expanded", "false");
+      });
+      flowMenu.addEventListener("click", (e) => e.stopPropagation());
+    }
+
+    if (flowMenuImport && flowImportInput) {
+      flowMenuImport.addEventListener("click", () => {
+        flowMenu?.classList.remove("is-open");
+        flowImportInput.value = "";
+        flowImportInput.click();
+      });
+    }
+
+    if (flowMenuExport) {
+      flowMenuExport.addEventListener("click", async () => {
+        flowMenu?.classList.remove("is-open");
+        await exportFlowToLocalFile();
+      });
+    }
+
+    if (flowMenuDelete) {
+      flowMenuDelete.addEventListener("click", async () => {
+        flowMenu?.classList.remove("is-open");
+        try {
+          await deleteCurrentFlow();
+          if (runStatus) runStatus.textContent = "Flow deleted.";
+        } catch (error) {
+          if (runStatus) runStatus.textContent = `Delete error: ${error.message}`;
+        }
+      });
+    }
+
+    // Settings nav button
+    const settingsNavBtn = document.getElementById("settingsNavBtn");
+    if (settingsNavBtn) {
+      settingsNavBtn.addEventListener("click", () => switchMode("settings"));
+    }
+
+    // Flow tabs: new tab button
+    if (flowTabNew) {
+      flowTabNew.addEventListener("click", () => createNewFlowTab());
+    }
+
+    // Zoom controls
+    const zoomInBtn = document.getElementById("zoomInBtn");
+    const zoomOutBtn = document.getElementById("zoomOutBtn");
+    const zoomResetBtn = document.getElementById("zoomResetBtn");
+    const zoomLevel = document.getElementById("zoomLevel");
+    const snapGridBtn = document.getElementById("snapGridBtn");
+
+    function updateZoomDisplay() {
+      if (!editor || !zoomLevel) return;
+      zoomLevel.textContent = Math.round(editor.zoom * 100) + "%";
+    }
+
+    if (zoomInBtn && editor) {
+      zoomInBtn.addEventListener("click", () => { editor.zoom_in(); updateZoomDisplay(); });
+    }
+    if (zoomOutBtn && editor) {
+      zoomOutBtn.addEventListener("click", () => { editor.zoom_out(); updateZoomDisplay(); });
+    }
+    if (zoomResetBtn && editor) {
+      zoomResetBtn.addEventListener("click", () => { editor.zoom_reset(); updateZoomDisplay(); });
+    }
+
+    // Snap to grid
+    let snapToGrid = localStorage.getItem("voyager_snap_grid") === "1";
+    if (snapGridBtn) {
+      if (snapToGrid) snapGridBtn.classList.add("is-active");
+      snapGridBtn.addEventListener("click", () => {
+        snapToGrid = !snapToGrid;
+        snapGridBtn.classList.toggle("is-active", snapToGrid);
+        localStorage.setItem("voyager_snap_grid", snapToGrid ? "1" : "0");
+      });
+    }
+
+    // Snap on node move
+    if (editor) {
+      editor.on("nodeMoved", (nodeId) => {
+        if (!snapToGrid) return;
+        const GRID = 20;
+        try {
+          const node = editor.drawflow.drawflow.Home.data[nodeId];
+          if (!node) return;
+          const snappedX = Math.round(node.pos_x / GRID) * GRID;
+          const snappedY = Math.round(node.pos_y / GRID) * GRID;
+          if (snappedX !== node.pos_x || snappedY !== node.pos_y) {
+            node.pos_x = snappedX;
+            node.pos_y = snappedY;
+            const el = document.querySelector(`#node-${nodeId}`);
+            if (el) {
+              el.style.left = snappedX + "px";
+              el.style.top = snappedY + "px";
+              editor.updateConnectionNodes(`node-${nodeId}`);
+            }
+          }
+        } catch {}
+      });
+    }
+
+    // Track Drawflow zoom/pan events for UI updates
+    // Note: Drawflow already handles Ctrl+Wheel zoom natively — no custom handler needed
+    if (editor) {
+      try {
+        editor.on("zoom", () => { updateZoomDisplay(); });
+      } catch {
+        // Fallback: poll zoom level periodically if events aren't supported
+      }
     }
 
     bindCanvasDropFromPalette();
@@ -5698,18 +6782,43 @@
           state.editorMode = savedMode || "chat";
         }
         state.isInspectorCollapsed = localStorage.getItem("voyager_right_collapsed") === "1";
+        state.isLeftCollapsed = localStorage.getItem("voyager_left_collapsed") === "1";
+        state.isChatDrawerOpen = localStorage.getItem("voyager_chat_drawer_open") === "1";
+        state.isLeftPanelFlipped = localStorage.getItem("voyager_left_panel_flipped") === "1";
+        state.isChatLogCollapsed = localStorage.getItem("voyager_chat_log_collapsed") === "1";
       } catch {
         state.editorMode = "chat";
         state.isInspectorCollapsed = false;
+        state.isLeftCollapsed = false;
+        state.isChatDrawerOpen = false;
+        state.isLeftPanelFlipped = false;
+        state.isChatLogCollapsed = false;
       }
+
+      // Restore conversations from localStorage
+      restoreConversations();
 
       initDeployPersistence();
       switchMode(state.editorMode);
       renderPalette();
+      initLeftPanelTabs();
+      initGlobalSearch();
       bindEvents();
       await refreshFlowList();
-      flowNameInput.value = "Untitled Flow";
-      createStarterFlow();
+
+      // Apply chat-log-collapsed state
+      if (state.isChatLogCollapsed) {
+        document.body.classList.add("chat-log-collapsed");
+      }
+
+      // Update conversation list in chat-full-log
+      updateConversationList();
+
+      // Restore flow tabs or create initial tab
+      if (!restoreFlowTabs()) {
+        if (flowNameText) flowNameText.textContent = "Untitled Flow";
+        createNewFlowTab();
+      }
       try {
         await loadEditorChatAgents();
       } catch {
@@ -5720,7 +6829,7 @@
         runStatus.textContent = "Static mode ready. Flows save locally in this browser.";
       }
     } catch (error) {
-      runStatus.textContent = `Boot error: ${error.message}`;
+      if (runStatus) runStatus.textContent = `Boot error: ${error.message}`;
     }
   }
 

@@ -29,8 +29,33 @@ body {
 }
 
 .landing-nav .top-nav-inner {
-  justify-content: flex-end;
   gap: var(--space-4);
+}
+
+.nav-brand {
+  display: flex;
+  align-items: center;
+  text-decoration: none;
+  margin-right: auto;
+}
+
+.nav-logo {
+  width: 28px;
+  height: 28px;
+  filter: drop-shadow(0 3px 0 rgba(160, 140, 170, 0.35));
+}
+
+[data-theme="dark"] .nav-logo {
+  filter: none;
+}
+
+.landing-nav .nav-links {
+  gap: var(--space-5);
+}
+
+.landing-nav .nav-actions {
+  gap: var(--space-2);
+  margin-left: var(--space-4);
 }
 
 .landing-nav .nav-link {
@@ -122,8 +147,63 @@ body {
   right: 0;
   height: 200px;
   background: linear-gradient(to bottom, transparent, var(--hero-bg-base));
+  z-index: 2;
+  pointer-events: none;
+}
+
+/* Braille ASCII art background layer */
+.hero-ascii {
+  position: absolute;
+  top: 50%;
+  right: 0;
+  transform: translateY(-50%) scaleX(0.85);
   z-index: 1;
   pointer-events: none;
+  user-select: none;
+  margin: 0;
+  padding: 0;
+  white-space: pre;
+  font-family: 'SF Mono', 'Fira Code', 'Consolas', monospace;
+  font-size: 6px;
+  line-height: 1.1;
+  letter-spacing: 0.02em;
+  color: rgba(47, 42, 58, 0.8);
+  opacity: 0;
+  animation: asciiArtFadeIn 0.6s ease 0.2s forwards;
+  -webkit-mask-image:
+    linear-gradient(to left, black 40%, transparent 100%),
+    linear-gradient(to top, transparent 0%, black 30%);
+  -webkit-mask-composite: destination-in;
+  mask-image:
+    linear-gradient(to left, black 40%, transparent 100%),
+    linear-gradient(to top, transparent 0%, black 30%);
+  mask-composite: intersect;
+}
+
+[data-theme="dark"] .hero-ascii {
+  color: rgba(248, 247, 242, 0.8);
+}
+
+@keyframes asciiArtFadeIn {
+  to { opacity: 1; }
+}
+
+/* Slow gentle drift */
+@media (prefers-reduced-motion: no-preference) {
+  .hero-ascii {
+    animation:
+      asciiArtFadeIn 0.6s ease 0.2s forwards,
+      asciiDrift 40s ease-in-out infinite;
+  }
+}
+
+@keyframes asciiDrift {
+  0%, 100% {
+    transform: translateY(-50%) scaleX(0.85);
+  }
+  50% {
+    transform: translateY(calc(-50% - 12px)) scaleX(0.85);
+  }
 }
 
 /* Gradient canvas */
@@ -260,12 +340,13 @@ body {
 }
 
 .hero .btn.btn-primary.btn-lg.press-feedback {
+  color: #2f2a3a;
   box-shadow: var(--hero-title-bottom-shadow);
 }
 
 .hero .btn.btn-primary.btn-lg.press-feedback:hover {
   background: #ffffff;
-  color: #2f2a3a;
+  color: #2f2a3a !important;
   border-color: #ffffff;
 }
 
@@ -1308,6 +1389,39 @@ body {
 
   .hero-word-label {
     display: none;
+  }
+
+  /* Hide text nav links on mobile, keep icons */
+  .landing-nav .nav-links {
+    display: none;
+  }
+
+  /* ASCII art: scale down on mobile so it doesn't dominate */
+  .hero-ascii {
+    font-size: 4.5px;
+    transform: translateY(-50%) scaleX(0.85) scale(0.7);
+    transform-origin: right center;
+  }
+
+  @media (prefers-reduced-motion: no-preference) {
+    .hero-ascii {
+      animation:
+        asciiArtFadeIn 0.6s ease 0.2s forwards,
+        asciiDriftMobile 40s ease-in-out infinite;
+    }
+  }
+
+  @keyframes asciiDriftMobile {
+    0%, 100% {
+      transform: translateY(-50%) scaleX(0.85) scale(0.7);
+    }
+    50% {
+      transform: translateY(calc(-50% - 8px)) scaleX(0.85) scale(0.7);
+    }
+  }
+
+  .hero .container {
+    padding-top: 30vh;
   }
 
   .hero-actions {

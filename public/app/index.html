@@ -3,7 +3,7 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>CANARIA App</title>
+    <title>Akompani</title>
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
@@ -18,63 +18,98 @@
     <!-- Navigation -->
     <nav class="top-nav editor-nav">
       <div class="top-nav-inner">
-        <div class="nav-links editor-nav-links" role="tablist" aria-label="Editor modes">
-          <button class="nav-link mode-tab active" data-mode="chat" id="modeChatTab" type="button" aria-controls="chatFullView" aria-selected="true">
-            <svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+        <!-- Pill mode switcher -->
+        <div class="mode-switcher" role="tablist" aria-label="Editor modes">
+          <button class="mode-tab active" data-mode="chat" id="modeChatTab" type="button" aria-controls="chatFullView" aria-selected="true">
+            <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
             <span>Chat</span>
           </button>
-          <button class="nav-link mode-tab" data-mode="canvas" id="modeCanvasTab" type="button" aria-controls="canvasView" aria-selected="false">
-            <svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>
+          <button class="mode-tab" data-mode="canvas" id="modeCanvasTab" type="button" aria-controls="canvasView" aria-selected="false">
+            <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>
             <span>Canvas</span>
           </button>
-          <button class="nav-link mode-tab" data-mode="deploy" id="modeDeployTab" type="button" aria-controls="deployView" aria-selected="false">
-            <svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 2L11 13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
+          <button class="mode-tab" data-mode="deploy" id="modeDeployTab" type="button" aria-controls="deployView" aria-selected="false">
+            <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 2L11 13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
             <span>Deploy</span>
-          </button>
-          <button class="nav-link mode-tab" data-mode="settings" id="modeSettingsTab" type="button" aria-controls="settingsView" aria-selected="false">
-            <svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="4" y1="21" x2="4" y2="14" /><line x1="4" y1="10" x2="4" y2="3" /><line x1="12" y1="21" x2="12" y2="12" /><line x1="12" y1="8" x2="12" y2="3" /><line x1="20" y1="21" x2="20" y2="16" /><line x1="20" y1="12" x2="20" y2="3" /><line x1="1" y1="14" x2="7" y2="14" /><line x1="9" y1="8" x2="15" y2="8" /><line x1="17" y1="16" x2="23" y2="16" /></svg>
-            <span>Settings</span>
           </button>
         </div>
 
-        <!-- Editor controls (visible across all modes) -->
+        <!-- Flow controls (visible in canvas mode) -->
         <div class="nav-canvas-controls" id="navCanvasControls">
-          <div class="flow-selector">
-            <select id="flowSelect" class="form-select form-select-sm">
-              <option value="">Select a flow...</option>
-            </select>
-            <input id="flowName" type="text" class="form-input form-input-sm" placeholder="Flow name" />
+          <div class="flow-name-display" id="flowNameDisplay" title="Click to switch flow">
+            <span class="flow-name-text" id="flowNameText">Untitled Flow</span>
+            <svg class="flow-name-caret" xmlns="http://www.w3.org/2000/svg" width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
           </div>
-          <button id="saveFlowBtn" class="btn btn-primary btn-sm">
-            <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>
-            Save
+          <div class="flow-dropdown" id="flowDropdown" role="listbox" style="display:none"></div>
+          <button id="saveFlowBtn" class="btn btn-primary btn-icon btn-sm" title="Save flow">
+            <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>
           </button>
-          <button id="newFlowBtn" class="btn btn-secondary btn-sm">
-            <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
-          </button>
-          <button id="deleteFlowBtn" class="btn btn-danger btn-sm">
-            <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
-          </button>
-          <button id="importFlowBtn" class="btn btn-secondary btn-sm" title="Import flow JSON">Import</button>
-          <button id="exportFlowBtn" class="btn btn-secondary btn-sm" title="Export flow JSON">Export</button>
+          <div class="flow-menu-wrap" id="flowMenuWrap">
+            <button id="flowMenuBtn" class="btn btn-ghost btn-icon btn-sm" title="More actions" aria-haspopup="true" aria-expanded="false">
+              <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="5" r="1"/><circle cx="12" cy="12" r="1"/><circle cx="12" cy="19" r="1"/></svg>
+            </button>
+            <div class="flow-menu" id="flowMenu" role="menu">
+              <button class="flow-menu-item" id="flowMenuRename" role="menuitem">
+                <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 3a2.85 2.85 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/></svg>
+                Rename
+              </button>
+              <button class="flow-menu-item" id="flowMenuImport" role="menuitem">
+                <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+                Import Flow…
+              </button>
+              <button class="flow-menu-item" id="flowMenuExport" role="menuitem">
+                <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+                Export Flow…
+              </button>
+              <div class="flow-menu-divider"></div>
+              <button class="flow-menu-item flow-menu-item--danger" id="flowMenuDelete" role="menuitem">
+                <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
+                Delete Flow
+              </button>
+            </div>
+          </div>
           <input id="flowImportInput" type="file" accept="application/json,.json" style="display:none" />
         </div>
 
         <div class="nav-actions">
-          <a href="?mode=chat" class="btn btn-ghost btn-sm editor-nav-link" data-editor-nav-mode="chat">Chat</a>
-          <a href="?mode=deploy" class="btn btn-ghost btn-sm editor-nav-link" data-editor-nav-mode="deploy">Deploy</a>
-          <a href="?mode=settings" class="btn btn-ghost btn-icon btn-sm editor-nav-link" data-editor-nav-mode="settings" title="Open settings" aria-label="Open settings">
-            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-              <line x1="4" y1="21" x2="4" y2="14" /><line x1="4" y1="10" x2="4" y2="3" /><line x1="12" y1="21" x2="12" y2="12" /><line x1="12" y1="8" x2="12" y2="3" /><line x1="20" y1="21" x2="20" y2="16" /><line x1="20" y1="12" x2="20" y2="3" /><line x1="1" y1="14" x2="7" y2="14" /><line x1="9" y1="8" x2="15" y2="8" /><line x1="17" y1="16" x2="23" y2="16" />
-            </svg>
-          </a>
+          <!-- Layout sidebar toggles (VSCode-style) -->
+          <div class="layout-toggles">
+            <button id="toggleLeftPanel" class="btn btn-ghost btn-icon btn-sm layout-toggle-btn" title="Toggle left sidebar" aria-label="Toggle left sidebar">
+              <svg width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <rect x="1" y="2" width="5" height="12" rx="1" fill="currentColor" opacity="0.9"/>
+                <rect x="7.5" y="2" width="7.5" height="12" rx="1" stroke="currentColor" stroke-width="1.2" fill="none"/>
+              </svg>
+            </button>
+            <button id="toggleRightPanel" class="btn btn-ghost btn-icon btn-sm layout-toggle-btn" title="Toggle right sidebar" aria-label="Toggle right sidebar">
+              <svg width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <rect x="1" y="2" width="7.5" height="12" rx="1" stroke="currentColor" stroke-width="1.2" fill="none"/>
+                <rect x="10" y="2" width="5" height="12" rx="1" fill="currentColor" opacity="0.9"/>
+              </svg>
+            </button>
+            <button id="toggleChatPanel" class="btn btn-ghost btn-icon btn-sm layout-toggle-btn" title="Toggle chat panel" aria-label="Toggle chat panel">
+              <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+            </button>
+          </div>
+          <button id="settingsNavBtn" class="btn btn-ghost btn-icon btn-sm" title="Settings" aria-label="Settings">
+            <svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="4" y1="21" x2="4" y2="14"/><line x1="4" y1="10" x2="4" y2="3"/><line x1="12" y1="21" x2="12" y2="12"/><line x1="12" y1="8" x2="12" y2="3"/><line x1="20" y1="21" x2="20" y2="16"/><line x1="20" y1="12" x2="20" y2="3"/><line x1="1" y1="14" x2="7" y2="14"/><line x1="9" y1="8" x2="15" y2="8"/><line x1="17" y1="16" x2="23" y2="16"/></svg>
+          </button>
           <button id="themeToggle" class="btn btn-ghost btn-icon btn-sm" title="Toggle theme">
-            <svg class="theme-icon-light" xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/></svg>
-            <svg class="theme-icon-dark" xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>
+            <svg class="theme-icon-light" xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/></svg>
+            <svg class="theme-icon-dark" xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>
           </button>
         </div>
       </div>
     </nav>
+
+    <!-- Flow Tabs (VSCode-style) -->
+    <div class="flow-tabs" id="flowTabs">
+      <div class="flow-tabs-scroll" id="flowTabsScroll">
+        <!-- Tabs inserted dynamically -->
+        <button class="flow-tab-new" id="flowTabNew" title="New flow" aria-label="New flow">
+          <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+        </button>
+      </div>
+    </div>
 
     <!-- Editor Main -->
     <main class="editor-main" id="editorMain">
@@ -104,16 +139,22 @@
                 <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="19" x2="12" y2="5"/><polyline points="5 12 12 5 19 12"/></svg>
               </button>
             </div>
-            <p class="chat-composer-hint">Press Enter to send, Shift+Enter for new line</p>
           </div>
         </div>
         <aside class="chat-full-log" id="chatFullLog">
           <div class="chat-log-header">
             <span class="chat-log-title">History</span>
+            <button id="chatLogToggle" class="btn btn-ghost btn-icon btn-sm" title="Close history">
+              <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+            </button>
           </div>
           <div class="chat-log-list" id="chatLogList">
             <div class="chat-log-empty">Your conversations will appear here.</div>
           </div>
+          <button class="chat-log-new-btn" id="chatLogNewBtn" title="New conversation">
+            <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+            New conversation
+          </button>
         </aside>
       </div>
 
@@ -121,11 +162,35 @@
       <div id="canvasView" class="canvas-layout editor-view" aria-hidden="true">
         <!-- Blocks Palette -->
         <aside class="blocks-panel" id="palettePanel">
-          <div class="panel-search">
-            <input id="blockSearch" type="text" class="form-input" placeholder="Search blocks..." />
-            <svg class="search-icon" xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/></svg>
+          <div class="panel-tabs" id="leftPanelTabs">
+            <button class="panel-tab active" data-panel-tab="blocks">Blocks</button>
+            <button class="panel-tab" data-panel-tab="search">Search</button>
+            <button class="panel-tab" data-panel-tab="outline">Outline</button>
           </div>
-          <div id="paletteSections" class="palette-content"></div>
+          <!-- Blocks tab -->
+          <div class="panel-tab-content active" id="leftTabBlocks" data-panel-content="blocks">
+            <div class="panel-search">
+              <input id="blockSearch" type="text" class="form-input" placeholder="Search blocks..." />
+              <svg class="search-icon" xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/></svg>
+            </div>
+            <div id="paletteSections" class="palette-content"></div>
+          </div>
+          <!-- Search tab -->
+          <div class="panel-tab-content" id="leftTabSearch" data-panel-content="search">
+            <div class="panel-search">
+              <input id="globalSearch" type="text" class="form-input" placeholder="Search across flows..." />
+              <svg class="search-icon" xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/></svg>
+            </div>
+            <div id="globalSearchResults" class="panel-search-results">
+              <div class="panel-empty-state">Type to search across all flows and nodes.</div>
+            </div>
+          </div>
+          <!-- Outline tab -->
+          <div class="panel-tab-content" id="leftTabOutline" data-panel-content="outline">
+            <div id="flowOutline" class="flow-outline">
+              <div class="panel-empty-state">Flow outline will appear here.</div>
+            </div>
+          </div>
         </aside>
 
         <!-- Resize handle: blocks ↔ canvas -->
@@ -134,22 +199,29 @@
         <!-- Canvas -->
         <section class="editor-canvas">
           <div class="canvas-toolbar">
-            <div class="canvas-hints">
-              <span class="hint"><kbd>⌘</kbd><kbd>S</kbd> Save</span>
-              <span class="hint"><kbd>⌘</kbd><kbd>Enter</kbd> Run</span>
-            </div>
-            <div class="canvas-actions">
-              <button id="generateBtn" class="btn btn-secondary btn-sm">
-                <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9.937 15.5A2 2 0 0 0 8.5 14.063l-6.135-1.582a.5.5 0 0 1 0-.962L8.5 9.936A2 2 0 0 0 9.937 8.5l1.582-6.135a.5.5 0 0 1 .963 0L14.063 8.5A2 2 0 0 0 15.5 9.937l6.135 1.581a.5.5 0 0 1 0 .964L15.5 14.063a2 2 0 0 0-1.437 1.437l-1.582 6.135a.5.5 0 0 1-.963 0z"/><path d="M20 3v4"/><path d="M22 5h-4"/></svg>
-                Generate
-              </button>
-              <button id="runFlowBtn" class="btn btn-secondary btn-sm">
-                <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="5 3 19 12 5 21 5 3"/></svg>
-                Run
-              </button>
+            <div class="canvas-shortcuts">
+              <kbd>⌘S</kbd> save · <kbd>⌘⏎</kbd> run
             </div>
           </div>
           <div id="drawflow" class="drawflow-canvas"></div>
+
+          <!-- Zoom Controls -->
+          <div class="canvas-zoom" id="canvasZoom">
+            <button class="canvas-zoom-btn" id="zoomOutBtn" title="Zoom out">
+              <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="5" y1="12" x2="19" y2="12"/></svg>
+            </button>
+            <span class="canvas-zoom-level" id="zoomLevel">100%</span>
+            <button class="canvas-zoom-btn" id="zoomInBtn" title="Zoom in">
+              <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+            </button>
+            <button class="canvas-zoom-btn" id="zoomResetBtn" title="Reset zoom">
+              <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 0 1 9-9 9.75 9.75 0 0 1 6.74 2.74L21 8"/><path d="M21 3v5h-5"/><path d="M21 12a9 9 0 0 1-9 9 9.75 9.75 0 0 1-6.74-2.74L3 16"/><path d="M8 16H3v5"/></svg>
+            </button>
+            <span class="canvas-zoom-sep"></span>
+            <button class="canvas-zoom-btn" id="snapGridBtn" title="Toggle snap to grid">
+              <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18"/><path d="M3 15h18"/><path d="M9 3v18"/><path d="M15 3v18"/></svg>
+            </button>
+          </div>
 
           <!-- Generate Overlay -->
           <div id="generateOverlay" class="generate-overlay" style="display:none">
@@ -258,14 +330,40 @@
             </div>
           </div>
         </aside>
+
+        <!-- Resize handle: inspector ↔ chat -->
+        <div class="panel-resize-handle chat-resize-handle" id="resizeHandleChat" data-panel="chat"></div>
+
+        <!-- Chat Drawer (in-grid) -->
+        <aside class="chat-drawer-inline" id="chatDrawer">
+          <div class="chat-drawer-header">
+            <span class="chat-drawer-title">Assistant</span>
+            <div class="chat-drawer-actions">
+              <button id="chatDrawerClose" class="btn btn-ghost btn-icon btn-sm" title="Close chat">
+                <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+              </button>
+            </div>
+          </div>
+          <div class="chat-drawer-messages" id="pillChatMessages">
+            <div class="chat-drawer-empty">Ask me anything about your flow.</div>
+          </div>
+          <div class="chat-drawer-composer">
+            <textarea id="pillChatInput" class="chat-drawer-input" placeholder="Ask anything..." rows="1"></textarea>
+            <button id="pillChatSend" class="chat-drawer-send" title="Send">
+              <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="19" x2="12" y2="5"/><polyline points="5 12 12 5 19 12"/></svg>
+            </button>
+          </div>
+        </aside>
       </div>
 
       <!-- ====== DEPLOY VIEW ====== -->
       <div id="deployView" class="deploy-view editor-view" aria-hidden="true">
         <div class="deploy-main">
           <div class="deploy-inner">
-            <h1 class="deploy-title anim-in">Deploy Agent</h1>
-            <p class="deploy-subtitle anim-in anim-d1">Configure and deploy your agent to production.</p>
+            <div class="deploy-header anim-in">
+              <h1 class="deploy-title">Deploy</h1>
+              <p class="deploy-subtitle">Configure and deploy your agent to production.</p>
+            </div>
 
             <div class="deploy-section anim-in anim-d2">
               <h3 class="deploy-section-title">Agent Configuration</h3>
@@ -667,32 +765,7 @@
         </section>
       </div>
 
-      <!-- ====== FLOATING CHAT PILL ====== -->
-      <div id="chatPill" class="chat-pill">
-        <button class="chat-pill-btn" id="chatPillBtn">
-          <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
-          <span class="chat-pill-text">Chat</span>
-        </button>
-        <div class="chat-pill-window" id="chatPillWindow" style="display:none">
-          <div class="chat-pill-header" id="chatPillHeader">
-            <span class="chat-pill-title">Assistant</span>
-            <button id="chatPillMinimize" class="btn btn-ghost btn-icon btn-sm" title="Minimize">
-              <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="5" y1="12" x2="19" y2="12"/></svg>
-            </button>
-          </div>
-          <div class="chat-pill-body">
-            <div class="chat-pill-messages" id="pillChatMessages">
-              <div class="chat-pill-empty">Ask me anything about your flow.</div>
-            </div>
-            <div class="chat-pill-composer">
-              <textarea id="pillChatInput" class="chat-pill-input" placeholder="Ask anything..." rows="1"></textarea>
-              <button id="pillChatSend" class="chat-pill-send" title="Send">
-                <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="19" x2="12" y2="5"/><polyline points="5 12 12 5 19 12"/></svg>
-              </button>
-            </div>
-          </div>
-        </div>
-      </div>
+      <!-- Chat drawer is now inside canvasView grid -->
 
       <!-- Floating Inspector -->
       <div id="floatingInspector" class="floating-inspector" style="display:none">
