@@ -132,6 +132,11 @@
   padding: 0 8px;
 }
 
+/* Flow Name Wrapper (anchors dropdown) */
+.flow-name-wrap {
+  position: relative;
+}
+
 /* Flow Name Display */
 .flow-name-display {
   display: flex;
@@ -145,7 +150,6 @@
   cursor: pointer;
   transition: background 150ms ease;
   max-width: 220px;
-  position: relative;
 }
 
 .flow-name-display:hover {
@@ -1020,7 +1024,9 @@ body.chat-log-collapsed .chat-full-log {
 .deploy-inline-actions {
   display: flex;
   flex-wrap: wrap;
+  align-items: center;
   gap: 8px;
+  margin-top: 8px;
 }
 
 .deploy-status {

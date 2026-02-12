@@ -1,18 +1,9 @@
-const CACHE_NAME = "akompani-v6";
+const CACHE_NAME = "akompani-v7";
 const STATIC_ASSETS = [
   "./",
   "./index.html",
-  "./app",
   "./app/",
-  "./chat",
-  "./chat/",
-  "./ops",
-  "./ops/",
-  "./chat-agents",
-  "./chat-agents/",
   "./chat-agents.html",
-  "./ops-console",
-  "./ops-console/",
   "./ops-console.html",
   "./design-system.css",
   "./landing.css",

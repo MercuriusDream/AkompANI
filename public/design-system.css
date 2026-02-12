@@ -897,7 +897,7 @@ h6 { font-size: var(--text-md); }
   border-radius: var(--radius-sm);
 }
 
-.btn-ghost.btn-sm {
+.btn-icon.btn-sm {
   width: 32px;
   height: 32px;
   padding: 0;

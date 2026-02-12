@@ -11,6 +11,7 @@
     <link rel="stylesheet" href="../design-system.css" />
     <link rel="stylesheet" href="../settings/settings.css" />
     <link rel="stylesheet" href="../editor/editor.css?v=20260212-06" />
+    <link rel="icon" href="../akompani.svg" type="image/svg+xml" />
     <link rel="manifest" href="../manifest.json" />
     <script>(function(){var t=localStorage.getItem('akompani-theme');if(!t)t=matchMedia('(prefers-color-scheme:dark)').matches?'dark':'light';document.documentElement.setAttribute('data-theme',t)})()</script>
   </head>
@@ -36,12 +37,14 @@
 
         <!-- Flow controls (visible in canvas mode) -->
         <div class="nav-canvas-controls" id="navCanvasControls">
-          <div class="flow-name-display" id="flowNameDisplay" title="Click to switch flow">
-            <span class="flow-name-text" id="flowNameText">Untitled Flow</span>
-            <svg class="flow-name-caret" xmlns="http://www.w3.org/2000/svg" width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
+          <div class="flow-name-wrap">
+            <div class="flow-name-display" id="flowNameDisplay" title="Click to switch flow">
+              <span class="flow-name-text" id="flowNameText">Untitled Flow</span>
+              <svg class="flow-name-caret" xmlns="http://www.w3.org/2000/svg" width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
+            </div>
+            <div class="flow-dropdown" id="flowDropdown" role="listbox" style="display:none"></div>
           </div>
-          <div class="flow-dropdown" id="flowDropdown" role="listbox" style="display:none"></div>
-          <button id="saveFlowBtn" class="btn btn-primary btn-icon btn-sm" title="Save flow">
+          <button id="saveFlowBtn" class="btn btn-ghost btn-icon btn-sm" title="Save flow">
             <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>
           </button>
           <div class="flow-menu-wrap" id="flowMenuWrap">
