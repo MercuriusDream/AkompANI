@@ -29,6 +29,79 @@
   const baseDir = docPath.includes("/") ? docPath.slice(0, docPath.lastIndexOf("/") + 1) : "";
   const docsContentRoot = new URL("../docs-content/", window.location.href);
 
+  function setError(message) {
+    readerEl.textContent = "";
+    const p = document.createElement("p");
+    p.className = "doc-error";
+    p.textContent = String(message || "Unknown docs error.");
+    readerEl.appendChild(p);
+  }
+
+  function setPlainMarkdown(markdown) {
+    readerEl.textContent = "";
+    const pre = document.createElement("pre");
+    pre.textContent = String(markdown || "");
+    readerEl.appendChild(pre);
+  }
+
+  function sanitizeRenderedHtml(html) {
+    const template = document.createElement("template");
+    template.innerHTML = String(html || "");
+    const decodeContainer = document.createElement("textarea");
+
+    const decodeEntities = (value) => {
+      decodeContainer.innerHTML = String(value || "");
+      return decodeContainer.value;
+    };
+
+    const hasDangerousProtocol = (value) => {
+      const normalized = decodeEntities(value).replace(/[\u0000-\u001F\u007F\s]+/g, "").toLowerCase();
+      return normalized.startsWith("javascript:") || normalized.startsWith("data:");
+    };
+
+    template.content
+      .querySelectorAll("script, iframe, object, embed, form, meta, link, base, style")
+      .forEach((node) => node.remove());
+
+    for (const el of template.content.querySelectorAll("*")) {
+      for (const attr of Array.from(el.attributes)) {
+        const attrName = String(attr.name || "");
+        const lowered = attrName.toLowerCase();
+
+        if (lowered.startsWith("on") || lowered === "srcdoc") {
+          el.removeAttribute(attrName);
+          continue;
+        }
+
+        if (lowered === "style") {
+          const normalizedStyle = String(attr.value || "").replace(/\s+/g, "").toLowerCase();
+          if (
+            normalizedStyle.includes("expression(") ||
+            normalizedStyle.includes("url(") ||
+            normalizedStyle.includes("javascript:")
+          ) {
+            el.removeAttribute(attrName);
+          }
+          continue;
+        }
+
+        if (["href", "src", "action", "xlink:href", "formaction"].includes(lowered) && hasDangerousProtocol(attr.value)) {
+          if (lowered === "href") {
+            el.setAttribute("href", "#");
+          } else {
+            el.removeAttribute(attrName);
+          }
+        }
+      }
+
+      if (el.getAttribute("target") === "_blank") {
+        el.setAttribute("rel", "noopener noreferrer");
+      }
+    }
+
+    return template.innerHTML;
+  }
+
   function resolveDocUrl(href) {
     const raw = String(href || "").trim();
     if (!raw) return raw;
@@ -69,13 +142,14 @@
     .then((markdown) => {
       const rewritten = rewriteMarkdownLinks(markdown);
       if (!window.marked || typeof window.marked.parse !== "function") {
-        readerEl.innerHTML = `<pre>${rewritten.replace(/[<>&]/g, (c) => ({"<":"&lt;",">":"&gt;","&":"&amp;"}[c]))}</pre>`;
+        setPlainMarkdown(rewritten);
         return;
       }
-      readerEl.innerHTML = window.marked.parse(rewritten);
+      const parsed = window.marked.parse(rewritten);
+      readerEl.innerHTML = sanitizeRenderedHtml(parsed);
       document.title = `Akompani Docs · ${docPath.split("/").pop().replace(/\.md$/i, "")}`;
     })
     .catch((error) => {
-      readerEl.innerHTML = `<p class="doc-error">${String(error && error.message || error)}</p>`;
+      setError(String((error && error.message) || error));
     });
 })();
