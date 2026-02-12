@@ -696,6 +696,32 @@
     return "off";
   }
 
+  function normalizeCloudflareD1BindingName(value) {
+    const clean = String(value || "").trim().toUpperCase();
+    if (!clean) return "DB";
+    return clean
+      .replace(/[^A-Z0-9_]/g, "_")
+      .replace(/_{2,}/g, "_")
+      .replace(/^_+|_+$/g, "") || "DB";
+  }
+
+  function normalizeCloudflareDoBindingName(value) {
+    const clean = String(value || "").trim().toUpperCase();
+    if (!clean) return "AGENT_DO";
+    return clean
+      .replace(/[^A-Z0-9_]/g, "_")
+      .replace(/_{2,}/g, "_")
+      .replace(/^_+|_+$/g, "") || "AGENT_DO";
+  }
+
+  function normalizeCloudflareDoClassName(value) {
+    const raw = String(value || "").trim();
+    if (!raw) return "AgentDurableObject";
+    const clean = raw.replace(/[^A-Za-z0-9_$]/g, "_");
+    const head = /^[A-Za-z_$]/.test(clean) ? clean : `_${clean}`;
+    return head || "AgentDurableObject";
+  }
+
   function normalizeCloudflareDeployConfig(config = {}) {
     const source = config && typeof config === "object" ? config : {};
     const mode = normalizeCloudflareZeroTrustMode(source.zeroTrustMode);
@@ -710,6 +736,13 @@
       zeroTrustMode: mode,
       accessAud: String(source.accessAud || "").trim(),
       accessServiceTokenId: String(source.accessServiceTokenId || "").trim(),
+      d1Binding: normalizeCloudflareD1BindingName(source.d1Binding || "DB"),
+      d1DatabaseId: String(source.d1DatabaseId || "").trim(),
+      d1DatabaseName: String(source.d1DatabaseName || "").trim(),
+      doBinding: normalizeCloudflareDoBindingName(source.doBinding || "AGENT_DO"),
+      doClassName: normalizeCloudflareDoClassName(source.doClassName || "AgentDurableObject"),
+      doScriptName: String(source.doScriptName || "").trim(),
+      doEnvironment: String(source.doEnvironment || "").trim(),
     };
   }
 
@@ -732,6 +765,7 @@
       if (lowered === "__proto__" || lowered === "constructor" || lowered === "prototype") continue;
       defaultExtraHeaders[cleanKey] = cleanValue;
     }
+    const durableObjectClassName = normalizeCloudflareDoClassName(cloudflareConfig.doClassName || "AgentDurableObject");
 
     return `// @ts-nocheck
 import { Elysia } from "elysia";
@@ -753,6 +787,13 @@ const ENDPOINT_MODE = ${JSON.stringify(endpointMode)};
 const DEFAULT_CF_ZERO_TRUST_MODE = ${JSON.stringify(cloudflareConfig.zeroTrustMode)};
 const DEFAULT_CF_ACCESS_AUD = ${JSON.stringify(cloudflareConfig.accessAud)};
 const DEFAULT_CF_ACCESS_SERVICE_TOKEN_ID = ${JSON.stringify(cloudflareConfig.accessServiceTokenId)};
+const DEFAULT_CF_D1_BINDING = ${JSON.stringify(cloudflareConfig.d1Binding)};
+const DEFAULT_CF_D1_DATABASE_ID = ${JSON.stringify(cloudflareConfig.d1DatabaseId)};
+const DEFAULT_CF_D1_DATABASE_NAME = ${JSON.stringify(cloudflareConfig.d1DatabaseName)};
+const DEFAULT_CF_DO_BINDING = ${JSON.stringify(cloudflareConfig.doBinding)};
+const DEFAULT_CF_DO_CLASS_NAME = ${JSON.stringify(durableObjectClassName)};
+const DEFAULT_CF_DO_SCRIPT_NAME = ${JSON.stringify(cloudflareConfig.doScriptName)};
+const DEFAULT_CF_DO_ENVIRONMENT = ${JSON.stringify(cloudflareConfig.doEnvironment)};
 const DEFAULT_RUNTIME_SYSTEM_PROMPT = [
   "You are Agent Builder Runtime, an execution assistant for deployed flow-based agents.",
   "Priority order: (1) safety and correctness, (2) explicit tool usage when provided, (3) concise user-facing output.",
@@ -762,6 +803,86 @@ const DEFAULT_RUNTIME_SYSTEM_PROMPT = [
   "If constraints prevent completion, explain the exact blocker and suggest the smallest viable next step.",
   "Keep responses practical, deterministic, and deployment-friendly.",
 ].join("\\n");
+
+function durableObjectJson(data, status = 200) {
+  return new Response(JSON.stringify(data, null, 2), {
+    status,
+    headers: {
+      "content-type": "application/json; charset=utf-8",
+      "cache-control": "no-store",
+    },
+  });
+}
+
+export class ${durableObjectClassName} {
+  constructor(state, env) {
+    this.state = state;
+    this.env = env;
+  }
+
+  async fetch(request) {
+    const url = new URL(request.url);
+    if (request.method === "GET" && (url.pathname === "/" || url.pathname === "/health")) {
+      return durableObjectJson({
+        ok: true,
+        className: DEFAULT_CF_DO_CLASS_NAME,
+        now: new Date().toISOString(),
+      });
+    }
+
+    if (request.method !== "POST") {
+      return durableObjectJson({ ok: false, error: "Method not allowed." }, 405);
+    }
+
+    let payload = {};
+    try {
+      payload = await request.json();
+    } catch {
+      // Keep empty payload.
+    }
+
+    const action = String(payload.action || payload.op || payload.mode || "echo").trim().toLowerCase();
+    const key = String(payload.key || payload.name || "default").trim() || "default";
+
+    try {
+      if (action === "get") {
+        const value = await this.state.storage.get(key);
+        return durableObjectJson({ ok: true, action, key, value: value ?? null });
+      }
+      if (action === "set" || action === "put") {
+        await this.state.storage.put(key, payload.value);
+        return durableObjectJson({ ok: true, action: "set", key });
+      }
+      if (action === "delete" || action === "del") {
+        await this.state.storage.delete(key);
+        return durableObjectJson({ ok: true, action: "delete", key });
+      }
+      if (action === "list") {
+        const limit = Math.max(1, Math.min(Number(payload.limit || 50) || 50, 200));
+        const rows = await this.state.storage.list({ limit });
+        const items = [];
+        for (const [entryKey, entryValue] of rows.entries()) {
+          items.push({ key: String(entryKey), value: entryValue });
+        }
+        return durableObjectJson({ ok: true, action: "list", items });
+      }
+      return durableObjectJson({
+        ok: true,
+        action: "echo",
+        payload,
+        now: new Date().toISOString(),
+      });
+    } catch (error) {
+      return durableObjectJson(
+        {
+          ok: false,
+          error: error instanceof Error ? error.message : String(error),
+        },
+        500,
+      );
+    }
+  }
+}
 
 function readEnvValue(source, key) {
   if (source && typeof source === "object" && typeof source[key] === "string") {
@@ -883,6 +1004,219 @@ function hasOpenAiEndpoint() {
 
 function hasChatWebUiEndpoint() {
   return ENDPOINT_MODE === "chat" || ENDPOINT_MODE === "both";
+}
+
+function normalizeD1BindingName(value) {
+  const clean = String(value || "").trim().toUpperCase();
+  if (!clean) return "DB";
+  return clean
+    .replace(/[^A-Z0-9_]/g, "_")
+    .replace(/_{2,}/g, "_")
+    .replace(/^_+|_+$/g, "") || "DB";
+}
+
+function resolveD1Binding(envSource) {
+  const fromEnv = readEnvValue(envSource, "CF_D1_BINDING");
+  const bindingName = normalizeD1BindingName(fromEnv || DEFAULT_CF_D1_BINDING || "DB");
+  const candidate = envSource && typeof envSource === "object" ? envSource[bindingName] : null;
+  const available = Boolean(candidate && typeof candidate.prepare === "function");
+  return {
+    bindingName,
+    db: available ? candidate : null,
+    available,
+    databaseId: readEnvValue(envSource, "CF_D1_DATABASE_ID") || DEFAULT_CF_D1_DATABASE_ID || "",
+    databaseName: readEnvValue(envSource, "CF_D1_DATABASE_NAME") || DEFAULT_CF_D1_DATABASE_NAME || "",
+  };
+}
+
+function normalizeDoBindingName(value) {
+  const clean = String(value || "").trim().toUpperCase();
+  if (!clean) return "AGENT_DO";
+  return clean
+    .replace(/[^A-Z0-9_]/g, "_")
+    .replace(/_{2,}/g, "_")
+    .replace(/^_+|_+$/g, "") || "AGENT_DO";
+}
+
+function normalizeDoClassName(value) {
+  const raw = String(value || "").trim();
+  if (!raw) return "AgentDurableObject";
+  const clean = raw.replace(/[^A-Za-z0-9_$]/g, "_");
+  const head = /^[A-Za-z_$]/.test(clean) ? clean : "_" + clean;
+  return head || "AgentDurableObject";
+}
+
+function resolveDurableObjectBinding(envSource) {
+  const fromEnv = readEnvValue(envSource, "CF_DO_BINDING");
+  const bindingName = normalizeDoBindingName(fromEnv || DEFAULT_CF_DO_BINDING || "AGENT_DO");
+  const candidate = envSource && typeof envSource === "object" ? envSource[bindingName] : null;
+  const available = Boolean(
+    candidate &&
+      typeof candidate.get === "function" &&
+      (typeof candidate.idFromName === "function" ||
+        typeof candidate.idFromString === "function" ||
+        typeof candidate.newUniqueId === "function"),
+  );
+  return {
+    bindingName,
+    namespace: available ? candidate : null,
+    available,
+    className: normalizeDoClassName(readEnvValue(envSource, "CF_DO_CLASS_NAME") || DEFAULT_CF_DO_CLASS_NAME || "AgentDurableObject"),
+    scriptName: readEnvValue(envSource, "CF_DO_SCRIPT_NAME") || DEFAULT_CF_DO_SCRIPT_NAME || "",
+    environment: readEnvValue(envSource, "CF_DO_ENVIRONMENT") || DEFAULT_CF_DO_ENVIRONMENT || "",
+  };
+}
+
+function resolveDurableObjectId(namespace, input) {
+  const payload = input && typeof input === "object" ? input : {};
+  const explicit = String(payload.objectId || payload.id || "").trim();
+  if (explicit && typeof namespace.idFromString === "function") {
+    try {
+      return namespace.idFromString(explicit);
+    } catch {
+      // Fall through to name based id.
+    }
+  }
+  const name = String(payload.name || payload.key || "default").trim() || "default";
+  if (typeof namespace.idFromName === "function") {
+    return namespace.idFromName(name);
+  }
+  if (typeof namespace.newUniqueId === "function") {
+    return namespace.newUniqueId();
+  }
+  throw new Error("Durable Object namespace cannot resolve object id.");
+}
+
+function normalizeDurableObjectMethod(value) {
+  const method = String(value || "POST").trim().toUpperCase();
+  if (method === "GET" || method === "POST" || method === "PUT" || method === "PATCH" || method === "DELETE") {
+    return method;
+  }
+  return "POST";
+}
+
+async function runDurableObjectRequest(input, envSource) {
+  const binding = resolveDurableObjectBinding(envSource);
+  if (!binding.available || !binding.namespace) {
+    throw new Error("Durable Object binding \"" + binding.bindingName + "\" is unavailable.");
+  }
+
+  const payload = input && typeof input === "object" ? input : {};
+  const objectId = resolveDurableObjectId(binding.namespace, payload);
+  const stub = binding.namespace.get(objectId);
+  if (!stub || typeof stub.fetch !== "function") {
+    throw new Error("Durable Object stub fetch is unavailable.");
+  }
+
+  const method = normalizeDurableObjectMethod(payload.method);
+  const pathValue = String(payload.path || payload.pathname || "/invoke").trim() || "/invoke";
+  const path = pathValue.startsWith("/") ? pathValue : "/" + pathValue;
+  const headers = normalizeHeaderMap(payload.headers);
+  let body = null;
+  if (payload.body !== undefined && payload.body !== null) {
+    if (typeof payload.body === "string") {
+      body = payload.body;
+    } else {
+      if (!headers["content-type"] && !headers["Content-Type"]) {
+        headers["content-type"] = "application/json";
+      }
+      body = safeStringify(payload.body);
+    }
+  } else if (payload.json !== undefined) {
+    if (!headers["content-type"] && !headers["Content-Type"]) {
+      headers["content-type"] = "application/json";
+    }
+    body = safeStringify(payload.json);
+  }
+
+  const response = await stub.fetch("https://do" + path, {
+    method,
+    headers,
+    ...(method === "GET" || body === null ? {} : { body }),
+  });
+  const text = await response.text().catch(() => "");
+  let data = null;
+  if (text) {
+    try {
+      data = JSON.parse(text);
+    } catch {
+      data = null;
+    }
+  }
+
+  return {
+    ok: response.ok,
+    status: response.status,
+    statusText: response.statusText,
+    headers: Object.fromEntries(response.headers.entries()),
+    response: data !== null ? data : text,
+  };
+}
+
+function normalizeD1Mode(mode) {
+  const clean = String(mode || "").trim().toLowerCase();
+  if (clean === "all" || clean === "first" || clean === "raw" || clean === "run") return clean;
+  return "all";
+}
+
+function normalizeD1Params(params) {
+  if (!Array.isArray(params)) return [];
+  return params.slice(0, 64);
+}
+
+function listRuntimeEndpoints() {
+  return [
+    "/health",
+    "/flow (requires FLOW_DEBUG_TOKEN + x-debug-token)",
+    "/api (GET/POST)",
+    "/api/invoke (POST)",
+    "/api/db/health (GET, auth required)",
+    "/api/db/query (POST, auth required)",
+    "/db/health (GET, auth required)",
+    "/db/query (POST, auth required)",
+    "/api/do/health (GET, auth required)",
+    "/api/do/invoke (POST, auth required)",
+    "/do/health (GET, auth required)",
+    "/do/invoke (POST, auth required)",
+    ...(hasOpenAiEndpoint() ? ["/v1/models", "/v1/chat/completions"] : []),
+    ...(hasChatWebUiEndpoint() ? ["/chat", "/invoke"] : []),
+  ];
+}
+
+async function runD1Query(input, envSource) {
+  const binding = resolveD1Binding(envSource);
+  if (!binding.available || !binding.db) {
+    throw new Error(`D1 binding "${binding.bindingName}" is unavailable.`);
+  }
+
+  const payload = input && typeof input === "object" ? input : {};
+  const sql = String(payload.sql || payload.query || "").trim();
+  if (!sql) {
+    throw new Error("SQL query is required.");
+  }
+  if (sql.length > 20000) {
+    throw new Error("SQL query exceeds max length.");
+  }
+
+  const params = normalizeD1Params(payload.params);
+  const mode = normalizeD1Mode(payload.mode || payload.resultMode || "all");
+  const statement = binding.db.prepare(sql).bind(...params);
+
+  if (mode === "first") {
+    const row = await statement.first();
+    return { mode, row: row || null, success: true };
+  }
+  if (mode === "raw") {
+    const raw = await statement.raw();
+    return { mode, rows: raw, success: true };
+  }
+  if (mode === "run") {
+    const result = await statement.run();
+    return { mode, result, success: true };
+  }
+
+  const result = await statement.all();
+  return { mode, result, rows: Array.isArray(result?.results) ? result.results : [], success: true };
 }
 
 function normalizeHeaderMap(source) {
@@ -1302,6 +1636,26 @@ async function callConfiguredLlm(input, envSource) {
   };
 }
 
+async function handleGenericApiPost(body, envSource) {
+  const input = body && typeof body === "object" ? body : {};
+  const completion = await callConfiguredLlm(input, envSource);
+  const format = String(input.format || "").trim().toLowerCase();
+  const wantsOpenAi = format === "openai" || input.openai === true;
+  const wantsStream = wantsOpenAi && Boolean(input.stream);
+  if (wantsStream) {
+    return buildOpenAiStreamResponse(completion);
+  }
+  if (wantsOpenAi) {
+    return buildOpenAiCompletionPayload(completion);
+  }
+  return {
+    ok: true,
+    agent: AGENT_NAME,
+    completion,
+    summary: FLOW_SUMMARY,
+  };
+}
+
 const app = new Elysia()
   .use(
     cors({
@@ -1330,6 +1684,233 @@ const app = new Elysia()
       flow: FLOW,
       summary: FLOW_SUMMARY,
     };
+  })
+  .get("/api", ({ store }) => {
+    const d1 = resolveD1Binding(store);
+    const durableObject = resolveDurableObjectBinding(store);
+    return {
+      ok: true,
+      agent: AGENT_NAME,
+      description: AGENT_DESCRIPTION,
+      endpointMode: ENDPOINT_MODE,
+      endpoints: listRuntimeEndpoints(),
+      d1: {
+        binding: d1.bindingName,
+        available: d1.available,
+        databaseId: d1.databaseId,
+        databaseName: d1.databaseName,
+      },
+      durableObject: {
+        binding: durableObject.bindingName,
+        className: durableObject.className,
+        scriptName: durableObject.scriptName,
+        environment: durableObject.environment,
+        available: durableObject.available,
+      },
+      summary: FLOW_SUMMARY,
+    };
+  })
+  .post("/api", async ({ body, store, set, request }) => {
+    if (!hasWorkerAccess(request.headers, store)) {
+      set.status = 401;
+      return {
+        ok: false,
+        error: "Unauthorized. Missing or invalid worker auth / zero-trust headers.",
+      };
+    }
+    try {
+      return await handleGenericApiPost(body, store);
+    } catch (error) {
+      set.status = 502;
+      return {
+        ok: false,
+        error: error instanceof Error ? error.message : String(error),
+      };
+    }
+  })
+  .post("/api/invoke", async ({ body, store, set, request }) => {
+    if (!hasWorkerAccess(request.headers, store)) {
+      set.status = 401;
+      return {
+        ok: false,
+        error: "Unauthorized. Missing or invalid worker auth / zero-trust headers.",
+      };
+    }
+    try {
+      return await handleGenericApiPost(body, store);
+    } catch (error) {
+      set.status = 502;
+      return {
+        ok: false,
+        error: error instanceof Error ? error.message : String(error),
+      };
+    }
+  })
+  .get("/db/health", ({ store, set, request }) => {
+    if (!hasWorkerAccess(request.headers, store)) {
+      set.status = 401;
+      return {
+        ok: false,
+        error: "Unauthorized. Missing or invalid worker auth / zero-trust headers.",
+      };
+    }
+    const d1 = resolveD1Binding(store);
+    return {
+      ok: true,
+      d1: {
+        binding: d1.bindingName,
+        available: d1.available,
+        databaseId: d1.databaseId,
+        databaseName: d1.databaseName,
+      },
+    };
+  })
+  .get("/api/db/health", ({ store, set, request }) => {
+    if (!hasWorkerAccess(request.headers, store)) {
+      set.status = 401;
+      return {
+        ok: false,
+        error: "Unauthorized. Missing or invalid worker auth / zero-trust headers.",
+      };
+    }
+    const d1 = resolveD1Binding(store);
+    return {
+      ok: true,
+      d1: {
+        binding: d1.bindingName,
+        available: d1.available,
+        databaseId: d1.databaseId,
+        databaseName: d1.databaseName,
+      },
+    };
+  })
+  .post("/db/query", async ({ body, store, set, request }) => {
+    if (!hasWorkerAccess(request.headers, store)) {
+      set.status = 401;
+      return {
+        ok: false,
+        error: "Unauthorized. Missing or invalid worker auth / zero-trust headers.",
+      };
+    }
+    try {
+      const query = await runD1Query(body, store);
+      return {
+        ok: true,
+        d1: query,
+      };
+    } catch (error) {
+      set.status = 502;
+      return {
+        ok: false,
+        error: error instanceof Error ? error.message : String(error),
+      };
+    }
+  })
+  .post("/api/db/query", async ({ body, store, set, request }) => {
+    if (!hasWorkerAccess(request.headers, store)) {
+      set.status = 401;
+      return {
+        ok: false,
+        error: "Unauthorized. Missing or invalid worker auth / zero-trust headers.",
+      };
+    }
+    try {
+      const query = await runD1Query(body, store);
+      return {
+        ok: true,
+        d1: query,
+      };
+    } catch (error) {
+      set.status = 502;
+      return {
+        ok: false,
+        error: error instanceof Error ? error.message : String(error),
+      };
+    }
+  })
+  .get("/do/health", ({ store, set, request }) => {
+    if (!hasWorkerAccess(request.headers, store)) {
+      set.status = 401;
+      return {
+        ok: false,
+        error: "Unauthorized. Missing or invalid worker auth / zero-trust headers.",
+      };
+    }
+    const durableObject = resolveDurableObjectBinding(store);
+    return {
+      ok: true,
+      durableObject: {
+        binding: durableObject.bindingName,
+        className: durableObject.className,
+        scriptName: durableObject.scriptName,
+        environment: durableObject.environment,
+        available: durableObject.available,
+      },
+    };
+  })
+  .get("/api/do/health", ({ store, set, request }) => {
+    if (!hasWorkerAccess(request.headers, store)) {
+      set.status = 401;
+      return {
+        ok: false,
+        error: "Unauthorized. Missing or invalid worker auth / zero-trust headers.",
+      };
+    }
+    const durableObject = resolveDurableObjectBinding(store);
+    return {
+      ok: true,
+      durableObject: {
+        binding: durableObject.bindingName,
+        className: durableObject.className,
+        scriptName: durableObject.scriptName,
+        environment: durableObject.environment,
+        available: durableObject.available,
+      },
+    };
+  })
+  .post("/do/invoke", async ({ body, store, set, request }) => {
+    if (!hasWorkerAccess(request.headers, store)) {
+      set.status = 401;
+      return {
+        ok: false,
+        error: "Unauthorized. Missing or invalid worker auth / zero-trust headers.",
+      };
+    }
+    try {
+      const response = await runDurableObjectRequest(body, store);
+      return {
+        ok: true,
+        durableObject: response,
+      };
+    } catch (error) {
+      set.status = 502;
+      return {
+        ok: false,
+        error: error instanceof Error ? error.message : String(error),
+      };
+    }
+  })
+  .post("/api/do/invoke", async ({ body, store, set, request }) => {
+    if (!hasWorkerAccess(request.headers, store)) {
+      set.status = 401;
+      return {
+        ok: false,
+        error: "Unauthorized. Missing or invalid worker auth / zero-trust headers.",
+      };
+    }
+    try {
+      const response = await runDurableObjectRequest(body, store);
+      return {
+        ok: true,
+        durableObject: response,
+      };
+    } catch (error) {
+      set.status = 502;
+      return {
+        ok: false,
+        error: error instanceof Error ? error.message : String(error),
+      };
+    }
   })
   .get("/v1/models", ({ set, store, request }) => {
     if (!hasOpenAiEndpoint()) {
@@ -1485,6 +2066,7 @@ export const OPTIONS = app.handle;
       if (lowered === "__proto__" || lowered === "constructor" || lowered === "prototype") continue;
       defaultExtraHeaders[cleanKey] = cleanValue;
     }
+    const durableObjectClassName = normalizeCloudflareDoClassName(cloudflareConfig.doClassName || "AgentDurableObject");
 
     return `// Generated by Agent Builder IDE
 // Target: Cloudflare Worker module fallback
@@ -1500,6 +2082,13 @@ const DEFAULT_LLM_EXTRA_HEADERS = ${JSON.stringify(defaultExtraHeaders, null, 2)
 const DEFAULT_CF_ZERO_TRUST_MODE = ${JSON.stringify(cloudflareConfig.zeroTrustMode)};
 const DEFAULT_CF_ACCESS_AUD = ${JSON.stringify(cloudflareConfig.accessAud)};
 const DEFAULT_CF_ACCESS_SERVICE_TOKEN_ID = ${JSON.stringify(cloudflareConfig.accessServiceTokenId)};
+const DEFAULT_CF_D1_BINDING = ${JSON.stringify(cloudflareConfig.d1Binding)};
+const DEFAULT_CF_D1_DATABASE_ID = ${JSON.stringify(cloudflareConfig.d1DatabaseId)};
+const DEFAULT_CF_D1_DATABASE_NAME = ${JSON.stringify(cloudflareConfig.d1DatabaseName)};
+const DEFAULT_CF_DO_BINDING = ${JSON.stringify(cloudflareConfig.doBinding)};
+const DEFAULT_CF_DO_CLASS_NAME = ${JSON.stringify(durableObjectClassName)};
+const DEFAULT_CF_DO_SCRIPT_NAME = ${JSON.stringify(cloudflareConfig.doScriptName)};
+const DEFAULT_CF_DO_ENVIRONMENT = ${JSON.stringify(cloudflareConfig.doEnvironment)};
 const DEFAULT_RUNTIME_SYSTEM_PROMPT = [
   "You are Agent Builder Runtime, an execution assistant for deployed flow-based agents.",
   "Priority order: (1) safety and correctness, (2) explicit tool usage when provided, (3) concise user-facing output.",
@@ -1509,6 +2098,86 @@ const DEFAULT_RUNTIME_SYSTEM_PROMPT = [
   "If constraints prevent completion, explain the exact blocker and suggest the smallest viable next step.",
   "Keep responses practical, deterministic, and deployment-friendly.",
 ].join("\\n");
+
+function durableObjectJson(data, status = 200) {
+  return new Response(JSON.stringify(data, null, 2), {
+    status,
+    headers: {
+      "content-type": "application/json; charset=utf-8",
+      "cache-control": "no-store",
+    },
+  });
+}
+
+export class ${durableObjectClassName} {
+  constructor(state, env) {
+    this.state = state;
+    this.env = env;
+  }
+
+  async fetch(request) {
+    const url = new URL(request.url);
+    if (request.method === "GET" && (url.pathname === "/" || url.pathname === "/health")) {
+      return durableObjectJson({
+        ok: true,
+        className: DEFAULT_CF_DO_CLASS_NAME,
+        now: new Date().toISOString(),
+      });
+    }
+
+    if (request.method !== "POST") {
+      return durableObjectJson({ ok: false, error: "Method not allowed." }, 405);
+    }
+
+    let payload = {};
+    try {
+      payload = await request.json();
+    } catch {
+      // Keep empty payload.
+    }
+
+    const action = String(payload.action || payload.op || payload.mode || "echo").trim().toLowerCase();
+    const key = String(payload.key || payload.name || "default").trim() || "default";
+
+    try {
+      if (action === "get") {
+        const value = await this.state.storage.get(key);
+        return durableObjectJson({ ok: true, action, key, value: value ?? null });
+      }
+      if (action === "set" || action === "put") {
+        await this.state.storage.put(key, payload.value);
+        return durableObjectJson({ ok: true, action: "set", key });
+      }
+      if (action === "delete" || action === "del") {
+        await this.state.storage.delete(key);
+        return durableObjectJson({ ok: true, action: "delete", key });
+      }
+      if (action === "list") {
+        const limit = Math.max(1, Math.min(Number(payload.limit || 50) || 50, 200));
+        const rows = await this.state.storage.list({ limit });
+        const items = [];
+        for (const [entryKey, entryValue] of rows.entries()) {
+          items.push({ key: String(entryKey), value: entryValue });
+        }
+        return durableObjectJson({ ok: true, action: "list", items });
+      }
+      return durableObjectJson({
+        ok: true,
+        action: "echo",
+        payload,
+        now: new Date().toISOString(),
+      });
+    } catch (error) {
+      return durableObjectJson(
+        {
+          ok: false,
+          error: error instanceof Error ? error.message : String(error),
+        },
+        500,
+      );
+    }
+  }
+}
 
 function json(data, status = 200) {
   return new Response(JSON.stringify(data, null, 2), {
@@ -1627,6 +2296,217 @@ function hasOpenAiEndpoint() {
 
 function hasChatWebUiEndpoint() {
   return ENDPOINT_MODE === "chat" || ENDPOINT_MODE === "both";
+}
+
+function normalizeD1BindingName(value) {
+  const clean = String(value || "").trim().toUpperCase();
+  if (!clean) return "DB";
+  return clean
+    .replace(/[^A-Z0-9_]/g, "_")
+    .replace(/_{2,}/g, "_")
+    .replace(/^_+|_+$/g, "") || "DB";
+}
+
+function resolveD1Binding(env) {
+  const bindingName = normalizeD1BindingName(String(env.CF_D1_BINDING || DEFAULT_CF_D1_BINDING || "").trim() || "DB");
+  const candidate = env && typeof env === "object" ? env[bindingName] : null;
+  const available = Boolean(candidate && typeof candidate.prepare === "function");
+  return {
+    bindingName,
+    db: available ? candidate : null,
+    available,
+    databaseId: String(env.CF_D1_DATABASE_ID || DEFAULT_CF_D1_DATABASE_ID || "").trim(),
+    databaseName: String(env.CF_D1_DATABASE_NAME || DEFAULT_CF_D1_DATABASE_NAME || "").trim(),
+  };
+}
+
+function normalizeDoBindingName(value) {
+  const clean = String(value || "").trim().toUpperCase();
+  if (!clean) return "AGENT_DO";
+  return clean
+    .replace(/[^A-Z0-9_]/g, "_")
+    .replace(/_{2,}/g, "_")
+    .replace(/^_+|_+$/g, "") || "AGENT_DO";
+}
+
+function normalizeDoClassName(value) {
+  const raw = String(value || "").trim();
+  if (!raw) return "AgentDurableObject";
+  const clean = raw.replace(/[^A-Za-z0-9_$]/g, "_");
+  const head = /^[A-Za-z_$]/.test(clean) ? clean : "_" + clean;
+  return head || "AgentDurableObject";
+}
+
+function resolveDurableObjectBinding(env) {
+  const bindingName = normalizeDoBindingName(String(env.CF_DO_BINDING || DEFAULT_CF_DO_BINDING || "").trim() || "AGENT_DO");
+  const candidate = env && typeof env === "object" ? env[bindingName] : null;
+  const available = Boolean(
+    candidate &&
+      typeof candidate.get === "function" &&
+      (typeof candidate.idFromName === "function" ||
+        typeof candidate.idFromString === "function" ||
+        typeof candidate.newUniqueId === "function"),
+  );
+  return {
+    bindingName,
+    namespace: available ? candidate : null,
+    available,
+    className: normalizeDoClassName(String(env.CF_DO_CLASS_NAME || DEFAULT_CF_DO_CLASS_NAME || "").trim() || "AgentDurableObject"),
+    scriptName: String(env.CF_DO_SCRIPT_NAME || DEFAULT_CF_DO_SCRIPT_NAME || "").trim(),
+    environment: String(env.CF_DO_ENVIRONMENT || DEFAULT_CF_DO_ENVIRONMENT || "").trim(),
+  };
+}
+
+function resolveDurableObjectId(namespace, input) {
+  const payload = input && typeof input === "object" ? input : {};
+  const explicit = String(payload.objectId || payload.id || "").trim();
+  if (explicit && typeof namespace.idFromString === "function") {
+    try {
+      return namespace.idFromString(explicit);
+    } catch {
+      // Fall through to name based id.
+    }
+  }
+  const name = String(payload.name || payload.key || "default").trim() || "default";
+  if (typeof namespace.idFromName === "function") {
+    return namespace.idFromName(name);
+  }
+  if (typeof namespace.newUniqueId === "function") {
+    return namespace.newUniqueId();
+  }
+  throw new Error("Durable Object namespace cannot resolve object id.");
+}
+
+function normalizeDurableObjectMethod(value) {
+  const method = String(value || "POST").trim().toUpperCase();
+  if (method === "GET" || method === "POST" || method === "PUT" || method === "PATCH" || method === "DELETE") {
+    return method;
+  }
+  return "POST";
+}
+
+async function runDurableObjectRequest(input, env) {
+  const binding = resolveDurableObjectBinding(env);
+  if (!binding.available || !binding.namespace) {
+    throw new Error("Durable Object binding \"" + binding.bindingName + "\" is unavailable.");
+  }
+
+  const payload = input && typeof input === "object" ? input : {};
+  const objectId = resolveDurableObjectId(binding.namespace, payload);
+  const stub = binding.namespace.get(objectId);
+  if (!stub || typeof stub.fetch !== "function") {
+    throw new Error("Durable Object stub fetch is unavailable.");
+  }
+
+  const method = normalizeDurableObjectMethod(payload.method);
+  const pathValue = String(payload.path || payload.pathname || "/invoke").trim() || "/invoke";
+  const path = pathValue.startsWith("/") ? pathValue : "/" + pathValue;
+  const headers = normalizeHeaderMap(payload.headers);
+  let body = null;
+  if (payload.body !== undefined && payload.body !== null) {
+    if (typeof payload.body === "string") {
+      body = payload.body;
+    } else {
+      if (!headers["content-type"] && !headers["Content-Type"]) {
+        headers["content-type"] = "application/json";
+      }
+      body = safeStringify(payload.body);
+    }
+  } else if (payload.json !== undefined) {
+    if (!headers["content-type"] && !headers["Content-Type"]) {
+      headers["content-type"] = "application/json";
+    }
+    body = safeStringify(payload.json);
+  }
+
+  const response = await stub.fetch("https://do" + path, {
+    method,
+    headers,
+    ...(method === "GET" || body === null ? {} : { body }),
+  });
+  const text = await response.text().catch(() => "");
+  let data = null;
+  if (text) {
+    try {
+      data = JSON.parse(text);
+    } catch {
+      data = null;
+    }
+  }
+
+  return {
+    ok: response.ok,
+    status: response.status,
+    statusText: response.statusText,
+    headers: Object.fromEntries(response.headers.entries()),
+    response: data !== null ? data : text,
+  };
+}
+
+function normalizeD1Mode(mode) {
+  const clean = String(mode || "").trim().toLowerCase();
+  if (clean === "all" || clean === "first" || clean === "raw" || clean === "run") return clean;
+  return "all";
+}
+
+function normalizeD1Params(params) {
+  if (!Array.isArray(params)) return [];
+  return params.slice(0, 64);
+}
+
+function listRuntimeEndpoints() {
+  return [
+    "/health",
+    "/flow (debug token required)",
+    "/api (GET/POST)",
+    "/api/invoke (POST)",
+    "/api/db/health (GET, auth required)",
+    "/api/db/query (POST, auth required)",
+    "/db/health (GET, auth required)",
+    "/db/query (POST, auth required)",
+    "/api/do/health (GET, auth required)",
+    "/api/do/invoke (POST, auth required)",
+    "/do/health (GET, auth required)",
+    "/do/invoke (POST, auth required)",
+    ...(hasOpenAiEndpoint() ? ["/v1/models", "/v1/chat/completions"] : []),
+    ...(hasChatWebUiEndpoint() ? ["/chat", "/invoke"] : []),
+  ];
+}
+
+async function runD1Query(input, env) {
+  const binding = resolveD1Binding(env);
+  if (!binding.available || !binding.db) {
+    throw new Error(`D1 binding "${binding.bindingName}" is unavailable.`);
+  }
+
+  const payload = input && typeof input === "object" ? input : {};
+  const sql = String(payload.sql || payload.query || "").trim();
+  if (!sql) {
+    throw new Error("SQL query is required.");
+  }
+  if (sql.length > 20000) {
+    throw new Error("SQL query exceeds max length.");
+  }
+
+  const params = normalizeD1Params(payload.params);
+  const mode = normalizeD1Mode(payload.mode || payload.resultMode || "all");
+  const statement = binding.db.prepare(sql).bind(...params);
+
+  if (mode === "first") {
+    const row = await statement.first();
+    return { mode, row: row || null, success: true };
+  }
+  if (mode === "raw") {
+    const rows = await statement.raw();
+    return { mode, rows, success: true };
+  }
+  if (mode === "run") {
+    const result = await statement.run();
+    return { mode, result, success: true };
+  }
+
+  const result = await statement.all();
+  return { mode, result, rows: Array.isArray(result?.results) ? result.results : [], success: true };
 }
 
 function normalizeHeaderMap(source) {
@@ -2025,6 +2905,21 @@ async function callConfiguredLlm(input, env) {
   };
 }
 
+async function handleGenericApiPost(input, env) {
+  const payload = input && typeof input === "object" ? input : {};
+  const completion = await callConfiguredLlm(payload, env);
+  const format = String(payload.format || "").trim().toLowerCase();
+  const wantsOpenAi = format === "openai" || payload.openai === true;
+  const wantsStream = wantsOpenAi && Boolean(payload.stream);
+  if (wantsStream) {
+    return buildOpenAiStreamResponse(completion);
+  }
+  if (wantsOpenAi) {
+    return buildOpenAiCompletionPayload(completion);
+  }
+  return { ok: true, agent: AGENT_NAME, completion, summary: FLOW_SUMMARY };
+}
+
 async function readResponsePayload(response) {
   const raw = await response.text().catch(() => "");
   if (!raw) return null;
@@ -2066,18 +2961,198 @@ export default {
       });
     }
 
+    if (url.pathname === "/api") {
+      if (request.method === "GET") {
+        const d1 = resolveD1Binding(env);
+        const durableObject = resolveDurableObjectBinding(env);
+        return json({
+          ok: true,
+          agent: AGENT_NAME,
+          endpointMode: ENDPOINT_MODE,
+          endpoints: listRuntimeEndpoints(),
+          d1: {
+            binding: d1.bindingName,
+            available: d1.available,
+            databaseId: d1.databaseId,
+            databaseName: d1.databaseName,
+          },
+          durableObject: {
+            binding: durableObject.bindingName,
+            className: durableObject.className,
+            scriptName: durableObject.scriptName,
+            environment: durableObject.environment,
+            available: durableObject.available,
+          },
+          summary: FLOW_SUMMARY,
+        });
+      }
+
+      if (request.method === "POST") {
+        if (!hasWorkerAccess(request, env)) {
+          return json({ error: "Unauthorized. Missing or invalid worker auth / zero-trust headers." }, 401);
+        }
+        let input = {};
+        try {
+          input = await request.json();
+        } catch {
+          // Keep empty input.
+        }
+        try {
+          const responsePayload = await handleGenericApiPost(input, env);
+          if (responsePayload instanceof Response) {
+            return responsePayload;
+          }
+          return json(responsePayload);
+        } catch (error) {
+          return json(
+            {
+              ok: false,
+              error: error instanceof Error ? error.message : String(error),
+            },
+            500,
+          );
+        }
+      }
+    }
+
+    if (url.pathname === "/api/invoke") {
+      if (request.method !== "POST") {
+        return json({ error: "Method not allowed" }, 405);
+      }
+      if (!hasWorkerAccess(request, env)) {
+        return json({ error: "Unauthorized. Missing or invalid worker auth / zero-trust headers." }, 401);
+      }
+      let input = {};
+      try {
+        input = await request.json();
+      } catch {
+        // Keep empty input.
+      }
+      try {
+        const responsePayload = await handleGenericApiPost(input, env);
+        if (responsePayload instanceof Response) {
+          return responsePayload;
+        }
+        return json(responsePayload);
+      } catch (error) {
+        return json(
+          {
+            ok: false,
+            error: error instanceof Error ? error.message : String(error),
+          },
+          500,
+        );
+      }
+    }
+
+    if (url.pathname === "/db/health" || url.pathname === "/api/db/health") {
+      if (!hasWorkerAccess(request, env)) {
+        return json({ error: "Unauthorized. Missing or invalid worker auth / zero-trust headers." }, 401);
+      }
+      const d1 = resolveD1Binding(env);
+      return json({
+        ok: true,
+        d1: {
+          binding: d1.bindingName,
+          available: d1.available,
+          databaseId: d1.databaseId,
+          databaseName: d1.databaseName,
+        },
+      });
+    }
+
+    if (url.pathname === "/db/query" || url.pathname === "/api/db/query") {
+      if (request.method !== "POST") {
+        return json({ error: "Method not allowed" }, 405);
+      }
+      if (!hasWorkerAccess(request, env)) {
+        return json({ error: "Unauthorized. Missing or invalid worker auth / zero-trust headers." }, 401);
+      }
+      let input = {};
+      try {
+        input = await request.json();
+      } catch {
+        // Keep empty input.
+      }
+      try {
+        const result = await runD1Query(input, env);
+        return json({ ok: true, d1: result });
+      } catch (error) {
+        return json(
+          {
+            ok: false,
+            error: error instanceof Error ? error.message : String(error),
+          },
+          500,
+        );
+      }
+    }
+
+    if (url.pathname === "/do/health" || url.pathname === "/api/do/health") {
+      if (!hasWorkerAccess(request, env)) {
+        return json({ error: "Unauthorized. Missing or invalid worker auth / zero-trust headers." }, 401);
+      }
+      const durableObject = resolveDurableObjectBinding(env);
+      return json({
+        ok: true,
+        durableObject: {
+          binding: durableObject.bindingName,
+          className: durableObject.className,
+          scriptName: durableObject.scriptName,
+          environment: durableObject.environment,
+          available: durableObject.available,
+        },
+      });
+    }
+
+    if (url.pathname === "/do/invoke" || url.pathname === "/api/do/invoke") {
+      if (request.method !== "POST") {
+        return json({ error: "Method not allowed" }, 405);
+      }
+      if (!hasWorkerAccess(request, env)) {
+        return json({ error: "Unauthorized. Missing or invalid worker auth / zero-trust headers." }, 401);
+      }
+      let input = {};
+      try {
+        input = await request.json();
+      } catch {
+        // Keep empty input.
+      }
+      try {
+        const result = await runDurableObjectRequest(input, env);
+        return json({ ok: true, durableObject: result });
+      } catch (error) {
+        return json(
+          {
+            ok: false,
+            error: error instanceof Error ? error.message : String(error),
+          },
+          500,
+        );
+      }
+    }
+
     if (url.pathname === "/" || url.pathname === "") {
+      const d1 = resolveD1Binding(env);
+      const durableObject = resolveDurableObjectBinding(env);
       return json({
         ok: true,
         agent: AGENT_NAME,
         endpointMode: ENDPOINT_MODE,
-        endpoints: [
-          "/health",
-          "/flow (debug token required)",
-          ...(hasOpenAiEndpoint() ? ["/v1/models"] : []),
-          ...(hasChatWebUiEndpoint() ? ["/chat", "/invoke"] : []),
-          ...(hasOpenAiEndpoint() ? ["/v1/chat/completions"] : []),
-        ],
+        endpoints: listRuntimeEndpoints(),
+        d1: {
+          binding: d1.bindingName,
+          available: d1.available,
+          databaseId: d1.databaseId,
+          databaseName: d1.databaseName,
+        },
+        durableObject: {
+          binding: durableObject.bindingName,
+          className: durableObject.className,
+          scriptName: durableObject.scriptName,
+          environment: durableObject.environment,
+          available: durableObject.available,
+        },
       });
     }
 
@@ -2232,7 +3307,20 @@ export default {
 
   function buildReadme(options = {}) {
     const endpointMode = normalizeEndpointMode(options.endpointMode || "both");
-    const endpointLines = ["- /health", "- /flow (requires FLOW_DEBUG_TOKEN + x-debug-token)"];
+    const endpointLines = [
+      "- /health",
+      "- /flow (requires FLOW_DEBUG_TOKEN + x-debug-token)",
+      "- /api (GET metadata + POST invoke)",
+      "- /api/invoke (POST alias)",
+      "- /api/db/health (auth required)",
+      "- /api/db/query (auth required)",
+      "- /db/health (auth required)",
+      "- /db/query (auth required)",
+      "- /api/do/health (auth required)",
+      "- /api/do/invoke (auth required)",
+      "- /do/health (auth required)",
+      "- /do/invoke (auth required)",
+    ];
     if (endpointMode === "openai" || endpointMode === "both") {
       endpointLines.push("- /v1/models (OpenAI model list)");
       endpointLines.push("- /v1/chat/completions (OpenAI-style, supports stream + tools)");
@@ -2269,6 +3357,13 @@ export default {
       "- CF_ACCESS_AUD (required when CF_ZERO_TRUST_MODE=access_jwt)",
       "- CF_ACCESS_SERVICE_TOKEN_ID (required when CF_ZERO_TRUST_MODE=service_token)",
       "- CF_ACCESS_SERVICE_TOKEN_SECRET (configure via wrangler secret for service_token mode)",
+      "- CF_D1_BINDING (optional, default DB)",
+      "- CF_D1_DATABASE_ID (optional metadata hint)",
+      "- CF_D1_DATABASE_NAME (optional metadata hint)",
+      "- CF_DO_BINDING (optional, default AGENT_DO)",
+      "- CF_DO_CLASS_NAME (optional, default AgentDurableObject)",
+      "- CF_DO_SCRIPT_NAME (optional external DO worker)",
+      "- CF_DO_ENVIRONMENT (optional external DO environment)",
       "",
     ];
 
@@ -2290,6 +3385,7 @@ export default {
       "OpenAI-style clients (including ChatKit-style frontends) can target /v1/chat/completions directly.",
       "Configure secrets and auth tokens in your platform dashboard (Cloudflare/Vercel/GitHub), not in the IDE.",
       "For service-token mode, set secret via: wrangler secret put CF_ACCESS_SERVICE_TOKEN_SECRET",
+      "Durable Object bindings are emitted when CF_DO_SCRIPT_NAME is set (external namespace binding).",
       "",
     );
     return lines.join("\n");
@@ -2315,6 +3411,31 @@ export default {
       lines.push("", "[[routes]]", `pattern = "${escapeTomlString(config.routePattern)}"`, `zone_id = "${escapeTomlString(config.zoneId)}"`);
     }
 
+    if (config.d1DatabaseId) {
+      lines.push(
+        "",
+        "[[d1_databases]]",
+        `binding = "${escapeTomlString(config.d1Binding || "DB")}"`,
+        `database_id = "${escapeTomlString(config.d1DatabaseId)}"`,
+      );
+      if (config.d1DatabaseName) {
+        lines.push(`database_name = "${escapeTomlString(config.d1DatabaseName)}"`);
+      }
+    }
+
+    if (config.doScriptName) {
+      lines.push(
+        "",
+        "[[durable_objects.bindings]]",
+        `name = "${escapeTomlString(config.doBinding || "AGENT_DO")}"`,
+        `class_name = "${escapeTomlString(config.doClassName || "AgentDurableObject")}"`,
+        `script_name = "${escapeTomlString(config.doScriptName)}"`,
+      );
+      if (config.doEnvironment) {
+        lines.push(`environment = "${escapeTomlString(config.doEnvironment)}"`);
+      }
+    }
+
     lines.push(
       "",
       "[vars]",
@@ -2323,6 +3444,13 @@ export default {
       `CF_ZERO_TRUST_MODE = "${escapeTomlString(config.zeroTrustMode)}"`,
       `CF_ACCESS_AUD = "${escapeTomlString(config.accessAud)}"`,
       `CF_ACCESS_SERVICE_TOKEN_ID = "${escapeTomlString(config.accessServiceTokenId)}"`,
+      `CF_D1_BINDING = "${escapeTomlString(config.d1Binding || "DB")}"`,
+      `CF_D1_DATABASE_ID = "${escapeTomlString(config.d1DatabaseId)}"`,
+      `CF_D1_DATABASE_NAME = "${escapeTomlString(config.d1DatabaseName)}"`,
+      `CF_DO_BINDING = "${escapeTomlString(config.doBinding || "AGENT_DO")}"`,
+      `CF_DO_CLASS_NAME = "${escapeTomlString(config.doClassName || "AgentDurableObject")}"`,
+      `CF_DO_SCRIPT_NAME = "${escapeTomlString(config.doScriptName)}"`,
+      `CF_DO_ENVIRONMENT = "${escapeTomlString(config.doEnvironment)}"`,
       "",
       "# Set auth/debug tokens via Wrangler secrets (recommended):",
       "# wrangler secret put WORKER_AUTH_TOKEN",

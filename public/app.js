@@ -86,6 +86,7 @@
   const githubConnectionState = document.getElementById("githubConnectionState");
   const cloudflareConnectionState = document.getElementById("cloudflareConnectionState");
   const deployCfAccountIdInput = document.getElementById("deployCfAccountId");
+  const deployAgentIdInput = document.getElementById("deployAgentId");
   const deployEndpointModeInput = document.getElementById("deployEndpointMode");
   const llmProviderInput = document.getElementById("llmProvider");
   const llmEndpointInput = document.getElementById("llmEndpoint");
@@ -167,9 +168,17 @@
     cloudflareAccessAud: "akompani_cf_access_aud",
     cloudflareAccessServiceTokenId: "akompani_cf_access_service_token_id",
     cloudflareAccessServiceTokenSecret: "akompani_cf_access_service_token_secret",
+    cloudflareD1Binding: "akompani_cf_d1_binding",
+    cloudflareD1DatabaseId: "akompani_cf_d1_database_id",
+    cloudflareD1DatabaseName: "akompani_cf_d1_database_name",
+    cloudflareDoBinding: "akompani_cf_do_binding",
+    cloudflareDoClassName: "akompani_cf_do_class_name",
+    cloudflareDoScriptName: "akompani_cf_do_script_name",
+    cloudflareDoEnvironment: "akompani_cf_do_environment",
     vercelProject: "akompani_vercel_project",
     vercelTeamId: "akompani_vercel_team_id",
     deployEndpointMode: "akompani_deploy_endpoint_mode",
+    deployLinkedAgentId: "akompani_deploy_linked_agent_id",
   };
 
   let editor = null;
@@ -1626,6 +1635,32 @@
       .replace(/\s+/g, "");
   }
 
+  function normalizeCloudflareD1BindingName(value) {
+    const clean = String(value || "").trim().toUpperCase();
+    if (!clean) return "DB";
+    return clean
+      .replace(/[^A-Z0-9_]/g, "_")
+      .replace(/_{2,}/g, "_")
+      .replace(/^_+|_+$/g, "") || "DB";
+  }
+
+  function normalizeCloudflareDoBindingName(value) {
+    const clean = String(value || "").trim().toUpperCase();
+    if (!clean) return "AGENT_DO";
+    return clean
+      .replace(/[^A-Z0-9_]/g, "_")
+      .replace(/_{2,}/g, "_")
+      .replace(/^_+|_+$/g, "") || "AGENT_DO";
+  }
+
+  function normalizeCloudflareDoClassName(value) {
+    const raw = String(value || "").trim();
+    if (!raw) return "AgentDurableObject";
+    const clean = raw.replace(/[^A-Za-z0-9_$]/g, "_");
+    const head = /^[A-Za-z_$]/.test(clean) ? clean : `_${clean}`;
+    return head || "AgentDurableObject";
+  }
+
   function resolveCloudflareDeploySettings(raw = {}) {
     const source = raw && typeof raw === "object" ? raw : {};
     const zoneId = String(source.zoneId || "").trim();
@@ -1641,6 +1676,13 @@
       accessAud: String(source.accessAud || "").trim(),
       accessServiceTokenId: String(source.accessServiceTokenId || "").trim(),
       accessServiceTokenSecret: String(source.accessServiceTokenSecret || "").trim(),
+      d1Binding: normalizeCloudflareD1BindingName(source.d1Binding || "DB"),
+      d1DatabaseId: String(source.d1DatabaseId || "").trim(),
+      d1DatabaseName: String(source.d1DatabaseName || "").trim(),
+      doBinding: normalizeCloudflareDoBindingName(source.doBinding || "AGENT_DO"),
+      doClassName: normalizeCloudflareDoClassName(source.doClassName || "AgentDurableObject"),
+      doScriptName: String(source.doScriptName || "").trim(),
+      doEnvironment: String(source.doEnvironment || "").trim(),
     };
   }
 
@@ -1653,6 +1695,13 @@
       accessAud: readLocal(STORAGE_KEYS.cloudflareAccessAud),
       accessServiceTokenId: readLocal(STORAGE_KEYS.cloudflareAccessServiceTokenId),
       accessServiceTokenSecret: readSession(STORAGE_KEYS.cloudflareAccessServiceTokenSecret),
+      d1Binding: readLocal(STORAGE_KEYS.cloudflareD1Binding),
+      d1DatabaseId: readLocal(STORAGE_KEYS.cloudflareD1DatabaseId),
+      d1DatabaseName: readLocal(STORAGE_KEYS.cloudflareD1DatabaseName),
+      doBinding: readLocal(STORAGE_KEYS.cloudflareDoBinding),
+      doClassName: readLocal(STORAGE_KEYS.cloudflareDoClassName),
+      doScriptName: readLocal(STORAGE_KEYS.cloudflareDoScriptName),
+      doEnvironment: readLocal(STORAGE_KEYS.cloudflareDoEnvironment),
     });
   }
 
@@ -3222,6 +3271,7 @@
     // Load deployment data when entering deploy mode
     if (resolvedMode === "deploy") {
       loadDeployments();
+      loadDeployAgentOptions(getLinkedDeployAgentId());
       prefillDeployAgent();
     }
 
@@ -4985,6 +5035,38 @@
     }
   }
 
+  function listSavedAgents() {
+    return readJsonArrayFromLocalStorage(STORAGE_KEYS.localAgents).sort((a, b) =>
+      String(b.updatedAt || b.createdAt || "").localeCompare(String(a.updatedAt || a.createdAt || "")),
+    );
+  }
+
+  function loadDeployAgentOptions(preferredId = "") {
+    if (!deployAgentIdInput) return;
+    const agents = listSavedAgents();
+    const fallbackId = String(readLocal(STORAGE_KEYS.deployLinkedAgentId) || "").trim();
+    const targetId = String(preferredId || deployAgentIdInput.value || fallbackId).trim();
+
+    deployAgentIdInput.innerHTML = '<option value="">None (manual deploy)</option>';
+    for (const agent of agents) {
+      const option = document.createElement("option");
+      option.value = agent.id;
+      option.textContent = `${agent.name || agent.id} (${agent.id})`;
+      deployAgentIdInput.appendChild(option);
+    }
+
+    const resolvedId = agents.some((agent) => agent.id === targetId) ? targetId : "";
+    deployAgentIdInput.value = resolvedId;
+    writeLocal(STORAGE_KEYS.deployLinkedAgentId, resolvedId);
+  }
+
+  function getLinkedDeployAgentId() {
+    const candidate = String(deployAgentIdInput?.value || readLocal(STORAGE_KEYS.deployLinkedAgentId) || "").trim();
+    if (!candidate) return "";
+    const agents = listSavedAgents();
+    return agents.some((agent) => agent.id === candidate) ? candidate : "";
+  }
+
   async function loadDeployments() {
     if (!deployLogList) return;
     const deps = readJsonArrayFromLocalStorage(STORAGE_KEYS.localDeployments).sort((a, b) => {
@@ -5015,17 +5097,26 @@
   }
 
   function appendDeploymentLog(entry) {
-    const resolveAgentIdByName = (name) => {
-      const clean = String(name || "").trim().toLowerCase();
-      if (!clean) return "";
-      const agents = readJsonArrayFromLocalStorage(STORAGE_KEYS.localAgents);
-      const matched = agents.find((agent) => String(agent?.name || "").trim().toLowerCase() === clean);
-      return String(matched?.id || "");
+    const resolveAgentId = (payload) => {
+      const agents = listSavedAgents();
+      const explicit = String(payload?.agentId || "").trim();
+      if (explicit && agents.some((agent) => agent.id === explicit)) {
+        return explicit;
+      }
+
+      const cleanName = String(payload?.name || "").trim().toLowerCase();
+      if (!cleanName) return "";
+      const matched = agents.filter((agent) => String(agent?.name || "").trim().toLowerCase() === cleanName);
+      if (matched.length === 1) {
+        return String(matched[0].id || "");
+      }
+      return "";
     };
+
     const rows = readJsonArrayFromLocalStorage(STORAGE_KEYS.localDeployments);
     rows.unshift({
       id: entry.id || `deploy_${Date.now().toString(36)}`,
-      agentId: entry.agentId || resolveAgentIdByName(entry.name),
+      agentId: resolveAgentId(entry),
       name: entry.name || "Unnamed",
       target: entry.target || "unknown",
       status: entry.status || "generated",
@@ -5073,6 +5164,8 @@
       };
       agents.unshift(agent);
       writeJsonArrayToLocalStorage(STORAGE_KEYS.localAgents, agents.slice(0, 200));
+      writeLocal(STORAGE_KEYS.deployLinkedAgentId, agent.id);
+      loadDeployAgentOptions(agent.id);
       if (deployStatus) { deployStatus.textContent = `Agent "${name}" saved locally (${agent.id}).`; deployStatus.className = "deploy-status success"; }
       if (typeof AkompaniToast !== "undefined") {
         AkompaniToast.success({ title: "Saved locally", message: `${name} is ready for deploy.` });
@@ -5237,6 +5330,9 @@
     if (deployEndpointModeInput) {
       writeLocal(STORAGE_KEYS.deployEndpointMode, normalizeEndpointMode(deployEndpointModeInput.value));
     }
+    if (deployAgentIdInput) {
+      writeLocal(STORAGE_KEYS.deployLinkedAgentId, deployAgentIdInput.value);
+    }
   }
 
   function loadDeployConnectionInputs() {
@@ -5254,6 +5350,7 @@
         readLocal(STORAGE_KEYS.deployEndpointMode) || deployEndpointModeInput.value || "both",
       );
     }
+    loadDeployAgentOptions(readLocal(STORAGE_KEYS.deployLinkedAgentId));
   }
 
   function saveLlmConfig() {
@@ -5546,6 +5643,36 @@
     const apiToken = String(params?.apiToken || "").trim();
     const script = String(params?.script || "");
     const compatibilityDate = String(params?.compatibilityDate || "").trim() || new Date().toISOString().slice(0, 10);
+    const bindings = (Array.isArray(params?.bindings) ? params.bindings : [])
+      .filter((binding) => binding && typeof binding === "object")
+      .map((binding) => {
+        const type = String(binding.type || "").trim();
+        const name = String(binding.name || "").trim();
+        if (!type || !name) return null;
+
+        if (type === "d1") {
+          const id = String(binding.id || "").trim();
+          if (!id) return null;
+          return { type, name, id };
+        }
+
+        if (type === "durable_object_namespace") {
+          const className = String(binding.class_name || binding.className || "").trim();
+          const scriptName = String(binding.script_name || binding.scriptName || "").trim();
+          const environment = String(binding.environment || "").trim();
+          if (!className) return null;
+          return {
+            type,
+            name,
+            class_name: className,
+            ...(scriptName ? { script_name: scriptName } : {}),
+            ...(environment ? { environment } : {}),
+          };
+        }
+
+        return null;
+      })
+      .filter(Boolean);
 
     if (!deployUrl || !apiToken) {
       throw new Error("Cloudflare deploy URL and API token are required.");
@@ -5576,6 +5703,7 @@
                     JSON.stringify({
                       main_module: moduleFilename,
                       compatibility_date: compatibilityDate,
+                      ...(bindings.length ? { bindings } : {}),
                     }),
                   ],
                   { type: "application/json" },
@@ -5600,6 +5728,7 @@
                     JSON.stringify({
                       body_part: "script",
                       compatibility_date: compatibilityDate,
+                      ...(bindings.length ? { bindings } : {}),
                     }),
                   ],
                   { type: "application/json" },
@@ -5610,29 +5739,34 @@
             })(),
           }),
       },
-      {
-        id: "module_content_type",
-        run: () =>
-          cloudflareApiRequest(deployUrl, apiToken, {
-            method: "PUT",
-            headers: {
-              "Content-Type": "application/javascript+module",
-            },
-            body: script,
-          }),
-      },
-      {
-        id: "plain_javascript",
-        run: () =>
-          cloudflareApiRequest(deployUrl, apiToken, {
-            method: "PUT",
-            headers: {
-              "Content-Type": "application/javascript",
-            },
-            body: script,
-          }),
-      },
     ];
+
+    if (!bindings.length) {
+      attempts.push(
+        {
+          id: "module_content_type",
+          run: () =>
+            cloudflareApiRequest(deployUrl, apiToken, {
+              method: "PUT",
+              headers: {
+                "Content-Type": "application/javascript+module",
+              },
+              body: script,
+            }),
+        },
+        {
+          id: "plain_javascript",
+          run: () =>
+            cloudflareApiRequest(deployUrl, apiToken, {
+              method: "PUT",
+              headers: {
+                "Content-Type": "application/javascript",
+              },
+              body: script,
+            }),
+        },
+      );
+    }
 
     let lastError = null;
     for (const attempt of attempts) {
@@ -5961,6 +6095,7 @@
     const endpointMode = normalizeEndpointMode(
       deployEndpointModeInput?.value || readLocal(STORAGE_KEYS.deployEndpointMode) || "both",
     );
+    const linkedAgentId = getLinkedDeployAgentId();
     const deployObject = buildDeployObjectForCurrentFlow(name, description, targetId, endpointMode);
 
     const targetPlatform = String(targetDef?.platform || "").trim();
@@ -5998,6 +6133,7 @@
           );
           appendDeploymentLog({
             id: `obj_${Date.now().toString(36)}`,
+            agentId: linkedAgentId,
             name,
             target: targetId,
             status: "generated",
@@ -6032,6 +6168,7 @@
         if (steps) steps.innerHTML = '<div class="deploy-step completed"><span class="deploy-step-icon">&#x2713;</span><span>Deployed + object generated</span></div>';
         appendDeploymentLog({
           id: `vercel_${Date.now().toString(36)}`,
+          agentId: linkedAgentId,
           name,
           target: targetId,
           status: "deployed",
@@ -6063,6 +6200,7 @@
         );
         appendDeploymentLog({
           id: `obj_${Date.now().toString(36)}`,
+          agentId: linkedAgentId,
           name,
           target: targetId,
           status: "generated",
@@ -6100,6 +6238,31 @@
       const script = generateWorkerScript(name, description, targetId, endpointMode);
       const deployUrl = `https://api.cloudflare.com/client/v4/accounts/${encodeURIComponent(accountId)}/workers/scripts/${encodeURIComponent(workerName)}`;
       const compatibilityDate = getDeployObjectCompatibilityDate(deployObject);
+      const d1Bindings = String(cloudflareSettings.d1DatabaseId || "").trim()
+        ? [
+            {
+              type: "d1",
+              name: normalizeCloudflareD1BindingName(cloudflareSettings.d1Binding || "DB"),
+              id: String(cloudflareSettings.d1DatabaseId || "").trim(),
+            },
+          ]
+        : [];
+      const doBindingName = normalizeCloudflareDoBindingName(cloudflareSettings.doBinding || "AGENT_DO");
+      const doClassName = normalizeCloudflareDoClassName(cloudflareSettings.doClassName || "AgentDurableObject");
+      const doScriptName = String(cloudflareSettings.doScriptName || "").trim();
+      const doEnvironment = String(cloudflareSettings.doEnvironment || "").trim();
+      const doBindings = doScriptName
+        ? [
+            {
+              type: "durable_object_namespace",
+              name: doBindingName,
+              class_name: doClassName,
+              script_name: doScriptName,
+              ...(doEnvironment ? { environment: doEnvironment } : {}),
+            },
+          ]
+        : [];
+      const metadataBindings = [...d1Bindings, ...doBindings];
       let uploadResult = null;
       let uploadError = null;
       for (let attempt = 0; attempt < 3; attempt += 1) {
@@ -6109,6 +6272,7 @@
             apiToken,
             script,
             compatibilityDate,
+            bindings: metadataBindings,
           });
           uploadError = null;
           break;
@@ -6174,11 +6338,19 @@
       if (steps) steps.innerHTML = '<div class="deploy-step completed"><span class="deploy-step-icon">&#x2713;</span><span>Deployed + object generated</span></div>';
       appendDeploymentLog({
         id: `cf_${Date.now().toString(36)}`,
+        agentId: linkedAgentId,
         name,
         target: targetId || "cloudflare_workers",
         status: "deployed",
         updatedAt: new Date().toISOString(),
         url,
+        d1Binding: d1Bindings.length ? String(cloudflareSettings.d1Binding || "DB") : "",
+        d1DatabaseId: d1Bindings.length ? String(cloudflareSettings.d1DatabaseId || "").trim() : "",
+        d1DatabaseName: d1Bindings.length ? String(cloudflareSettings.d1DatabaseName || "").trim() : "",
+        doBinding: doBindings.length ? doBindingName : "",
+        doClassName: doBindings.length ? doClassName : "",
+        doScriptName: doBindings.length ? doScriptName : "",
+        doEnvironment: doBindings.length ? doEnvironment : "",
         deployObject,
       });
       loadDeployments();
@@ -6203,6 +6375,7 @@
       }
       appendDeploymentLog({
         id: `obj_${Date.now().toString(36)}`,
+        agentId: linkedAgentId,
         name,
         target: targetId,
         status: "generated",
@@ -6342,6 +6515,7 @@
     const branch = branchInput ? branchInput.value.trim() : "main";
     const message = messageInput ? messageInput.value.trim() : "Deploy agent via Akompani";
     const targetId = getSelectedDeployTarget();
+    const linkedAgentId = getLinkedDeployAgentId();
 
     if (!name || !repoFullName) {
       if (typeof AkompaniToast !== "undefined") AkompaniToast.warning({ title: "Missing fields", message: "Agent name and repository are required." });
@@ -6406,6 +6580,7 @@
 
       appendDeploymentLog({
         id: `gh_${Date.now().toString(36)}`,
+        agentId: linkedAgentId,
         name,
         target: `github:${targetId}`,
         status: "generated",
@@ -6449,6 +6624,11 @@
     }
     if (deployEndpointModeInput) {
       deployEndpointModeInput.addEventListener("change", () => {
+        persistDeployConnectionInputs();
+      });
+    }
+    if (deployAgentIdInput) {
+      deployAgentIdInput.addEventListener("change", () => {
         persistDeployConnectionInputs();
       });
     }

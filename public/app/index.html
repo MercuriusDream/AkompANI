@@ -290,6 +290,13 @@
                   <label class="deploy-label" for="deployAgentDesc">Description</label>
                   <textarea id="deployAgentDesc" class="form-textarea" rows="2" placeholder="What does this agent do?"></textarea>
                 </div>
+                <div class="deploy-field">
+                  <label class="deploy-label" for="deployAgentId">Linked Saved Agent (optional)</label>
+                  <select id="deployAgentId" class="form-select">
+                    <option value="">None (manual deploy)</option>
+                  </select>
+                  <span class="field-hint">Link deploy records to a saved agent so Chat Console uses the correct runtime.</span>
+                </div>
               </div>
             </div>
 
@@ -501,6 +508,44 @@
                     <label for="cfAccountId">Account ID</label>
                     <input id="cfAccountId" type="text" class="form-input" placeholder="Your Cloudflare Account ID" autocomplete="off" />
                     <span class="field-hint">Found in Cloudflare dashboard sidebar</span>
+                  </div>
+                  <div class="settings-field-grid">
+                    <div class="settings-field">
+                      <label for="cfD1Binding">D1 Binding Name</label>
+                      <input id="cfD1Binding" type="text" class="form-input" placeholder="DB" autocomplete="off" />
+                    </div>
+                    <div class="settings-field">
+                      <label for="cfD1DatabaseId">D1 Database ID</label>
+                      <input id="cfD1DatabaseId" type="text" class="form-input" placeholder="xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx" autocomplete="off" />
+                    </div>
+                  </div>
+                  <div class="settings-field">
+                    <label for="cfD1DatabaseName">D1 Database Name (optional)</label>
+                    <input id="cfD1DatabaseName" type="text" class="form-input" placeholder="my_agent_db" autocomplete="off" />
+                    <span class="field-hint">Optional Cloudflare D1 binding. See <a href="https://developers.cloudflare.com/workers/databases/" target="_blank" rel="noopener noreferrer">Workers Databases docs</a>.</span>
+                  </div>
+                  <div class="settings-field-grid">
+                    <div class="settings-field">
+                      <label for="cfDoBinding">Durable Object Binding Name</label>
+                      <input id="cfDoBinding" type="text" class="form-input" placeholder="AGENT_DO" autocomplete="off" />
+                    </div>
+                    <div class="settings-field">
+                      <label for="cfDoClassName">Durable Object Class Name</label>
+                      <input id="cfDoClassName" type="text" class="form-input" placeholder="AgentDurableObject" autocomplete="off" />
+                    </div>
+                  </div>
+                  <div class="settings-field-grid">
+                    <div class="settings-field">
+                      <label for="cfDoScriptName">Durable Object Script Name</label>
+                      <input id="cfDoScriptName" type="text" class="form-input" placeholder="existing-do-worker" autocomplete="off" />
+                    </div>
+                    <div class="settings-field">
+                      <label for="cfDoEnvironment">Durable Object Environment (optional)</label>
+                      <input id="cfDoEnvironment" type="text" class="form-input" placeholder="production" autocomplete="off" />
+                    </div>
+                  </div>
+                  <div class="settings-field">
+                    <span class="field-hint">To bind Durable Objects during direct deploy, provide a script name for an existing namespace. See <a href="https://developers.cloudflare.com/durable-objects/" target="_blank" rel="noopener noreferrer">Durable Objects docs</a>.</span>
                   </div>
                   <div class="settings-field-grid">
                     <div class="settings-field">

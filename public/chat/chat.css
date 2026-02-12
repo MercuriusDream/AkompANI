@@ -243,6 +243,28 @@
   justify-content: flex-end;
 }
 
+.chat-mobile-controls {
+  display: none;
+  padding: 0 24px 12px;
+  gap: 8px;
+  flex-direction: column;
+}
+
+.chat-mobile-row {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
+.chat-mobile-select {
+  min-width: 0;
+  flex: 1;
+}
+
+.chat-mobile-toggle {
+  flex-shrink: 0;
+}
+
 .chat-mode-label {
   font-size: 10px;
   letter-spacing: 0.05em;
@@ -704,6 +726,11 @@
   .chat-header-actions {
     width: 100%;
     justify-content: flex-start;
+  }
+
+  .chat-mobile-controls {
+    display: flex;
+    padding: 0 16px 10px;
   }
   
   .message {

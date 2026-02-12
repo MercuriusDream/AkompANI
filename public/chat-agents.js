@@ -2,6 +2,10 @@
   const refreshBtn = document.getElementById("refreshBtn");
   const showAllToggle = document.getElementById("showAllToggle");
   const chatModeSelect = document.getElementById("chatModeSelect");
+  const mobileAgentSelect = document.getElementById("mobileAgentSelect");
+  const mobileThreadSelect = document.getElementById("mobileThreadSelect");
+  const mobileShowAllToggle = document.getElementById("mobileShowAllToggle");
+  const mobileNewThreadBtn = document.getElementById("mobileNewThreadBtn");
   const agentList = document.getElementById("agentList");
   const threadList = document.getElementById("threadList");
   const newThreadBtn = document.getElementById("newThreadBtn");
@@ -37,6 +41,19 @@
     cfToken: "akompani_oauth_cloudflare_token",
     cfTokenLegacy: "akompani_cf_api_token",
     cfAccountId: "akompani_cf_account_id",
+    cfWorkersDev: "akompani_cf_workers_dev",
+    cfZoneId: "akompani_cf_zone_id",
+    cfRoutePattern: "akompani_cf_route_pattern",
+    cfZeroTrustMode: "akompani_cf_zero_trust_mode",
+    cfAccessAud: "akompani_cf_access_aud",
+    cfAccessServiceTokenId: "akompani_cf_access_service_token_id",
+    cfD1Binding: "akompani_cf_d1_binding",
+    cfD1DatabaseId: "akompani_cf_d1_database_id",
+    cfD1DatabaseName: "akompani_cf_d1_database_name",
+    cfDoBinding: "akompani_cf_do_binding",
+    cfDoClassName: "akompani_cf_do_class_name",
+    cfDoScriptName: "akompani_cf_do_script_name",
+    cfDoEnvironment: "akompani_cf_do_environment",
     workerAuthToken: "akompani_worker_auth_token",
   };
 
@@ -156,11 +173,17 @@
 
   function deploymentMatchesAgent(deployment, agent) {
     if (!deployment || !agent) return false;
-    if (deployment.agentId === agent.id) return true;
+    const deploymentAgentId = String(deployment.agentId || "").trim();
+    if (deploymentAgentId) {
+      return deploymentAgentId === agent.id;
+    }
 
     const depName = String(deployment.name || "").trim().toLowerCase();
-    const agentName = String(agent.name || "").trim().toLowerCase();
-    return Boolean(depName && agentName && depName === agentName);
+    if (!depName) return false;
+    const matchedAgents = state.agents.filter(
+      (candidate) => String(candidate?.name || "").trim().toLowerCase() === depName,
+    );
+    return matchedAgents.length === 1 && matchedAgents[0].id === agent.id;
   }
 
   function deploymentsForAgent(agentId) {
@@ -172,7 +195,7 @@
   function latestDeployment(agentId) {
     const rows = deploymentsForAgent(agentId).filter((item) => {
       const status = String(item?.status || "").toLowerCase();
-      return status === "generated" || status === "deployed" || status === "success";
+      return status === "deployed" || status === "success";
     });
     return rows[0] || null;
   }
@@ -180,7 +203,7 @@
   function latestCloudflareDeployment(agentId) {
     const rows = deploymentsForAgent(agentId).filter((item) => {
       const status = String(item?.status || "").toLowerCase();
-      if (!(status === "generated" || status === "deployed" || status === "success")) return false;
+      if (!(status === "deployed" || status === "success")) return false;
       const target = String(item.target || "").toLowerCase();
       const url = String(item.url || "").trim();
       return target.includes("cloudflare") && /^https?:\/\//i.test(url);
@@ -211,6 +234,44 @@
 
   function getWorkerAuthToken() {
     return readSession(STORAGE.workerAuthToken) || readLocal(STORAGE.workerAuthToken);
+  }
+
+  function normalizeCloudflareD1BindingName(input) {
+    const clean = String(input || "").trim().toUpperCase();
+    if (!clean) return "DB";
+    return clean.replace(/[^A-Z0-9_]/g, "_").replace(/_{2,}/g, "_").replace(/^_+|_+$/g, "") || "DB";
+  }
+
+  function normalizeCloudflareDoBindingName(input) {
+    const clean = String(input || "").trim().toUpperCase();
+    if (!clean) return "AGENT_DO";
+    return clean.replace(/[^A-Z0-9_]/g, "_").replace(/_{2,}/g, "_").replace(/^_+|_+$/g, "") || "AGENT_DO";
+  }
+
+  function normalizeCloudflareDoClassName(input) {
+    const raw = String(input || "").trim();
+    if (!raw) return "AgentDurableObject";
+    const clean = raw.replace(/[^A-Za-z0-9_$]/g, "_");
+    const head = /^[A-Za-z_$]/.test(clean) ? clean : `_${clean}`;
+    return head || "AgentDurableObject";
+  }
+
+  function getCloudflareDeployConfig() {
+    return {
+      workersDevEnabled: String(readLocal(STORAGE.cfWorkersDev) || "true").toLowerCase() !== "false",
+      zoneId: readLocal(STORAGE.cfZoneId),
+      routePattern: readLocal(STORAGE.cfRoutePattern),
+      zeroTrustMode: readLocal(STORAGE.cfZeroTrustMode),
+      accessAud: readLocal(STORAGE.cfAccessAud),
+      accessServiceTokenId: readLocal(STORAGE.cfAccessServiceTokenId),
+      d1Binding: normalizeCloudflareD1BindingName(readLocal(STORAGE.cfD1Binding) || "DB"),
+      d1DatabaseId: readLocal(STORAGE.cfD1DatabaseId),
+      d1DatabaseName: readLocal(STORAGE.cfD1DatabaseName),
+      doBinding: normalizeCloudflareDoBindingName(readLocal(STORAGE.cfDoBinding) || "AGENT_DO"),
+      doClassName: normalizeCloudflareDoClassName(readLocal(STORAGE.cfDoClassName) || "AgentDurableObject"),
+      doScriptName: readLocal(STORAGE.cfDoScriptName),
+      doEnvironment: readLocal(STORAGE.cfDoEnvironment),
+    };
   }
 
   function getIdeRuntime() {
@@ -366,6 +427,7 @@
   function generateWorkerScript(agent) {
     const name = String(agent?.name || "Akompani Agent");
     const drawflow = agent?.flow || { drawflow: { Home: { data: {} } } };
+    const endpointMode = String(agent?.deploy?.preferredEndpointMode || "both");
     const ide = getIdeRuntime();
     if (ide?.buildCloudflareWorkerModule) {
       return ide.buildCloudflareWorkerModule({
@@ -373,7 +435,8 @@
         description: String(agent?.description || ""),
         drawflow,
         providerConfig: getLlmConfig(),
-        endpointMode: "both",
+        endpointMode,
+        cloudflareConfig: getCloudflareDeployConfig(),
       });
     }
 
@@ -546,6 +609,45 @@
     const deployUrl = `https://api.cloudflare.com/client/v4/accounts/${encodeURIComponent(accountId)}/workers/scripts/${encodeURIComponent(workerName)}`;
     const compatibilityDate = getCompatibilityDate(script);
     const moduleFilename = "index.js";
+    const cloudflareConfig = getCloudflareDeployConfig();
+    const d1DatabaseId = String(cloudflareConfig.d1DatabaseId || "").trim();
+    const d1DatabaseName = String(cloudflareConfig.d1DatabaseName || "").trim();
+    const d1Binding = normalizeCloudflareD1BindingName(cloudflareConfig.d1Binding || "DB");
+    const d1Bindings = d1DatabaseId
+      ? [
+          {
+            type: "d1",
+            name: d1Binding,
+            id: d1DatabaseId,
+          },
+        ]
+      : [];
+    const doBinding = normalizeCloudflareDoBindingName(cloudflareConfig.doBinding || "AGENT_DO");
+    const doClassName = normalizeCloudflareDoClassName(cloudflareConfig.doClassName || "AgentDurableObject");
+    const doScriptName = String(cloudflareConfig.doScriptName || "").trim();
+    const doEnvironment = String(cloudflareConfig.doEnvironment || "").trim();
+    const doBindings = doScriptName
+      ? [
+          {
+            type: "durable_object_namespace",
+            name: doBinding,
+            class_name: doClassName,
+            script_name: doScriptName,
+            ...(doEnvironment ? { environment: doEnvironment } : {}),
+          },
+        ]
+      : [];
+    const metadataBindings = [...d1Bindings, ...doBindings];
+    const moduleMetadata = {
+      main_module: moduleFilename,
+      compatibility_date: compatibilityDate,
+      ...(metadataBindings.length ? { bindings: metadataBindings } : {}),
+    };
+    const serviceWorkerMetadata = {
+      body_part: "script",
+      compatibility_date: compatibilityDate,
+      ...(metadataBindings.length ? { bindings: metadataBindings } : {}),
+    };
     const attempts = [
       {
         id: "module_multipart",
@@ -558,10 +660,7 @@
                 "metadata",
                 new Blob(
                   [
-                    JSON.stringify({
-                      main_module: moduleFilename,
-                      compatibility_date: compatibilityDate,
-                    }),
+                    JSON.stringify(moduleMetadata),
                   ],
                   { type: "application/json" },
                 ),
@@ -582,10 +681,7 @@
                 "metadata",
                 new Blob(
                   [
-                    JSON.stringify({
-                      body_part: "script",
-                      compatibility_date: compatibilityDate,
-                    }),
+                    JSON.stringify(serviceWorkerMetadata),
                   ],
                   { type: "application/json" },
                 ),
@@ -595,29 +691,34 @@
             })(),
           }),
       },
-      {
-        id: "module_content_type",
-        run: () =>
-          cloudflareApiRequest(deployUrl, token, {
-            method: "PUT",
-            headers: {
-              "Content-Type": "application/javascript+module",
-            },
-            body: script,
-          }),
-      },
-      {
-        id: "plain_javascript",
-        run: () =>
-          cloudflareApiRequest(deployUrl, token, {
-            method: "PUT",
-            headers: {
-              "Content-Type": "application/javascript",
-            },
-            body: script,
-          }),
-      },
     ];
+
+    if (!metadataBindings.length) {
+      attempts.push(
+        {
+          id: "module_content_type",
+          run: () =>
+            cloudflareApiRequest(deployUrl, token, {
+              method: "PUT",
+              headers: {
+                "Content-Type": "application/javascript+module",
+              },
+              body: script,
+            }),
+        },
+        {
+          id: "plain_javascript",
+          run: () =>
+            cloudflareApiRequest(deployUrl, token, {
+              method: "PUT",
+              headers: {
+                "Content-Type": "application/javascript",
+              },
+              body: script,
+            }),
+        },
+      );
+    }
 
     let uploadSucceeded = false;
     let lastError = null;
@@ -664,6 +765,13 @@
       url,
       workerName,
       accountId,
+      d1Binding: d1Bindings.length ? d1Binding : "",
+      d1DatabaseId: d1Bindings.length ? d1DatabaseId : "",
+      d1DatabaseName: d1Bindings.length ? d1DatabaseName : "",
+      doBinding: doBindings.length ? doBinding : "",
+      doClassName: doBindings.length ? doClassName : "",
+      doScriptName: doBindings.length ? doScriptName : "",
+      doEnvironment: doBindings.length ? doEnvironment : "",
       source: "chat_agents_static",
     };
 
@@ -839,43 +947,64 @@
     }
 
     let response;
+    const openAiPayload = {
+      model: "runtime-default",
+      stream: true,
+      messages: [
+        ...history,
+        { role: "user", content: text },
+      ],
+      metadata: {
+        threadId,
+        agentId: agent.id,
+        source: "chat_agents_static",
+      },
+    };
+    const invokePayload = {
+      prompt: text,
+      message: text,
+      threadId,
+      agentId: agent.id,
+      history,
+      source: "chat_agents_static",
+    };
+    const attempts = [
+      { path: "/v1/chat/completions", payload: openAiPayload },
+      { path: "/api", payload: { ...openAiPayload, prompt: text, format: "openai" } },
+      { path: "/invoke", payload: invokePayload },
+      { path: "/api/invoke", payload: invokePayload },
+    ];
     try {
-      response = await fetch(`${baseUrl}/v1/chat/completions`, {
-        method: "POST",
-        headers,
-        body: JSON.stringify({
-          model: "runtime-default",
-          stream: true,
-          messages: [
-            ...history,
-            { role: "user", content: text },
-          ],
-          metadata: {
-            threadId,
-            agentId: agent.id,
-            source: "chat_agents_static",
-          },
-        }),
-        signal: controller.signal,
-      });
-      if (response.status === 404) {
-        response = await fetch(`${baseUrl}/invoke`, {
+      let lastEndpoint = "";
+      let attempted = 0;
+      for (const attempt of attempts) {
+        attempted += 1;
+        lastEndpoint = attempt.path;
+        response = await fetch(`${baseUrl}${attempt.path}`, {
           method: "POST",
           headers,
-          body: JSON.stringify({
-            prompt: text,
-            message: text,
-            threadId,
-            agentId: agent.id,
-            history,
-            source: "chat_agents_static",
-          }),
+          body: JSON.stringify(attempt.payload),
           signal: controller.signal,
         });
+        if (response.status === 404 || response.status === 405) {
+          if (attempted < attempts.length) {
+            continue;
+          }
+        }
+        break;
+      }
+      if (!response) {
+        throw new Error("No runtime response.");
+      }
+      if ((response.status === 404 || response.status === 405) && lastEndpoint) {
+        throw new Error(`No compatible endpoint found on worker (last tried: ${lastEndpoint}).`);
       }
     } catch (err) {
       clearTimeout(cfTimeoutId);
       if (err.name === "AbortError") throw new Error("Request timed out (60s). The deployment may be slow or unreachable.");
+      if (err instanceof Error && /^No compatible endpoint found/i.test(err.message)) {
+        throw err;
+      }
       throw new Error(`Network error: ${err.message}`);
     }
     clearTimeout(cfTimeoutId);
@@ -915,6 +1044,9 @@
       body?.response ||
       body?.content ||
       body?.message ||
+      body?.completion?.reply ||
+      body?.completion?.message?.content ||
+      body?.completion?.raw?.choices?.[0]?.message?.content ||
       body?.output?.text ||
       body?.result?.output;
 
@@ -929,13 +1061,18 @@
     return stringify(body);
   }
 
-  function renderAgentRows() {
-    const rows = state.agents
+  function visibleAgentRows() {
+    return state.agents
       .map((agent) => ({
         agent,
         finalized: isFinalized(agent.id),
       }))
       .filter((row) => (state.showAll ? true : row.finalized));
+  }
+
+  function renderAgentRows() {
+    if (!agentList) return;
+    const rows = visibleAgentRows();
 
     agentList.innerHTML = "";
     if (rows.length === 0) {
@@ -965,7 +1102,7 @@
       if (row.finalized) {
         status.classList.add("finalized");
         status.textContent = "Finalized";
-      } else if (latestEval(row.agent.id) || latestDeployment(row.agent.id)) {
+      } else if (latestEval(row.agent.id) || deploymentsForAgent(row.agent.id).length > 0) {
         status.classList.add("pending");
         status.textContent = "Partial";
       } else {
@@ -991,6 +1128,58 @@
       });
 
       agentList.appendChild(card);
+    }
+  }
+
+  function renderMobileControls() {
+    if (mobileShowAllToggle) {
+      mobileShowAllToggle.checked = state.showAll;
+      mobileShowAllToggle.disabled = state.busy;
+    }
+
+    if (mobileAgentSelect) {
+      const rows = visibleAgentRows();
+      mobileAgentSelect.innerHTML = "";
+      const placeholder = document.createElement("option");
+      placeholder.value = "";
+      placeholder.textContent = rows.length ? "Select agent..." : "No agents available";
+      mobileAgentSelect.appendChild(placeholder);
+      for (const row of rows) {
+        const option = document.createElement("option");
+        option.value = row.agent.id;
+        option.textContent = row.agent.name || row.agent.id;
+        mobileAgentSelect.appendChild(option);
+      }
+      const hasSelected = rows.some((row) => row.agent.id === state.selectedAgentId);
+      mobileAgentSelect.value = hasSelected ? state.selectedAgentId : "";
+      mobileAgentSelect.disabled = state.busy || rows.length === 0;
+    }
+
+    if (mobileThreadSelect) {
+      mobileThreadSelect.innerHTML = "";
+      const placeholder = document.createElement("option");
+      placeholder.value = "";
+      if (!state.selectedAgentId) {
+        placeholder.textContent = "Select agent first";
+      } else if (!state.threads.length) {
+        placeholder.textContent = "No threads yet";
+      } else {
+        placeholder.textContent = "Select thread...";
+      }
+      mobileThreadSelect.appendChild(placeholder);
+      for (const thread of state.threads) {
+        const option = document.createElement("option");
+        option.value = thread.id;
+        option.textContent = thread.title || "Untitled thread";
+        mobileThreadSelect.appendChild(option);
+      }
+      const hasSelected = state.threads.some((thread) => thread.id === state.selectedThreadId);
+      mobileThreadSelect.value = hasSelected ? state.selectedThreadId : "";
+      mobileThreadSelect.disabled = state.busy || !state.selectedAgentId;
+    }
+
+    if (mobileNewThreadBtn) {
+      mobileNewThreadBtn.disabled = state.busy || !state.selectedAgentId;
     }
   }
 
@@ -1189,8 +1378,16 @@
   }
 
   function render() {
+    const rows = visibleAgentRows();
+    if (state.selectedAgentId && !rows.some((row) => row.agent.id === state.selectedAgentId)) {
+      state.selectedAgentId = rows[0]?.agent?.id || "";
+      state.selectedThreadId = "";
+      refreshThreads();
+    }
+
     renderAgentRows();
     renderThreadRows();
+    renderMobileControls();
     renderHeaderAndDetails();
     renderMessages();
 
@@ -1206,6 +1403,8 @@
     if (renameThreadBtn) renameThreadBtn.disabled = state.busy || !thread;
     if (archiveThreadBtn) archiveThreadBtn.disabled = state.busy || !thread;
     if (deleteThreadBtn) deleteThreadBtn.disabled = state.busy || !thread;
+    if (showAllToggle) showAllToggle.checked = state.showAll;
+    if (mobileShowAllToggle) mobileShowAllToggle.checked = state.showAll;
 
     if (sendHint) {
       if (!agent) {
@@ -1218,7 +1417,12 @@
           if (runtime.mode === "cloudflare") {
             sendHint.textContent = "Runtime: Cloudflare deployed worker.";
           } else {
-            sendHint.textContent = "Runtime: Local BYOK test via your configured LLM endpoint.";
+            const mode = getRuntimeMode();
+            if (mode === "auto") {
+              sendHint.textContent = "Runtime: Local BYOK test (no deployed worker linked; auto fallback).";
+            } else {
+              sendHint.textContent = "Runtime: Local BYOK test via your configured LLM endpoint.";
+            }
           }
         } catch (error) {
           sendHint.textContent = error.message;
@@ -1493,6 +1697,19 @@
     if (showAllToggle) {
       showAllToggle.addEventListener("change", () => {
         state.showAll = Boolean(showAllToggle.checked);
+        if (mobileShowAllToggle) {
+          mobileShowAllToggle.checked = state.showAll;
+        }
+        render();
+      });
+    }
+
+    if (mobileShowAllToggle) {
+      mobileShowAllToggle.addEventListener("change", () => {
+        state.showAll = Boolean(mobileShowAllToggle.checked);
+        if (showAllToggle) {
+          showAllToggle.checked = state.showAll;
+        }
         render();
       });
     }
@@ -1504,8 +1721,35 @@
       });
     }
 
+    if (mobileAgentSelect) {
+      mobileAgentSelect.addEventListener("change", () => {
+        const next = String(mobileAgentSelect.value || "").trim();
+        state.selectedAgentId = next;
+        state.selectedThreadId = "";
+        refreshThreads();
+        render();
+      });
+    }
+
+    if (mobileThreadSelect) {
+      mobileThreadSelect.addEventListener("change", () => {
+        state.selectedThreadId = String(mobileThreadSelect.value || "").trim();
+        render();
+      });
+    }
+
     if (newThreadBtn) {
       newThreadBtn.addEventListener("click", async () => {
+        try {
+          await createThread();
+        } catch (error) {
+          setStatus({ error: error.message });
+        }
+      });
+    }
+
+    if (mobileNewThreadBtn) {
+      mobileNewThreadBtn.addEventListener("click", async () => {
         try {
           await createThread();
         } catch (error) {

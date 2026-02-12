@@ -126,6 +126,24 @@
           </div>
         </header>
 
+        <div class="chat-mobile-controls">
+          <div class="chat-mobile-row">
+            <select id="mobileAgentSelect" class="form-select chat-mobile-select">
+              <option value="">Select agent...</option>
+            </select>
+            <label class="toggle-label chat-mobile-toggle">
+              <input id="mobileShowAllToggle" type="checkbox" />
+              <span>Show all</span>
+            </label>
+          </div>
+          <div class="chat-mobile-row">
+            <select id="mobileThreadSelect" class="form-select chat-mobile-select">
+              <option value="">Select thread...</option>
+            </select>
+            <button id="mobileNewThreadBtn" class="btn btn-primary btn-sm">New</button>
+          </div>
+        </div>
+
         <div id="messages" class="messages">
           <div class="welcome-message">
             <div class="welcome-icon">
@@ -138,12 +156,12 @@
 
         <footer class="chat-composer">
           <div class="composer-input-wrap">
-            <textarea id="promptInput" class="composer-input" placeholder="Message finalized agent..." spellcheck="false" disabled></textarea>
+            <textarea id="promptInput" class="composer-input" placeholder="Message agent..." spellcheck="false" disabled></textarea>
             <button id="sendBtn" class="composer-send" disabled>
               <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
             </button>
           </div>
-          <p id="sendHint" class="composer-hint">Only finalized + deployed agents can be prompted by default</p>
+          <p id="sendHint" class="composer-hint">Only finalized agents can be prompted by default</p>
         </footer>
       </section>
 

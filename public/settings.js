@@ -16,6 +16,13 @@
     cfAccessAud: "akompani_cf_access_aud",
     cfAccessServiceTokenId: "akompani_cf_access_service_token_id",
     cfAccessServiceTokenSecret: "akompani_cf_access_service_token_secret",
+    cfD1Binding: "akompani_cf_d1_binding",
+    cfD1DatabaseId: "akompani_cf_d1_database_id",
+    cfD1DatabaseName: "akompani_cf_d1_database_name",
+    cfDoBinding: "akompani_cf_do_binding",
+    cfDoClassName: "akompani_cf_do_class_name",
+    cfDoScriptName: "akompani_cf_do_script_name",
+    cfDoEnvironment: "akompani_cf_do_environment",
     vercelToken: "akompani_oauth_vercel_token",
     vercelProject: "akompani_vercel_project",
     vercelTeamId: "akompani_vercel_team_id",
@@ -41,6 +48,13 @@
     cfAccessAud: document.getElementById("cfAccessAud"),
     cfAccessServiceTokenId: document.getElementById("cfAccessServiceTokenId"),
     cfAccessServiceTokenSecret: document.getElementById("cfAccessServiceTokenSecret"),
+    cfD1Binding: document.getElementById("cfD1Binding"),
+    cfD1DatabaseId: document.getElementById("cfD1DatabaseId"),
+    cfD1DatabaseName: document.getElementById("cfD1DatabaseName"),
+    cfDoBinding: document.getElementById("cfDoBinding"),
+    cfDoClassName: document.getElementById("cfDoClassName"),
+    cfDoScriptName: document.getElementById("cfDoScriptName"),
+    cfDoEnvironment: document.getElementById("cfDoEnvironment"),
     vercelToken: document.getElementById("vercelToken"),
     vercelProject: document.getElementById("vercelProject"),
     vercelTeamId: document.getElementById("vercelTeamId"),
@@ -426,6 +440,15 @@
     if (els.cfZeroTrustMode && !["off", "access_jwt", "service_token"].includes(String(els.cfZeroTrustMode.value || "").toLowerCase())) {
       els.cfZeroTrustMode.value = "off";
     }
+    if (els.cfD1Binding && !String(els.cfD1Binding.value || "").trim()) {
+      els.cfD1Binding.value = "DB";
+    }
+    if (els.cfDoBinding && !String(els.cfDoBinding.value || "").trim()) {
+      els.cfDoBinding.value = "AGENT_DO";
+    }
+    if (els.cfDoClassName && !String(els.cfDoClassName.value || "").trim()) {
+      els.cfDoClassName.value = "AgentDurableObject";
+    }
 
     if (runtime?.ensureProviderAndReturn) {
       runtime.ensureProviderAndReturn();
@@ -465,6 +488,13 @@
     "cfAccessAud",
     "cfAccessServiceTokenId",
     "cfAccessServiceTokenSecret",
+    "cfD1Binding",
+    "cfD1DatabaseId",
+    "cfD1DatabaseName",
+    "cfDoBinding",
+    "cfDoClassName",
+    "cfDoScriptName",
+    "cfDoEnvironment",
     "vercelToken",
     "vercelProject",
     "vercelTeamId",
