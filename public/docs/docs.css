@@ -1,3 +1,9 @@
+/* ========================================
+   DOCS — Follows landing page design standards
+   No gradient boxes, no rainbow bars, no glow orbs.
+   Full-bleed sections, color-based hierarchy, content-forward.
+   ======================================== */
+
 html {
   scroll-behavior: smooth;
 }
@@ -6,53 +12,15 @@ body.docs-page {
   background: #eaf6f5;
   color: var(--text);
   overflow-x: hidden;
-  position: relative;
-}
-
-body.docs-page::before {
-  content: "";
-  position: fixed;
-  inset: -20% -10% auto;
-  height: 90vh;
-  pointer-events: none;
-  z-index: 0;
-  background:
-    radial-gradient(42% 58% at 18% 12%, rgba(251, 200, 200, 0.46), transparent 72%),
-    radial-gradient(34% 54% at 84% 14%, rgba(99, 223, 246, 0.28), transparent 70%),
-    radial-gradient(30% 50% at 56% 0%, rgba(197, 188, 216, 0.34), transparent 66%);
-}
-
-body.docs-page::after {
-  content: "";
-  position: fixed;
-  inset: 0;
-  pointer-events: none;
-  z-index: 0;
-  opacity: 0.25;
-  background-image:
-    linear-gradient(to right, rgba(47, 42, 58, 0.06) 1px, transparent 1px),
-    linear-gradient(to bottom, rgba(47, 42, 58, 0.06) 1px, transparent 1px);
-  background-size: 48px 48px;
-  mask-image: linear-gradient(to bottom, rgba(0, 0, 0, 0.24), transparent 60%);
 }
 
 [data-theme="dark"] body.docs-page {
   background: #33353b;
 }
 
-[data-theme="dark"] body.docs-page::before {
-  background:
-    radial-gradient(42% 58% at 18% 12%, rgba(251, 200, 200, 0.14), transparent 72%),
-    radial-gradient(34% 54% at 84% 14%, rgba(99, 223, 246, 0.2), transparent 70%),
-    radial-gradient(30% 50% at 56% 0%, rgba(197, 188, 216, 0.2), transparent 66%);
-}
-
-[data-theme="dark"] body.docs-page::after {
-  opacity: 0.16;
-  background-image:
-    linear-gradient(to right, rgba(248, 247, 242, 0.1) 1px, transparent 1px),
-    linear-gradient(to bottom, rgba(248, 247, 242, 0.1) 1px, transparent 1px);
-}
+/* ========================================
+   NAV — Identical to landing-nav
+   ======================================== */
 
 .docs-nav.top-nav,
 [data-theme="dark"] .docs-nav.top-nav {
@@ -101,271 +69,183 @@ body.docs-page::after {
   margin-left: var(--space-4);
 }
 
+/* ========================================
+   DOCS MAIN — Full-bleed like landing sections
+   ======================================== */
+
 .docs-main {
   position: relative;
   z-index: 1;
-  padding-top: 112px;
-  padding-bottom: var(--space-16);
+  padding-top: 140px;
+  padding-bottom: var(--space-20);
 }
 
-.docs-hero,
-.docs-reader-hero {
-  position: relative;
-  overflow: hidden;
-  border-radius: 28px;
-  padding: clamp(1.8rem, 3vw, 3rem);
-  background:
-    linear-gradient(148deg, rgba(255, 255, 255, 0.88) 0%, rgba(247, 245, 242, 0.76) 52%, rgba(234, 246, 245, 0.82) 100%);
-  border: 1px solid color-mix(in srgb, var(--border) 80%, transparent);
+/* ========================================
+   DOCS HEADER — Clean, no box, like hero-content
+   No gradient box, no border, no ::before/::after glow orbs.
+   Just text with generous spacing.
+   ======================================== */
+
+.docs-header,
+.docs-reader-header {
+  max-width: 680px;
+  margin-bottom: var(--space-12);
 }
 
-.docs-hero::before,
-.docs-reader-hero::before {
-  content: "";
-  position: absolute;
-  inset: -30% auto auto -8%;
-  width: 320px;
-  height: 320px;
-  border-radius: 50%;
-  background: radial-gradient(circle, rgba(242, 201, 230, 0.72) 0%, rgba(242, 201, 230, 0) 70%);
-  pointer-events: none;
+.docs-title {
+  font-size: clamp(2.8rem, 6vw, 4.5rem);
+  font-weight: 600;
+  line-height: 1.1;
+  letter-spacing: -0.035em;
+  color: var(--text);
+  margin: 0 0 var(--space-4);
 }
 
-.docs-hero::after,
-.docs-reader-hero::after {
-  content: "";
-  position: absolute;
-  inset: auto -16% -34% auto;
-  width: 360px;
-  height: 360px;
-  border-radius: 50%;
-  background: radial-gradient(circle, rgba(99, 223, 246, 0.26) 0%, rgba(99, 223, 246, 0) 70%);
-  pointer-events: none;
+.docs-reader-header h1 {
+  font-size: clamp(2rem, 4vw, 3rem);
+  font-weight: 600;
+  line-height: 1.14;
+  letter-spacing: -0.03em;
+  color: var(--text);
+  margin: 0 0 var(--space-3);
 }
 
-[data-theme="dark"] .docs-hero,
-[data-theme="dark"] .docs-reader-hero {
-  background:
-    linear-gradient(148deg, rgba(61, 64, 73, 0.88) 0%, rgba(51, 53, 59, 0.84) 54%, rgba(47, 49, 57, 0.88) 100%);
-  border-color: rgba(164, 184, 205, 0.26);
-}
-
-.docs-kicker {
-  margin: 0;
-  font-size: var(--text-xs);
-  font-weight: var(--font-semibold);
-  text-transform: uppercase;
-  letter-spacing: 0.14em;
-  color: color-mix(in srgb, var(--brand) 75%, var(--text));
-}
-
-.docs-hero h1,
-.docs-reader-hero h1 {
-  margin: var(--space-3) 0 var(--space-4);
-  font-size: clamp(2.1rem, 6vw, 4.4rem);
-  line-height: 1.06;
-  letter-spacing: -0.04em;
-  max-width: 14ch;
-}
-
-@supports ((-webkit-background-clip: text) or (background-clip: text)) {
-  .docs-hero h1,
-  .docs-reader-hero h1 {
-    background-image: linear-gradient(112deg, #e399c2 0%, #daa8d2 42%, #7fb3e3 72%, #43acf6 100%);
-    background-repeat: no-repeat;
-    background-size: 110% 120%;
-    background-position: 0 0;
-    -webkit-background-clip: text;
-    background-clip: text;
-    color: transparent;
-    -webkit-text-fill-color: transparent;
-    text-shadow: 0 6px 0 rgba(183, 169, 187, 0.28);
-  }
-
-  [data-theme="dark"] .docs-hero h1,
-  [data-theme="dark"] .docs-reader-hero h1 {
-    text-shadow: 0 6px 0 rgba(170, 157, 182, 0.2);
-  }
-}
-
-.docs-hero p,
-.docs-reader-hero p {
-  margin: 0;
-  max-width: 68ch;
+.docs-subtitle {
+  font-size: var(--text-lg);
   color: var(--text-secondary);
-  line-height: 1.8;
+  line-height: 1.7;
+  margin: 0;
+  max-width: 52ch;
 }
 
-.doc-meta {
+.docs-reader-header p {
   font-family: var(--font-mono);
   font-size: var(--text-xs);
   color: var(--text-muted);
-  margin-top: var(--space-2);
+  margin: 0;
 }
 
-.docs-hero-actions {
+.docs-header-actions {
   display: flex;
   align-items: center;
   flex-wrap: wrap;
   gap: var(--space-3);
-  margin-top: var(--space-6);
+  margin-top: var(--space-8);
 }
+
+/* ========================================
+   DOCS GRID — Same as features-grid pattern
+   ======================================== */
 
 .docs-grid {
-  margin-top: var(--space-8);
   display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
+  grid-template-columns: 1fr;
   gap: var(--space-5);
+  max-width: 1080px;
 }
+
+/* ========================================
+   DOC CARD — Matches feature-card from landing
+   No rainbow top bar, no type badges, no arrow labels.
+   Just a clean card with color-based hierarchy.
+   ======================================== */
 
 .doc-card {
-  position: relative;
-  overflow: hidden;
   display: flex;
   flex-direction: column;
-  gap: var(--space-3);
-  min-height: 220px;
+  gap: var(--space-2);
   border-radius: 24px;
   text-decoration: none;
-  padding: var(--space-6);
+  padding: var(--space-6) var(--space-8);
   color: var(--text);
   background: color-mix(in srgb, var(--bg-secondary) 92%, var(--bg));
-  border: 1px solid color-mix(in srgb, var(--border) 72%, transparent);
-  transition: transform var(--dur-base) var(--ease-smooth), border-color var(--dur-base) var(--ease-smooth), box-shadow var(--dur-base) var(--ease-smooth);
-  animation: docCardIn 700ms var(--ease-smooth) both;
-}
-
-.doc-card::before {
-  content: "";
-  position: absolute;
-  left: 0;
-  right: 0;
-  top: 0;
-  height: 4px;
-  background: linear-gradient(90deg, #e399c2 0%, #daa8d2 40%, #7fb3e3 72%, #43acf6 100%);
-  opacity: 0.74;
-}
-
-.doc-card:nth-child(1) {
-  animation-delay: 50ms;
-}
-
-.doc-card:nth-child(2) {
-  animation-delay: 120ms;
-}
-
-.doc-card:nth-child(3) {
-  animation-delay: 180ms;
-}
-
-.doc-card:nth-child(4) {
-  animation-delay: 240ms;
-}
-
-.doc-card:nth-child(5) {
-  animation-delay: 300ms;
-}
-
-.doc-card:nth-child(6) {
-  animation-delay: 360ms;
+  transition: box-shadow 400ms ease;
 }
 
 .doc-card:hover {
-  transform: translateY(-4px);
-  border-color: var(--border-strong);
-  box-shadow: 0 8px 24px rgba(47, 42, 58, 0.1);
+  box-shadow: 0 2px 20px rgba(30, 20, 10, 0.06);
 }
 
 [data-theme="dark"] .doc-card {
   background: color-mix(in srgb, var(--bg-secondary) 88%, #1f2229);
-  border-color: rgba(164, 184, 205, 0.26);
 }
 
 [data-theme="dark"] .doc-card:hover {
-  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.34);
-  border-color: rgba(164, 184, 205, 0.4);
-}
-
-.doc-card-head {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: var(--space-3);
-}
-
-.doc-card-type {
-  display: inline-flex;
-  align-items: center;
-  padding: 6px 10px;
-  border-radius: var(--radius-full);
-  font-size: var(--text-xs);
-  font-weight: var(--font-semibold);
-  letter-spacing: 0.06em;
-  text-transform: uppercase;
-  color: color-mix(in srgb, var(--brand) 76%, var(--text));
-  background: color-mix(in srgb, var(--brand-soft) 55%, transparent);
-}
-
-.doc-card-arrow {
-  font-size: var(--text-xs);
-  font-weight: var(--font-medium);
-  text-transform: uppercase;
-  letter-spacing: 0.06em;
-  color: var(--text-muted);
+  box-shadow: 0 2px 24px rgba(0, 0, 0, 0.3);
 }
 
 .doc-card h2 {
   margin: 0;
-  font-size: clamp(1.35rem, 2vw, 1.75rem);
+  font-size: var(--text-lg);
+  font-weight: 600;
   line-height: 1.2;
-  letter-spacing: -0.02em;
+  letter-spacing: -0.01em;
+  color: var(--text);
 }
 
-.doc-card p {
+.doc-card-desc {
   margin: 0;
-  color: var(--text-secondary);
-  line-height: 1.75;
-}
-
-.doc-card-agenda {
-  margin-top: var(--space-2);
-  font-size: var(--text-sm);
-  font-weight: var(--font-medium);
-  color: var(--brand);
-  line-height: 1.55;
-}
-
-[data-theme="dark"] .doc-card-agenda {
-  color: var(--tone-plain-white);
-}
-
-.doc-card-brief {
-  margin-top: var(--space-1);
   font-size: var(--text-sm);
   color: var(--text-secondary);
   line-height: 1.7;
 }
 
+.doc-card-category {
+  margin-top: var(--space-2);
+  font-size: var(--text-sm);
+  font-weight: 500;
+  color: var(--brand);
+  line-height: 1.5;
+}
+
+[data-theme="dark"] .doc-card-category {
+  color: var(--tone-plain-white);
+}
+
+/* ========================================
+   SCROLL REVEAL — Same as landing page
+   ======================================== */
+
+.docs-page .reveal {
+  opacity: 0;
+  transform: translateY(40px);
+  transition: opacity 0.8s cubic-bezier(0.16, 1, 0.3, 1),
+    transform 0.8s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.docs-page .reveal.revealed {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+.docs-grid .reveal:nth-child(2) { transition-delay: 0.1s; }
+.docs-grid .reveal:nth-child(3) { transition-delay: 0.18s; }
+.docs-grid .reveal:nth-child(4) { transition-delay: 0.1s; }
+.docs-grid .reveal:nth-child(5) { transition-delay: 0.18s; }
+.docs-grid .reveal:nth-child(6) { transition-delay: 0.24s; }
+
+/* ========================================
+   DOC READER VIEW
+   ======================================== */
+
 .docs-view-main {
-  padding-top: 104px;
+  padding-top: 140px;
 }
 
 .doc-reader-wrap {
-  margin-top: var(--space-6);
+  margin-top: var(--space-8);
 }
 
 .doc-reader {
-  border-radius: 24px;
-  border: 1px solid color-mix(in srgb, var(--border) 75%, transparent);
   background: color-mix(in srgb, var(--bg-secondary) 95%, var(--bg));
-  padding: clamp(1.2rem, 2.2vw, 2.2rem);
+  border-radius: 24px;
+  padding: clamp(1.5rem, 3vw, 2.5rem);
   line-height: 1.8;
   overflow-wrap: anywhere;
 }
 
 [data-theme="dark"] .doc-reader {
   background: color-mix(in srgb, var(--bg-secondary) 88%, #1f2229);
-  border-color: rgba(164, 184, 205, 0.28);
 }
 
 .doc-reader h1,
@@ -421,10 +301,10 @@ body.docs-page::after {
 
 .doc-reader pre {
   overflow-x: auto;
-  border-radius: 12px;
-  padding: 14px;
-  border: 1px solid color-mix(in srgb, var(--border) 72%, transparent);
-  background: color-mix(in srgb, var(--surface-subtle) 72%, transparent);
+  border-radius: 14px;
+  padding: 16px;
+  background: var(--bg);
+  border: 1px solid var(--border);
 }
 
 [data-theme="dark"] .doc-reader pre {
@@ -460,12 +340,11 @@ body.docs-page::after {
   max-width: 100%;
   height: auto;
   border-radius: 14px;
-  border: 1px solid color-mix(in srgb, var(--border) 70%, transparent);
 }
 
 .doc-reader hr {
   border: none;
-  border-top: 1px solid color-mix(in srgb, var(--border) 72%, transparent);
+  border-top: 1px solid var(--border);
   margin: 1.5rem 0;
 }
 
@@ -478,17 +357,9 @@ body.docs-page::after {
   color: #ff9a9a;
 }
 
-@keyframes docCardIn {
-  from {
-    opacity: 0;
-    transform: translateY(24px);
-  }
-
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
-}
+/* ========================================
+   RESPONSIVE
+   ======================================== */
 
 @media (max-width: 1080px) {
   .docs-nav .nav-links {
@@ -496,19 +367,11 @@ body.docs-page::after {
   }
 
   .docs-main {
-    padding-top: 98px;
+    padding-top: 120px;
   }
 }
 
 @media (max-width: 900px) {
-  .docs-grid {
-    grid-template-columns: 1fr;
-  }
-
-  .doc-card {
-    min-height: 190px;
-  }
-
   .docs-nav .nav-links {
     display: none;
   }
@@ -521,26 +384,25 @@ body.docs-page::after {
 @media (max-width: 680px) {
   .docs-main,
   .docs-view-main {
-    padding-top: 88px;
+    padding-top: 100px;
   }
 
-  .docs-hero,
-  .docs-reader-hero,
+  .docs-title {
+    font-size: clamp(2.2rem, 10vw, 3rem);
+  }
+
+  .doc-card,
   .doc-reader {
     border-radius: 20px;
+    padding: var(--space-5) var(--space-5);
   }
 
-  .docs-hero-actions {
+  .docs-header-actions {
     flex-direction: column;
     align-items: stretch;
   }
 
-  .docs-hero-actions .btn {
+  .docs-header-actions .btn {
     width: 100%;
-  }
-
-  .docs-nav .nav-actions .btn-primary,
-  .docs-nav .nav-actions .btn-secondary {
-    display: none;
   }
 }

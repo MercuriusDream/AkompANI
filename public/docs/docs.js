@@ -9,6 +9,20 @@
     });
   }
 
+  // Scroll reveal — same pattern as landing page
+  const reveals = document.querySelectorAll(".reveal");
+  if (reveals.length) {
+    const revealObserver = new IntersectionObserver((entries) => {
+      entries.forEach((e) => {
+        if (e.isIntersecting) {
+          e.target.classList.add("revealed");
+          revealObserver.unobserve(e.target);
+        }
+      });
+    }, { threshold: 0.12, rootMargin: "0px 0px -60px 0px" });
+    reveals.forEach((el) => revealObserver.observe(el));
+  }
+
   const readerEl = document.getElementById("docContent");
   const docTitleEl = document.getElementById("docTitle");
   const docMetaEl = document.getElementById("docMeta");
