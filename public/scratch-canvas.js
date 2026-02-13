@@ -769,12 +769,12 @@ class ScratchCanvas {
     path.setAttribute("filter", "url(#scratchShadow)");
     g.appendChild(path);
 
-    // Left accent bar — colored stripe on left edge
+    // Left accent bar — colored stripe on left edge (inset by 1px to not cover selection stroke)
     const accent = document.createElementNS("http://www.w3.org/2000/svg", "rect");
     accent.setAttribute("class", "scratch-accent");
-    accent.setAttribute("x", "0");
-    accent.setAttribute("y", "0");
-    accent.setAttribute("width", "4");
+    accent.setAttribute("x", "1");
+    accent.setAttribute("y", "1");
+    accent.setAttribute("width", "3");
     accent.setAttribute("height", "400"); // refined by _updateBlockPath
     accent.setAttribute("rx", "0");
     accent.setAttribute("fill", color);
@@ -856,10 +856,10 @@ class ScratchCanvas {
     const pathEl = g.querySelector(".scratch-shape");
     if (pathEl) pathEl.setAttribute("d", pathD);
 
-    // Update accent bar height
+    // Update accent bar height (inset by 1px top+bottom to not cover selection stroke)
     const accentEl = g.querySelector(".scratch-accent");
     if (accentEl) {
-      accentEl.setAttribute("height", String(totalH));
+      accentEl.setAttribute("height", String(totalH - 2));
     }
 
     // Update foreignObject height
