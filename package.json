@@ -22,6 +22,6 @@
   "engines": {
     "node": ">=20"
   },
-  "license": "MIT",
+  "license": "AGPL V3",
   "packageManager": "bun@1.3.3"
 }

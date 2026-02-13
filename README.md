@@ -2,8 +2,8 @@
 
 Static-first browser IDE for building and deploying flow-based agents.
 
-- Website: https://akompani.cc
-- Docs: https://docs.akompani.cc
+- Website: <https://akompani.cc>
+- Docs: <https://docs.akompani.cc>
 
 ## Mission
 
@@ -107,4 +107,4 @@ Repository setting required once:
 
 ## License
 
-MIT (`LICENSE`)
+AGPL V3 (`LICENSE`)
