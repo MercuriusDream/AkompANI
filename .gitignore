@@ -17,3 +17,9 @@ deployments-smoke
 test-results/
 playwright-report/
 plan.md
+
+# AI-generated internal docs (not for public release)
+docs/release-process.md
+docs/demo-videos.md
+docs/frontier-oss-playbook.md
+public/docs-content/
