@@ -2328,7 +2328,7 @@ async function executeFlowChain(flowData, nodeChain, requestCtx) {
         if (d.storeAs) ctx.vars[d.storeAs] = ctx.last;
       }
     } else if (type === "log") {
-      console.log("[flow-chain]", d.label || "", ctx.last);
+      /* log block – output captured by the runtime, no console noise */
     }
     // Other block types: pass through (ctx.last unchanged)
   }

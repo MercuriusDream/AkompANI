@@ -59,7 +59,7 @@ const AkompaniToast = (() => {
       <button class="toast-close" aria-label="Dismiss">&times;</button>
     `;
 
-    el.querySelector('.toast-close').addEventListener('click', (e) => {
+    el.querySelector('.toast-close')?.addEventListener('click', (e) => {
       e.stopPropagation();
       dismiss(el);
     });

@@ -4132,6 +4132,127 @@
     if (generateOverlay) generateOverlay.style.display = "none";
   }
 
+  /* ── Template Gallery ── */
+  const templateGalleryOverlay = document.getElementById("templateGalleryOverlay");
+  const templateGalleryGrid = document.getElementById("templateGalleryGrid");
+  const templateGalleryFilters = document.getElementById("templateGalleryFilters");
+  const templateGalleryClose = document.getElementById("templateGalleryClose");
+  let _templateFilterCategory = "all";
+
+  function showTemplateGallery() {
+    if (!templateGalleryOverlay) return;
+    _templateFilterCategory = "all";
+    templateGalleryOverlay.style.display = "";
+    renderTemplateFilters();
+    renderTemplateCards();
+  }
+
+  function hideTemplateGallery() {
+    if (templateGalleryOverlay) templateGalleryOverlay.style.display = "none";
+  }
+
+  function renderTemplateFilters() {
+    if (!templateGalleryFilters) return;
+    const categories = window.FLOW_TEMPLATE_CATEGORIES || [];
+    templateGalleryFilters.innerHTML = "";
+    for (const cat of categories) {
+      const pill = document.createElement("button");
+      pill.className = "template-filter-pill" + (cat.id === _templateFilterCategory ? " active" : "");
+      pill.textContent = cat.label;
+      pill.addEventListener("click", () => {
+        _templateFilterCategory = cat.id;
+        renderTemplateFilters();
+        renderTemplateCards();
+      });
+      templateGalleryFilters.appendChild(pill);
+    }
+  }
+
+  function renderTemplateCards() {
+    if (!templateGalleryGrid) return;
+    templateGalleryGrid.innerHTML = "";
+
+    // "Blank Flow" always first
+    const blank = document.createElement("div");
+    blank.className = "template-card template-card--blank";
+    blank.innerHTML =
+      '<svg class="template-blank-icon" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>' +
+      '<span class="template-blank-label">Blank Flow</span>';
+    blank.addEventListener("click", () => {
+      hideTemplateGallery();
+      createNewFlowTab();
+      switchMode("canvas");
+    });
+    templateGalleryGrid.appendChild(blank);
+
+    // Template cards
+    const templates = window.FLOW_TEMPLATES || [];
+    const filtered = _templateFilterCategory === "all"
+      ? templates
+      : templates.filter(t => t.category === _templateFilterCategory);
+
+    for (const tpl of filtered) {
+      const card = document.createElement("div");
+      card.className = "template-card";
+      const iconSvg = '<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l1.9 5.8H20l-4.9 3.6L17 18.2 12 14.6l-5 3.6 1.9-5.8L4 8.8h6.1z"/></svg>';
+      card.innerHTML =
+        '<div class="template-card-head">' +
+          '<div class="template-card-icon" style="background:' + escapeHtml(tpl.color || "#888") + '">' + iconSvg + '</div>' +
+          '<div class="template-card-meta"><p class="template-card-name">' + escapeHtml(tpl.name) + '</p></div>' +
+        '</div>' +
+        '<p class="template-card-desc">' + escapeHtml(tpl.description) + '</p>' +
+        '<div class="template-card-footer">' +
+          '<span class="template-card-badge template-card-badge--' + escapeHtml(tpl.difficulty || "beginner") + '">' + escapeHtml(tpl.difficulty || "beginner") + '</span>' +
+          '<span class="template-card-nodes">' + (tpl.nodeCount || "?") + ' nodes</span>' +
+        '</div>';
+      card.addEventListener("click", () => applyTemplate(tpl));
+      templateGalleryGrid.appendChild(card);
+    }
+  }
+
+  function applyTemplate(tpl) {
+    if (!tpl || !tpl.drawflow) return;
+    hideTemplateGallery();
+
+    const drawflow = normalizeImportedDrawflow(tpl);
+    if (!drawflow) {
+      if (typeof AkompaniToast !== "undefined") {
+        AkompaniToast.error({ title: "Template error", message: "Invalid template data." });
+      }
+      return;
+    }
+
+    clearEditor();
+    if (editor) editor.import(drawflow);
+    resetNodeRuntime();
+    refreshAllNodeCards();
+
+    const flowId = "flow_" + Date.now().toString(36) + "_" + Math.random().toString(36).slice(2, 6);
+    const now = new Date().toISOString();
+    const name = tpl.name || "Template Flow";
+
+    const record = {
+      id: flowId,
+      name: name,
+      drawflow: editor ? editor.export() : drawflow,
+      createdAt: now,
+      updatedAt: now,
+    };
+    saveLocalFlowRecord(record);
+
+    state.currentFlowId = flowId;
+    if (flowNameText) flowNameText.textContent = name;
+    state.selectedNodeId = "";
+    refreshNodeInspector();
+    openFlowTab(flowId, name);
+    refreshFlowList().catch(() => {});
+    switchMode("canvas");
+
+    if (typeof AkompaniToast !== "undefined") {
+      AkompaniToast.success({ title: "Template loaded", message: name + " is ready to customize." });
+    }
+  }
+
   function setGenerateLoading(loading) {
     if (!generateFlowBtn) return;
     const btnText = generateFlowBtn.querySelector(".generate-btn-text");
@@ -7163,12 +7284,35 @@
         }
       });
     }
+
+    // Template gallery overlay
+    if (templateGalleryOverlay) {
+      templateGalleryOverlay.addEventListener("click", (event) => {
+        if (event.target === templateGalleryOverlay) hideTemplateGallery();
+      });
+    }
+    if (templateGalleryClose) {
+      templateGalleryClose.addEventListener("click", () => hideTemplateGallery());
+    }
+    const browseTplBtn = document.getElementById("generateBrowseTemplates");
+    if (browseTplBtn) {
+      browseTplBtn.addEventListener("click", () => {
+        hideGenerateOverlay();
+        showTemplateGallery();
+      });
+    }
   }
 
   function bindKeyboardShortcuts() {
     document.addEventListener("keydown", async (event) => {
       const key = event.key.toLowerCase();
       const isMeta = event.metaKey || event.ctrlKey;
+
+      if (event.key === "Escape" && templateGalleryOverlay && templateGalleryOverlay.style.display !== "none") {
+        hideTemplateGallery();
+        event.preventDefault();
+        return;
+      }
 
       if (isMeta && key === "s") {
         event.preventDefault();
@@ -7529,7 +7673,14 @@
             updateNodeCard(nodeId);
             if (skipped.length) {
               console.warn("[asset-upload] Skipped files:", skipped);
-              alert("Some files were skipped:\n" + skipped.join("\n"));
+              if (typeof AkompaniToast !== "undefined") {
+                AkompaniToast.warning({ title: "Files skipped", message: skipped.join(", ") });
+              }
+            }
+          }).catch(err => {
+            console.warn("[asset-upload] Read error:", err);
+            if (typeof AkompaniToast !== "undefined") {
+              AkompaniToast.error({ title: "Upload failed", message: "Could not read one or more files." });
             }
           });
           fileInput.value = "";
@@ -7679,7 +7830,13 @@
 
     // Flow tabs: new tab button
     if (flowTabNew) {
-      flowTabNew.addEventListener("click", () => createNewFlowTab());
+      flowTabNew.addEventListener("click", () => {
+        if (window.FLOW_TEMPLATES && window.FLOW_TEMPLATES.length > 0) {
+          showTemplateGallery();
+        } else {
+          createNewFlowTab();
+        }
+      });
     }
 
     // Zoom controls
@@ -7828,9 +7985,39 @@
       if (runStatus && !runStatus.textContent) {
         runStatus.textContent = "Static mode ready. Flows save locally in this browser.";
       }
+
+      // First-visit welcome guide
+      maybeShowWelcomeGuide();
     } catch (error) {
       if (runStatus) runStatus.textContent = `Boot error: ${error.message}`;
     }
+  }
+
+  /* ── Welcome Guide (first visit) ── */
+  function maybeShowWelcomeGuide() {
+    try {
+      if (localStorage.getItem("akompani_welcomed") === "1") return;
+    } catch { return; }
+
+    const overlay = document.getElementById("welcomeGuide");
+    const btn = document.getElementById("welcomeGuideDismiss");
+    if (!overlay) return;
+
+    overlay.style.display = "";
+
+    function dismiss() {
+      overlay.style.display = "none";
+      try { localStorage.setItem("akompani_welcomed", "1"); } catch {}
+      // After dismissing, show the template gallery so they can pick a starting point
+      if (typeof showTemplateGallery === "function" && window.FLOW_TEMPLATES?.length) {
+        showTemplateGallery();
+      }
+    }
+
+    if (btn) btn.addEventListener("click", dismiss);
+    overlay.addEventListener("click", (e) => {
+      if (e.target === overlay) dismiss();
+    });
   }
 
   boot();

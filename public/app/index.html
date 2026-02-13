@@ -394,7 +394,30 @@
                 data-prompt="Convert this chat idea into Elysia+Bun deployable agent runtime for Cloudflare, Vercel, and local">Elysia
                 deploy runtime</button>
             </div>
+            <div class="generate-templates-link">
+              <span class="generate-examples-label">or</span>
+              <button class="generate-example-chip" id="generateBrowseTemplates">Browse Templates</button>
+            </div>
             <div id="generateError" class="generate-error" style="display:none"></div>
+          </div>
+        </div>
+
+        <!-- Template Gallery Overlay -->
+        <div id="templateGalleryOverlay" class="template-gallery-overlay" style="display:none">
+          <div class="template-gallery-card">
+            <div class="template-gallery-header">
+              <h2 class="template-gallery-title">Start from a template</h2>
+              <p class="template-gallery-subtitle">Pick a pre-built flow or start from scratch</p>
+              <button id="templateGalleryClose" class="template-gallery-close" title="Close" aria-label="Close">
+                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none"
+                  stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <line x1="18" y1="6" x2="6" y2="18" />
+                  <line x1="6" y1="6" x2="18" y2="18" />
+                </svg>
+              </button>
+            </div>
+            <div class="template-gallery-filters" id="templateGalleryFilters"></div>
+            <div class="template-gallery-grid" id="templateGalleryGrid"></div>
           </div>
         </div>
       </section>
@@ -1096,8 +1119,41 @@
 
   </main>
 
+  <!-- First-visit welcome guide -->
+  <div id="welcomeGuide" class="welcome-guide-overlay" style="display:none">
+    <div class="welcome-guide-card">
+      <h2 class="welcome-guide-title">Welcome to AkompANI</h2>
+      <p class="welcome-guide-subtitle">Build, test, and deploy AI agents — all from your browser.</p>
+      <div class="welcome-guide-steps">
+        <div class="welcome-guide-step">
+          <div class="welcome-guide-step-num">1</div>
+          <div class="welcome-guide-step-body">
+            <strong>Design your agent</strong>
+            <span>Pick a template or describe what you want in Chat mode. The visual flow editor handles the rest.</span>
+          </div>
+        </div>
+        <div class="welcome-guide-step">
+          <div class="welcome-guide-step-num">2</div>
+          <div class="welcome-guide-step-body">
+            <strong>Add an LLM key</strong>
+            <span>Go to Settings and add your OpenAI (or compatible) API key so your agent can call an LLM.</span>
+          </div>
+        </div>
+        <div class="welcome-guide-step">
+          <div class="welcome-guide-step-num">3</div>
+          <div class="welcome-guide-step-body">
+            <strong>Deploy in one click</strong>
+            <span>Connect Cloudflare or Vercel in Settings, then hit Deploy. Your agent goes live instantly.</span>
+          </div>
+        </div>
+      </div>
+      <button id="welcomeGuideDismiss" class="btn btn-primary welcome-guide-btn">Get Started</button>
+    </div>
+  </div>
+
   <div id="paletteHoverCard" class="palette-hover-card" aria-hidden="true"></div>
 
+  <script src="../flow-templates.js"></script>
   <script src="../scratch-canvas.js?v=20260213-02"></script>
   <script src="../toast.js"></script>
   <script src="../auth-ui.js"></script>

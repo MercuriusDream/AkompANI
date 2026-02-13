@@ -22,6 +22,18 @@ if git ls-files --error-unmatch .env >/dev/null 2>&1; then
   exit 1
 fi
 
+echo "==> Internal docs exposure check"
+for f in docs/release-process.md docs/demo-videos.md docs/frontier-oss-playbook.md docs/project-deep-dive.md; do
+  if git ls-files --error-unmatch "$f" >/dev/null 2>&1; then
+    echo "ERROR: Internal doc '$f' is tracked. Run: git rm --cached $f"
+    exit 1
+  fi
+done
+if git ls-files --error-unmatch public/docs-content/ >/dev/null 2>&1; then
+  echo "ERROR: public/docs-content/ is tracked. Run: git rm --cached -r public/docs-content/"
+  exit 1
+fi
+
 tracked_files=()
 while IFS= read -r file; do
   if [[ -n "$file" ]]; then
