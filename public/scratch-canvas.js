@@ -27,8 +27,8 @@ class ScratchCanvas {
   static SNAP_DIST = 28;
 
   /* ─── Block shape classification ─── */
-  static HAT_TYPES = new Set(["start"]);
-  static CAP_TYPES = new Set(["end"]);
+  static HAT_TYPES = new Set(["start", "route_get", "route_post", "route_put", "route_delete"]);
+  static CAP_TYPES = new Set(["end", "respond_json", "respond_html", "respond_redirect"]);
   static C_TYPES = new Set(["if", "switch_case", "while", "for_each", "try_catch"]);
 
   static C_ARM_COUNT = {
@@ -859,7 +859,7 @@ class ScratchCanvas {
     // Update accent bar height (inset by 1px top+bottom to not cover selection stroke)
     const accentEl = g.querySelector(".scratch-accent");
     if (accentEl) {
-      accentEl.setAttribute("height", String(totalH - 2));
+      accentEl.setAttribute("height", String(Math.max(0, totalH - 2)));
     }
 
     // Update foreignObject height

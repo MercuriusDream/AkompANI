@@ -686,6 +686,140 @@
     };
   }
 
+  const ROUTE_TRIGGER_TYPES = {
+    route_get: "get",
+    route_post: "post",
+    route_put: "put",
+    route_delete: "delete",
+  };
+  const RESPOND_TYPES = new Set(["respond_json", "respond_html", "respond_redirect"]);
+
+  /**
+   * Scans the drawflow for route trigger blocks and traces their handler chains.
+   * Returns an array of { method, path, requireAuth, parseBody, startNodeId, nodeChain }.
+   */
+  const MAX_CHAIN_LENGTH = 500;
+  const VALID_HTTP_METHODS = new Set(["get", "post", "put", "delete"]);
+  const VALID_PARSE_BODY = new Set(["json", "text", "form"]);
+
+  /** Sanitize a route path: must start with /, no double dots, no backslash, max 2048 chars. */
+  function sanitizeRoutePath(raw) {
+    let p = String(raw || "/").trim();
+    if (p.length > 2048) p = p.slice(0, 2048);
+    if (!p.startsWith("/")) p = "/" + p;
+    // Strip directory traversal, backslashes, null bytes
+    p = p.replace(/\.\./g, "").replace(/\\/g, "/").replace(/\0/g, "").replace(/\/+/g, "/");
+    return p || "/";
+  }
+
+  function extractCustomRoutes(drawflow) {
+    const data = drawflow?.drawflow?.Home?.data;
+    if (!data || typeof data !== "object") return [];
+
+    const routes = [];
+    for (const [id, node] of Object.entries(data)) {
+      const method = ROUTE_TRIGGER_TYPES[node?.name];
+      if (!method || !VALID_HTTP_METHODS.has(method)) continue;
+
+      const nodeData = node.data || {};
+      const path = sanitizeRoutePath(nodeData.path);
+      const requireAuth = String(nodeData.requireAuth) === "true";
+      const parseBody = VALID_PARSE_BODY.has(String(nodeData.parseBody || "").trim()) ? String(nodeData.parseBody).trim() : "json";
+
+      // Trace the connected chain of node IDs from this trigger (capped at MAX_CHAIN_LENGTH)
+      const nodeChain = [];
+      const visited = new Set();
+      let currentId = id;
+
+      while (currentId && !visited.has(currentId) && nodeChain.length < MAX_CHAIN_LENGTH) {
+        visited.add(currentId);
+        const current = data[currentId];
+        if (!current) break;
+        nodeChain.push(String(currentId));
+
+        // If this is a respond block, chain ends
+        if (RESPOND_TYPES.has(current.name)) break;
+
+        // Follow first output connection
+        const outputs = current.outputs || {};
+        const firstOutput = outputs.output_1;
+        const connections = firstOutput?.connections;
+        if (Array.isArray(connections) && connections.length > 0) {
+          currentId = String(connections[0].node);
+        } else {
+          break;
+        }
+      }
+
+      routes.push({ method, path, requireAuth, parseBody, startNodeId: String(id), nodeChain });
+    }
+
+    return routes;
+  }
+
+  /**
+   * Collects static asset data from static_assets nodes in the flow.
+   */
+  /** Sanitize a filename: strip traversal, backslashes, null bytes, limit length. */
+  function sanitizeFileName(raw) {
+    let name = String(raw || "").trim();
+    // Remove directory traversal and dangerous characters
+    name = name.replace(/\.\./g, "").replace(/\\/g, "/").replace(/\0/g, "");
+    // Strip leading slashes and path components — only keep the basename
+    const parts = name.split("/").filter(Boolean);
+    name = parts.length > 0 ? parts[parts.length - 1] : "unnamed";
+    // Limit length
+    if (name.length > 255) name = name.slice(0, 255);
+    return name || "unnamed";
+  }
+
+  /** Validate MIME type: only allow safe characters. */
+  function sanitizeMimeType(raw) {
+    const mime = String(raw || "application/octet-stream").trim();
+    // MIME types: type/subtype, allow alphanumeric, -, +, .
+    if (/^[a-zA-Z0-9][a-zA-Z0-9!#$&\-^_.+]*\/[a-zA-Z0-9][a-zA-Z0-9!#$&\-^_.+]*$/.test(mime)) return mime;
+    return "application/octet-stream";
+  }
+
+  function extractStaticAssets(drawflow) {
+    const data = drawflow?.drawflow?.Home?.data;
+    if (!data || typeof data !== "object") return { embeddedAssets: [], r2Config: null };
+
+    const embeddedAssets = [];
+    let r2Config = null;
+
+    for (const node of Object.values(data)) {
+      if (node?.name !== "static_assets") continue;
+      const d = node.data || {};
+      const rawBasePath = String(d.basePath || "/static").trim().replace(/\/+$/, "");
+      const basePath = sanitizeRoutePath(rawBasePath);
+      const storageMode = String(d.storageMode || "embed").trim();
+      const files = Array.isArray(d.files) ? d.files : [];
+
+      if (storageMode === "r2" && d.r2Bucket) {
+        const bucketName = String(d.r2Bucket).trim().replace(/[^a-zA-Z0-9\-_]/g, "");
+        if (bucketName) r2Config = { basePath, bucketName };
+      }
+
+      for (const file of files) {
+        if (!file || !file.name) continue;
+        const safeName = sanitizeFileName(file.name);
+        const safeType = sanitizeMimeType(file.type);
+        const content = String(file.content || "");
+        // Skip empty or excessively large embedded files (>5MB base64)
+        if (content.length > 5 * 1024 * 1024 * 1.37) continue;
+        embeddedAssets.push({
+          path: `${basePath}/${safeName}`,
+          type: safeType,
+          content,
+          isBase64: true,
+        });
+      }
+    }
+
+    return { embeddedAssets, r2Config };
+  }
+
   function normalizeCloudflareZeroTrustMode(mode) {
     const normalized = String(mode || "")
       .trim()
@@ -746,9 +880,39 @@
     };
   }
 
+  /**
+   * Builds the static assets block for generated runtime code.
+   * Uses JSON.stringify for all user-controlled values to prevent injection.
+   */
+  function buildStaticAssetsBlock(embeddedAssets) {
+    const staticBase = embeddedAssets[0]?.path?.split("/").slice(0, -1).join("/") || "/static";
+    const safeBase = JSON.stringify(staticBase);
+    const assetsData = JSON.stringify(embeddedAssets.map(a => [a.path, { type: a.type, content: a.content, isBase64: a.isBase64 }]));
+    return `
+// --- Static assets (embedded) ---
+const STATIC_ASSETS = new Map(${assetsData});
+const STATIC_BASE = ${safeBase};
+
+app.get(STATIC_BASE + "/*", ({ params, set }) => {
+  const key = STATIC_BASE + "/" + (params["*"] || "");
+  const asset = STATIC_ASSETS.get(key);
+  if (!asset) { set.status = 404; return "Not found"; }
+  set.headers["content-type"] = asset.type;
+  set.headers["cache-control"] = "public, max-age=3600";
+  if (asset.isBase64) {
+    const raw = typeof Buffer !== "undefined" ? Buffer.from(asset.content, "base64") : Uint8Array.from(atob(asset.content), c => c.charCodeAt(0));
+    return new Response(raw, { headers: { "content-type": asset.type, "cache-control": "public, max-age=3600" } });
+  }
+  return asset.content;
+});
+`;
+  }
+
   function buildSharedAgenticRuntimeSource(options = {}) {
     const drawflow = options.drawflow || { drawflow: { Home: { data: {} } } };
     const summary = summarizeFlow(drawflow);
+    const customRoutes = extractCustomRoutes(drawflow);
+    const { embeddedAssets, r2Config } = extractStaticAssets(drawflow);
     const providerConfig = options.providerConfig || {};
     const cloudflareConfig = normalizeCloudflareDeployConfig(options.cloudflareConfig);
     const endpointMode = normalizeEndpointMode(options.endpointMode || "both");
@@ -2012,6 +2176,188 @@ const app = new Elysia()
       };
     }
   });
+
+// --- Flow chain executor for custom routes ---
+const RESPOND_BLOCK_TYPES = new Set(["respond_json", "respond_html", "respond_redirect"]);
+
+function resolveTemplate(template, ctx) {
+  return String(template || "").replace(/\{\{\s*([\w.]+)\s*\}\}/g, (_, path) => {
+    const parts = path.split(".");
+    let val = ctx;
+    for (const p of parts) {
+      if (val == null || typeof val !== "object") return "";
+      // Block prototype pollution access
+      if (p === "__proto__" || p === "constructor" || p === "prototype") return "";
+      val = val[p];
+    }
+    return val !== undefined && val !== null ? String(val) : "";
+  });
+}
+
+/**
+ * Safe expression evaluator — resolves dot-path property access and simple literals.
+ * Does NOT use eval/new Function. Only supports:
+ *   - Property paths: "last", "vars.name", "params.id", "body.items"
+ *   - JSON literals (parsed via JSON.parse)
+ *   - The special keyword "last" / "vars" / "input" / "params" / "query" / "body"
+ */
+function safeEval(expr, ctx) {
+  const trimmed = String(expr || "").trim();
+  if (!trimmed) return undefined;
+
+  // Direct context keywords
+  if (trimmed === "last") return ctx.last;
+  if (trimmed === "vars") return ctx.vars;
+  if (trimmed === "input") return ctx.input;
+  if (trimmed === "params") return ctx.params;
+  if (trimmed === "query") return ctx.query;
+  if (trimmed === "body") return ctx.body;
+  if (trimmed === "headers") return ctx.headers;
+  if (trimmed === "null") return null;
+  if (trimmed === "undefined") return undefined;
+  if (trimmed === "true") return true;
+  if (trimmed === "false") return false;
+
+  // Numeric literal
+  if (/^-?\d+(\.\d+)?$/.test(trimmed)) return Number(trimmed);
+
+  // JSON object/array literal
+  if ((trimmed.startsWith("{") && trimmed.endsWith("}")) || (trimmed.startsWith("[") && trimmed.endsWith("]"))) {
+    // First resolve any template-style vars in the JSON
+    const resolved = resolveTemplate(trimmed, ctx);
+    try { return JSON.parse(resolved); } catch { /* fall through to path resolution */ }
+  }
+
+  // Dot-path resolution: "vars.name", "last.items.0", "params.id"
+  if (/^[\w.]+$/.test(trimmed) && !trimmed.startsWith(".") && !trimmed.endsWith(".")) {
+    const parts = trimmed.split(".");
+    const roots = { vars: ctx.vars, last: ctx.last, input: ctx.input, params: ctx.params, query: ctx.query, body: ctx.body, headers: ctx.headers };
+    let val = roots.hasOwnProperty(parts[0]) ? roots[parts[0]] : ctx.last;
+    const startIndex = roots.hasOwnProperty(parts[0]) ? 1 : 0;
+    for (let i = startIndex; i < parts.length; i++) {
+      const p = parts[i];
+      if (val == null || typeof val !== "object") return undefined;
+      if (p === "__proto__" || p === "constructor" || p === "prototype") return undefined;
+      val = val[p];
+    }
+    return val;
+  }
+
+  // Fallback: return the expression as a string (safe — no code execution)
+  return trimmed;
+}
+
+async function executeFlowChain(flowData, nodeChain, requestCtx) {
+  const data = flowData?.drawflow?.Home?.data || {};
+  const ctx = {
+    vars: {},
+    last: null,
+    input: requestCtx.body || requestCtx.params || {},
+    params: requestCtx.params || {},
+    query: requestCtx.query || {},
+    body: requestCtx.body || null,
+    headers: requestCtx.headers || {},
+  };
+
+  for (const nodeId of nodeChain) {
+    const node = data[nodeId];
+    if (!node) continue;
+    const d = node.data || {};
+    const type = node.name;
+
+    // Skip the route trigger itself
+    if (type.startsWith("route_")) continue;
+
+    // Response blocks — return the response
+    if (type === "respond_json") {
+      const bodyResult = safeEval(d.bodyExpr || "last", ctx);
+      const extraHeaders = safeEval(d.headersExpr || "{}", ctx) || {};
+      return { statusCode: Number(d.statusCode) || 200, contentType: "application/json", body: bodyResult, headers: extraHeaders };
+    }
+    if (type === "respond_html") {
+      let html = resolveTemplate(d.templateHtml || "", ctx);
+      if (d.cssExpr) {
+        // Sanitize CSS to prevent style tag breakout (</style> injection)
+        const safeCSS = String(d.cssExpr).replace(/<\\/style/gi, "").replace(/<script/gi, "").replace(/<\\//g, "");
+        html = html.replace("</head>", "<style>" + safeCSS + "</style></head>");
+      }
+      return { statusCode: Number(d.statusCode) || 200, contentType: "text/html", body: html, headers: {} };
+    }
+    if (type === "respond_redirect") {
+      const url = resolveTemplate(d.url || "/", ctx);
+      return { statusCode: Number(d.statusCode) || 302, contentType: null, body: null, headers: { Location: url }, redirect: true };
+    }
+
+    // Logic blocks
+    if (type === "set_var") {
+      const val = safeEval(d.valueExpr || "last", ctx);
+      if (d.varName) ctx.vars[d.varName] = val;
+      ctx.last = val;
+    } else if (type === "transform") {
+      ctx.last = safeEval(d.expression || "last", ctx);
+    } else if (type === "json_parse") {
+      try { ctx.last = JSON.parse(typeof ctx.last === "string" ? ctx.last : JSON.stringify(ctx.last)); } catch { /* keep last */ }
+    } else if (type === "json_stringify") {
+      ctx.last = JSON.stringify(ctx.last, null, 2);
+    } else if (type === "template") {
+      ctx.last = resolveTemplate(d.template || "", ctx);
+      if (String(d.parseJson) === "true") { try { ctx.last = JSON.parse(ctx.last); } catch { /* keep */ } }
+      if (d.storeAs) ctx.vars[d.storeAs] = ctx.last;
+    } else if (type === "http") {
+      try {
+        const url = resolveTemplate(d.url || "", ctx);
+        const method = String(d.method || "GET").toUpperCase();
+        const hdrs = typeof d.headers === "object" ? d.headers : {};
+        const fetchOpts = { method, headers: { "content-type": "application/json", ...hdrs } };
+        if (method !== "GET" && method !== "HEAD" && d.body) { fetchOpts.body = resolveTemplate(typeof d.body === "string" ? d.body : JSON.stringify(d.body), ctx); }
+        const res = await fetch(url, fetchOpts);
+        const ct = res.headers.get("content-type") || "";
+        ctx.last = ct.includes("json") ? await res.json() : await res.text();
+        if (d.storeAs) ctx.vars[d.storeAs] = ctx.last;
+      } catch (err) {
+        ctx.last = { error: err instanceof Error ? err.message : String(err) };
+        if (d.storeAs) ctx.vars[d.storeAs] = ctx.last;
+      }
+    } else if (type === "llm_chat" || type === "openai_structured") {
+      try {
+        const result = await callConfiguredLlm({ messages: [{ role: "user", content: resolveTemplate(d.userPrompt || String(ctx.last || ""), ctx) }], model: d.model }, requestCtx.envSource);
+        ctx.last = result?.reply || result;
+        if (d.storeAs) ctx.vars[d.storeAs] = ctx.last;
+      } catch (err) {
+        ctx.last = { error: err instanceof Error ? err.message : String(err) };
+        if (d.storeAs) ctx.vars[d.storeAs] = ctx.last;
+      }
+    } else if (type === "log") {
+      console.log("[flow-chain]", d.label || "", ctx.last);
+    }
+    // Other block types: pass through (ctx.last unchanged)
+  }
+
+  // If no respond block was hit, return last value as JSON
+  return { statusCode: 200, contentType: "application/json", body: ctx.last, headers: {} };
+}
+
+${embeddedAssets.length > 0 ? buildStaticAssetsBlock(embeddedAssets) : ""}
+${customRoutes.map(route => {
+      const methodLower = route.method;
+      const safePath = JSON.stringify(route.path);
+      const authGuard = route.requireAuth ? `
+  if (!hasWorkerAccess(request.headers, store)) {
+    set.status = 401;
+    return { error: "Unauthorized. Provide WORKER_AUTH_TOKEN via x-worker-token header." };
+  }` : "";
+      const safeComment = String(route.path).replace(/[`$\\]/g, "").replace(/\n/g, " ").substring(0, 200);
+      return `
+// Custom route: ${route.method.toUpperCase()} ${safeComment}
+app.${methodLower}(${safePath}, async ({ params, query, body, request, set, store }) => {${authGuard}
+  const result = await executeFlowChain(FLOW, ${JSON.stringify(route.nodeChain)}, { params: params || {}, query: query || {}, body: body || null, headers: request.headers, envSource: store });
+  set.status = result.statusCode || 200;
+  if (result.redirect) { set.redirect = result.headers?.Location || "/"; return; }
+  if (result.headers) { for (const [k,v] of Object.entries(result.headers)) { set.headers[k] = v; } }
+  if (result.contentType) { set.headers["content-type"] = result.contentType; }
+  return result.body;
+});`;
+    }).join("\n")}
 
 export default app;
 `;
@@ -3397,7 +3743,7 @@ export default {
       .replace(/"/g, '\\"');
   }
 
-  function buildCloudflareWranglerToml(workerName, cloudflareConfig = {}) {
+  function buildCloudflareWranglerToml(workerName, cloudflareConfig = {}, r2Config = null) {
     const config = normalizeCloudflareDeployConfig(cloudflareConfig);
     const compatibilityDate = new Date().toISOString().slice(0, 10);
     const lines = [
@@ -3409,6 +3755,15 @@ export default {
 
     if (config.zoneId && config.routePattern) {
       lines.push("", "[[routes]]", `pattern = "${escapeTomlString(config.routePattern)}"`, `zone_id = "${escapeTomlString(config.zoneId)}"`);
+    }
+
+    if (r2Config && r2Config.bucketName) {
+      lines.push(
+        "",
+        "[[r2_buckets]]",
+        `binding = "STATIC_BUCKET"`,
+        `bucket_name = "${escapeTomlString(r2Config.bucketName)}"`,
+      );
     }
 
     if (config.d1DatabaseId) {
@@ -3494,13 +3849,14 @@ export default {
     const nonCloudflareConfig = normalizeCloudflareDeployConfig({ zeroTrustMode: "off" });
     const endpointMode = normalizeEndpointMode(options.endpointMode || "both");
     const drawflow = options.drawflow || { drawflow: { Home: { data: {} } } };
+    const { r2Config } = extractStaticAssets(drawflow);
 
     const rootDir = `${slugify(agentName, "akompani-runtime")}-${targetDef.id}-${formatDateForSlug(new Date())}`;
     const files = [];
 
     if (targetDef.id === "cloudflare_workers_elysia_bun") {
       files.push({ path: "src/index.ts", content: buildCloudflareElysiaSource({ agentName, description, drawflow, providerConfig, endpointMode, cloudflareConfig }) });
-      files.push({ path: "wrangler.toml", content: buildCloudflareWranglerToml(agentName, cloudflareConfig) });
+      files.push({ path: "wrangler.toml", content: buildCloudflareWranglerToml(agentName, cloudflareConfig, r2Config) });
       files.push({ path: "package.json", content: buildPackageJson(agentName, targetDef.id) });
       files.push({ path: "tsconfig.json", content: buildTsconfig(targetDef.id) });
       files.push({ path: "README.md", content: buildReadme({ target: targetDef.id, targetLabel: targetDef.label, agentName, endpointMode }) });
@@ -3582,6 +3938,8 @@ export default {
     buildDeployObject,
     buildCloudflareWorkerModule,
     summarizeFlow,
+    extractCustomRoutes,
+    extractStaticAssets,
     syncLegacyFromActive,
     ensureProviderAndReturn,
   };

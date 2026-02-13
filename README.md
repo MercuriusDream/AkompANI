@@ -1,4 +1,6 @@
-# Akompani
+# AkompANI
+
+> *`Akompani`: to accompany; attend; go hand in hand with.<sup>Esperanto</sup>*
 
 <img width="1282" height="717" alt="image" src="https://github.com/user-attachments/assets/a66955cb-f947-4305-8e0d-d13fab7c9eb4" />
 
@@ -6,7 +8,7 @@
 
 ## Mission
 
-An Artificial Narrow Intelligence agent platform, for people who have not yet developed strong agentic usage patterns, while keeping generated runtime artifacts practical, readable, and production-oriented.
+An *Artificial Narrow Intelligence* agent suite, for people who have not yet developed strong agentic usage patterns, while keeping generated runtime artifacts practical, readable, and production-oriented;
 
 ## What It Is
 

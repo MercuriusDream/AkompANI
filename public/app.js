@@ -194,6 +194,11 @@
       types: ["vibe_agent_maker", "agent_flow_maker", "agent_block_maker", "chat_code_to_elysia"],
     },
     {
+      id: "routes",
+      label: "API Routes",
+      types: ["route_get", "route_post", "route_put", "route_delete", "respond_json", "respond_html", "respond_redirect", "static_assets"],
+    },
+    {
       id: "flow",
       label: "Flow Control",
       types: ["start", "if", "switch_case", "while", "for_each", "try_catch", "merge", "parallel", "delay", "assert", "end"],
@@ -285,6 +290,172 @@
       macroKind: "chat_to_elysia",
       data: {},
       fields: [],
+    },
+    /* ── API Route triggers (HAT blocks) ── */
+    route_get: {
+      group: "routes",
+      label: "GET Route",
+      icon: "GET",
+      meta: "route",
+      color: "#ef476f",
+      ports: "out: handler",
+      description: "Defines a GET endpoint. Provides request params, query, and headers as context.",
+      inputs: 0,
+      outputs: 1,
+      data: {
+        path: "/api/items",
+        requireAuth: "false",
+      },
+      fields: [
+        { section: "Endpoint", key: "path", label: "Path", type: "text", help: "Route path (supports :param placeholders).", example: "/api/users/:id" },
+        { section: "Security", key: "requireAuth", label: "Require auth", type: "select", options: ["false", "true"], help: "Enforce WORKER_AUTH_TOKEN or CF Zero Trust." },
+      ],
+    },
+    route_post: {
+      group: "routes",
+      label: "POST Route",
+      icon: "POST",
+      meta: "route",
+      color: "#ef476f",
+      ports: "out: handler",
+      description: "Defines a POST endpoint. Provides request body, params, query, and headers as context.",
+      inputs: 0,
+      outputs: 1,
+      data: {
+        path: "/api/items",
+        requireAuth: "false",
+        parseBody: "json",
+      },
+      fields: [
+        { section: "Endpoint", key: "path", label: "Path", type: "text", help: "Route path (supports :param placeholders).", example: "/api/submit" },
+        { section: "Endpoint", key: "parseBody", label: "Body format", type: "select", options: ["json", "text", "form"], help: "How to parse the request body." },
+        { section: "Security", key: "requireAuth", label: "Require auth", type: "select", options: ["false", "true"], help: "Enforce WORKER_AUTH_TOKEN or CF Zero Trust." },
+      ],
+    },
+    route_put: {
+      group: "routes",
+      label: "PUT Route",
+      icon: "PUT",
+      meta: "route",
+      color: "#ef476f",
+      ports: "out: handler",
+      description: "Defines a PUT endpoint for updating resources.",
+      inputs: 0,
+      outputs: 1,
+      data: {
+        path: "/api/items/:id",
+        requireAuth: "false",
+        parseBody: "json",
+      },
+      fields: [
+        { section: "Endpoint", key: "path", label: "Path", type: "text", help: "Route path (supports :param placeholders).", example: "/api/users/:id" },
+        { section: "Endpoint", key: "parseBody", label: "Body format", type: "select", options: ["json", "text", "form"], help: "How to parse the request body." },
+        { section: "Security", key: "requireAuth", label: "Require auth", type: "select", options: ["false", "true"], help: "Enforce WORKER_AUTH_TOKEN or CF Zero Trust." },
+      ],
+    },
+    route_delete: {
+      group: "routes",
+      label: "DELETE Route",
+      icon: "DEL",
+      meta: "route",
+      color: "#ef476f",
+      ports: "out: handler",
+      description: "Defines a DELETE endpoint for removing resources.",
+      inputs: 0,
+      outputs: 1,
+      data: {
+        path: "/api/items/:id",
+        requireAuth: "false",
+      },
+      fields: [
+        { section: "Endpoint", key: "path", label: "Path", type: "text", help: "Route path (supports :param placeholders).", example: "/api/users/:id" },
+        { section: "Security", key: "requireAuth", label: "Require auth", type: "select", options: ["false", "true"], help: "Enforce WORKER_AUTH_TOKEN or CF Zero Trust." },
+      ],
+    },
+    /* ── Response blocks (CAP blocks) ── */
+    respond_json: {
+      group: "routes",
+      label: "Respond JSON",
+      icon: "JSON",
+      meta: "response",
+      color: "#ef476f",
+      ports: "in: input",
+      description: "Ends route handler and returns a JSON response.",
+      inputs: 1,
+      outputs: 0,
+      data: {
+        statusCode: 200,
+        bodyExpr: "last",
+        headersExpr: "{}",
+      },
+      fields: [
+        { section: "Response", key: "statusCode", label: "Status code", type: "number", help: "HTTP status code.", example: "200" },
+        { section: "Response", key: "bodyExpr", label: "Body expression", type: "textarea", insertMode: "expression", help: "Expression that evaluates to the JSON response body.", example: "{ items: vars.items, total: vars.items.length }", presets: ["last", "vars", "{ ok: true, data: last }"] },
+        { section: "Response", key: "headersExpr", label: "Extra headers", type: "json", help: "Additional response headers as JSON object.", example: "{\"X-Custom\": \"value\"}" },
+      ],
+    },
+    respond_html: {
+      group: "routes",
+      label: "Respond HTML",
+      icon: "HTML",
+      meta: "response",
+      color: "#ef476f",
+      ports: "in: input",
+      description: "Ends route handler and returns an HTML response. Supports template interpolation.",
+      inputs: 1,
+      outputs: 0,
+      data: {
+        statusCode: 200,
+        templateHtml: "<html><body><h1>Hello {{vars.name}}</h1></body></html>",
+        cssExpr: "",
+      },
+      fields: [
+        { section: "Response", key: "statusCode", label: "Status code", type: "number", help: "HTTP status code.", example: "200" },
+        { section: "Response", key: "templateHtml", label: "HTML template", type: "textarea", insertMode: "template", help: "HTML content. Supports {{vars.*}}, {{last}}, {{input.*}}." },
+        { section: "Response", key: "cssExpr", label: "Inline CSS", type: "textarea", help: "Optional CSS injected into a <style> tag." },
+      ],
+    },
+    respond_redirect: {
+      group: "routes",
+      label: "Redirect",
+      icon: "→",
+      meta: "response",
+      color: "#ef476f",
+      ports: "in: input",
+      description: "Ends route handler with an HTTP redirect.",
+      inputs: 1,
+      outputs: 0,
+      data: {
+        url: "/api/new-location",
+        statusCode: 302,
+      },
+      fields: [
+        { section: "Redirect", key: "url", label: "Target URL", type: "text", insertMode: "template", help: "URL to redirect to. Supports template interpolation.", example: "/dashboard/{{vars.userId}}" },
+        { section: "Redirect", key: "statusCode", label: "Status code", type: "select", options: ["301", "302", "307", "308"], help: "301 = permanent, 302 = temporary." },
+      ],
+    },
+    /* ── Static Assets ── */
+    static_assets: {
+      group: "routes",
+      label: "Static Assets",
+      icon: "Files",
+      meta: "assets",
+      color: "#0f8f67",
+      ports: "",
+      description: "Serves static files (HTML, CSS, JS, images) from /static/ path. Upload files in the detail panel.",
+      inputs: 0,
+      outputs: 0,
+      data: {
+        basePath: "/static",
+        storageMode: "embed",
+        r2Bucket: "",
+        files: [],
+      },
+      fields: [
+        { section: "Config", key: "basePath", label: "Base path", type: "text", help: "URL prefix for static files.", example: "/static" },
+        { section: "Config", key: "storageMode", label: "Storage", type: "select", options: ["embed", "r2"], help: "Embed in worker (≤1MB) or use R2 bucket." },
+        { section: "Config", key: "r2Bucket", label: "R2 bucket name", type: "text", help: "Required when storage mode is R2.", example: "my-assets" },
+      ],
     },
     start: {
       group: "flow",
@@ -2059,6 +2230,16 @@
   }
 
   const BLOCK_SVG_ICONS = {
+    // API Routes
+    route_get: `<svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12H3"/><path d="m15 6 6 6-6 6"/></svg>`,
+    route_post: `<svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14"/><path d="M5 12h14"/></svg>`,
+    route_put: `<svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 3a2.85 2.85 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/></svg>`,
+    route_delete: `<svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/><line x1="10" y1="11" x2="10" y2="17"/><line x1="14" y1="11" x2="14" y2="17"/></svg>`,
+    respond_json: `<svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8 3H5a2 2 0 0 0-2 2v3"/><path d="M21 8V5a2 2 0 0 0-2-2h-3"/><path d="M3 16v3a2 2 0 0 0 2 2h3"/><path d="M16 21h3a2 2 0 0 0 2-2v-3"/><path d="M12 8v4l2 2"/></svg>`,
+    respond_html: `<svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="16 18 22 12 16 6"/><polyline points="8 6 2 12 8 18"/></svg>`,
+    respond_redirect: `<svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18l6-6-6-6"/><path d="M15 18l6-6-6-6"/></svg>`,
+    static_assets: `<svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg>`,
+    // Code
     python_script: `<svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="16 18 22 12 16 6"/><polyline points="8 6 2 12 8 18"/><line x1="14" y1="4" x2="10" y2="20"/></svg>`,
     typescript_script: `<svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="16 18 22 12 16 6"/><polyline points="8 6 2 12 8 18"/><line x1="14" y1="4" x2="10" y2="20"/></svg>`,
     // Flow control
@@ -2108,6 +2289,14 @@
       case "parallel": return "3 branches";
       case "delay": return d.msExpr ? `${d.msExpr}ms` : "";
       case "webhook": return d.path || "";
+      case "route_get": return d.path ? `GET ${d.path}` : "";
+      case "route_post": return d.path ? `POST ${d.path}` : "";
+      case "route_put": return d.path ? `PUT ${d.path}` : "";
+      case "route_delete": return d.path ? `DEL ${d.path}` : "";
+      case "respond_json": return d.statusCode ? `${d.statusCode} · ${String(d.bodyExpr || "last").substring(0, 30)}` : "";
+      case "respond_html": return d.statusCode ? `${d.statusCode} · HTML` : "";
+      case "respond_redirect": return d.url ? `${d.statusCode || 302} → ${String(d.url).substring(0, 30)}` : "";
+      case "static_assets": return d.basePath ? `${d.basePath}/ · ${d.storageMode || "embed"}` : "";
       case "websocket": return d.action ? `${d.action} · ${String(d.url || "").substring(0, 30)}` : "";
       case "db_query": return d.driver ? `${d.driver} · ${String(d.query || "").substring(0, 30)}` : "";
       case "email_send": return d.to ? `→ ${String(d.to).substring(0, 30)}` : "";
@@ -2205,7 +2394,24 @@
 
     // Inline fields (shown when expanded)
     const fields = Array.isArray(def.fields) ? def.fields : [];
-    const fieldsHtml = fields.map(f => createInlineFieldHtml(data, f)).join("");
+    let fieldsHtml = fields.map(f => createInlineFieldHtml(data, f)).join("");
+
+    // Add file manager for static_assets blocks
+    if (type === "static_assets") {
+      const fileCount = Array.isArray(data.files) ? data.files.length : 0;
+      const totalSize = Array.isArray(data.files) ? data.files.reduce((sum, f) => sum + (f.content?.length || 0) * 0.75, 0) : 0;
+      const sizeStr = totalSize > 1024 * 1024 ? `${(totalSize / (1024 * 1024)).toFixed(1)}MB` : totalSize > 1024 ? `${(totalSize / 1024).toFixed(0)}KB` : `${Math.round(totalSize)}B`;
+      const sizeWarn = totalSize > 1024 * 1024 ? ' style="color:#ef476f;font-weight:600"' : '';
+      const filesListHtml = Array.isArray(data.files) ? data.files.map((f, i) =>
+        `<div class="asset-file-row" data-file-index="${i}"><span class="asset-file-name">${escapeHtml(f.name || "unnamed")}</span><span class="asset-file-type">${escapeHtml(f.type || "")}</span><button class="scratch-btn asset-file-delete" data-action="delete-asset" data-file-index="${i}" title="Remove">×</button></div>`
+      ).join("") : "";
+      fieldsHtml += `
+        <div class="scratch-field asset-manager">
+          <div class="asset-manager-header"><span>Files</span><span class="asset-size"${sizeWarn}>${fileCount} file${fileCount !== 1 ? "s" : ""} · ${sizeStr}</span></div>
+          <div class="asset-file-list">${filesListHtml || '<div class="asset-empty">No files uploaded</div>'}</div>
+          <label class="asset-upload-btn"><input type="file" multiple class="asset-file-input" style="display:none" data-action="upload-assets" />+ Upload files</label>
+        </div>`;
+    }
 
     // Port labels
     const portLabels = String(def.ports || "").split("·").map(p => p.trim()).filter(Boolean);
@@ -2654,6 +2860,7 @@
     editor.updateNodeDataFromId(Number(nodeId), next);
     // Only update summary line, NOT full re-render (preserves field focus)
     updateScratchBlockSummary(nodeId);
+    debouncedCodePreview();
   }
 
   function getInsertTarget() {
@@ -4461,6 +4668,124 @@
     updateLayoutToggleIcons();
     try { localStorage.setItem("akompani_chat_drawer_open", state.isChatDrawerOpen ? "1" : "0"); } catch {}
     setTimeout(() => refreshCanvasConnections(), 130);
+  }
+
+  /* ===== Code Preview Panel ===== */
+  let _codePreviewDebounceTimer = null;
+  let _codePreviewActiveFile = "src/index.ts";
+
+  function toggleCodePreview() {
+    const panel = document.getElementById("codePreviewPanel");
+    if (!panel) return;
+    const isCollapsed = panel.classList.toggle("collapsed");
+    if (!isCollapsed) refreshCodePreview();
+  }
+
+  function refreshCodePreview() {
+    const panel = document.getElementById("codePreviewPanel");
+    if (!panel || panel.classList.contains("collapsed")) return;
+    const pre = document.getElementById("codePreviewContent");
+    if (!pre) return;
+
+    try {
+      const flowData = editor ? editor.export() : { drawflow: { Home: { data: {} } } };
+      const deployObj = window.IdeRuntime?.buildDeployObject?.({
+        drawflow: flowData,
+        target: "cloudflare_workers_elysia_bun",
+        agentName: state.agentName || "akompani-runtime",
+      });
+      if (!deployObj?.files) { pre.textContent = "// No deploy output"; return; }
+
+      const file = deployObj.files.find(f => f.path === _codePreviewActiveFile) || deployObj.files[0];
+      if (!file) { pre.textContent = "// No files generated"; return; }
+
+      // Basic syntax highlighting
+      pre.innerHTML = highlightCode(file.content || "", file.path);
+    } catch (err) {
+      pre.textContent = `// Error generating preview: ${err.message || err}`;
+    }
+  }
+
+  function highlightCode(code, filename) {
+    // Escape HTML entities first — MUST happen before any regex wrapping.
+    // This ensures user-controlled content cannot inject HTML/script tags.
+    let s = code.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
+    if (filename.endsWith(".ts") || filename.endsWith(".js")) {
+      // Comments
+      s = s.replace(/(\/\/[^\n]*)/g, '<span class="cmt">$1</span>');
+      // Strings (double and single quotes, backticks)
+      s = s.replace(/("(?:[^"\\]|\\.)*")/g, '<span class="str">$1</span>');
+      s = s.replace(/('(?:[^'\\]|\\.)*')/g, '<span class="str">$1</span>');
+      // Keywords
+      s = s.replace(/\b(const|let|var|function|async|await|return|import|export|from|if|else|for|while|try|catch|throw|new|class|extends|default|true|false|null|undefined)\b/g, '<span class="kw">$1</span>');
+      // Numbers
+      s = s.replace(/\b(\d+\.?\d*)\b/g, '<span class="num">$1</span>');
+    } else if (filename.endsWith(".toml")) {
+      s = s.replace(/(#[^\n]*)/g, '<span class="cmt">$1</span>');
+      s = s.replace(/("(?:[^"\\]|\\.)*")/g, '<span class="str">$1</span>');
+      s = s.replace(/\b(true|false)\b/g, '<span class="kw">$1</span>');
+    } else if (filename.endsWith(".json")) {
+      s = s.replace(/("(?:[^"\\]|\\.)*")\s*:/g, '<span class="fn">$1</span>:');
+      s = s.replace(/:(\s*"(?:[^"\\]|\\.)*")/g, ':<span class="str">$1</span>');
+      s = s.replace(/\b(\d+\.?\d*)\b/g, '<span class="num">$1</span>');
+      s = s.replace(/\b(true|false|null)\b/g, '<span class="kw">$1</span>');
+    }
+    return s;
+  }
+
+  function debouncedCodePreview() {
+    if (_codePreviewDebounceTimer) clearTimeout(_codePreviewDebounceTimer);
+    _codePreviewDebounceTimer = setTimeout(refreshCodePreview, 500);
+  }
+
+  function initCodePreviewPanel() {
+    const panel = document.getElementById("codePreviewPanel");
+    if (!panel) return;
+
+    // Tab switching
+    panel.addEventListener("click", (e) => {
+      const tab = e.target.closest(".code-preview-tab");
+      if (tab) {
+        _codePreviewActiveFile = tab.dataset.file;
+        panel.querySelectorAll(".code-preview-tab").forEach(t => t.classList.remove("active"));
+        tab.classList.add("active");
+        refreshCodePreview();
+        return;
+      }
+    });
+
+    // Copy button
+    document.getElementById("codePreviewCopy")?.addEventListener("click", () => {
+      const pre = document.getElementById("codePreviewContent");
+      if (pre) navigator.clipboard?.writeText(pre.textContent || "");
+    });
+
+    // Close button
+    document.getElementById("codePreviewClose")?.addEventListener("click", () => {
+      panel.classList.add("collapsed");
+    });
+
+    // Resize handle
+    const resizeHandle = document.getElementById("codePreviewResize");
+    if (resizeHandle) {
+      let startY = 0, startH = 0;
+      resizeHandle.addEventListener("mousedown", (e) => {
+        e.preventDefault();
+        startY = e.clientY;
+        startH = panel.offsetHeight;
+        const onMove = (e2) => {
+          const delta = startY - e2.clientY;
+          const newH = Math.max(100, Math.min(600, startH + delta));
+          panel.style.height = newH + "px";
+        };
+        const onUp = () => {
+          document.removeEventListener("mousemove", onMove);
+          document.removeEventListener("mouseup", onUp);
+        };
+        document.addEventListener("mousemove", onMove);
+        document.addEventListener("mouseup", onUp);
+      });
+    }
   }
 
   function toggleLeftPanelSide() {
@@ -6880,6 +7205,12 @@
         return;
       }
 
+      if (isMeta && key === "k" && state.editorMode === "canvas") {
+        event.preventDefault();
+        toggleCodePreview();
+        return;
+      }
+
       if (!isMeta && key === "r") {
         event.preventDefault();
         try {
@@ -6969,6 +7300,9 @@
     } catch {}
   })();
 
+  // Initialize code preview panel
+  initCodePreviewPanel();
+
   function bindEvents() {
     if (editor) {
       editor.on("nodeSelected", (id) => {
@@ -6984,10 +7318,12 @@
       editor.on("connectionCreated", () => {
         // Variable hints may have changed — update expanded block if any
         if (state.selectedNodeId) updateScratchBlockVars(state.selectedNodeId);
+        debouncedCodePreview();
       });
 
       editor.on("connectionRemoved", () => {
         if (state.selectedNodeId) updateScratchBlockVars(state.selectedNodeId);
+        debouncedCodePreview();
       });
     }
 
@@ -7113,7 +7449,74 @@
             const wasSelected = state.selectedNodeId === nodeId;
             removeNodeById(nodeId);
             if (wasSelected) state.selectedNodeId = "";
+          } else if (action === "delete-asset") {
+            const fileIndex = Number(actionBtn.dataset.fileIndex);
+            const node = editor?.getNodeFromId ? editor.getNodeFromId(Number(nodeId)) : null;
+            if (node && Array.isArray(node.data?.files)) {
+              node.data.files.splice(fileIndex, 1);
+              editor.updateNodeDataFromId(Number(nodeId), node.data);
+              updateNodeCard(nodeId);
+            }
           }
+          return;
+        }
+
+        // File upload for static_assets blocks
+        const fileInput = e.target.closest(".asset-file-input");
+        if (fileInput && fileInput.files?.length) {
+          const nodeEl = fileInput.closest(".scratch-node");
+          if (!nodeEl) return;
+          const nodeId = nodeEl.dataset.nodeId || nodeEl.id.replace("snode-", "").replace("node-", "");
+          const node = editor?.getNodeFromId ? editor.getNodeFromId(Number(nodeId)) : null;
+          if (!node) return;
+          if (!Array.isArray(node.data.files)) node.data.files = [];
+
+          const MAX_FILE_SIZE = 5 * 1024 * 1024; // 5MB per file
+          const MAX_TOTAL_FILES = 50;
+          const skipped = [];
+
+          const readPromises = Array.from(fileInput.files).map(file => {
+            // Validate file size
+            if (file.size > MAX_FILE_SIZE) {
+              skipped.push(`${file.name} (too large: ${(file.size / 1024 / 1024).toFixed(1)}MB, max 5MB)`);
+              return Promise.resolve(null);
+            }
+            // Sanitize filename: strip path traversal, extract basename, limit length
+            let safeName = String(file.name || "file").replace(/\\/g, "/").split("/").pop() || "file";
+            safeName = safeName.replace(/[^\w.\-]/g, "_").substring(0, 255);
+            if (!safeName || safeName.startsWith(".")) safeName = "_" + safeName;
+            // Validate MIME type
+            const safeType = /^[\w.+-]+\/[\w.+-]+$/.test(file.type) ? file.type : "application/octet-stream";
+
+            return new Promise((resolve) => {
+              const reader = new FileReader();
+              reader.onload = () => {
+                const base64 = reader.result.split(",")[1] || "";
+                resolve({ name: safeName, type: safeType, content: base64 });
+              };
+              reader.onerror = () => resolve(null);
+              reader.readAsDataURL(file);
+            });
+          });
+          Promise.all(readPromises).then(results => {
+            let added = 0;
+            for (const r of results) {
+              if (!r) continue;
+              if (node.data.files.length >= MAX_TOTAL_FILES) {
+                skipped.push(`${r.name} (max ${MAX_TOTAL_FILES} files reached)`);
+                continue;
+              }
+              node.data.files.push(r);
+              added++;
+            }
+            editor.updateNodeDataFromId(Number(nodeId), node.data);
+            updateNodeCard(nodeId);
+            if (skipped.length) {
+              console.warn("[asset-upload] Skipped files:", skipped);
+              alert("Some files were skipped:\n" + skipped.join("\n"));
+            }
+          });
+          fileInput.value = "";
           return;
         }
 

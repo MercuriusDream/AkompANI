@@ -197,7 +197,7 @@
         <section class="editor-canvas">
           <div class="canvas-toolbar">
             <div class="canvas-shortcuts">
-              <kbd>⌘S</kbd> save · <kbd>⌘⏎</kbd> run · <kbd>⌘B</kbd> blocks · <kbd>⌘J</kbd> chat
+              <kbd>⌘S</kbd> save · <kbd>⌘⏎</kbd> run · <kbd>⌘B</kbd> blocks · <kbd>⌘J</kbd> chat · <kbd>⌘K</kbd> code
             </div>
           </div>
           <div id="drawflow" class="scratch-canvas"></div>
@@ -244,6 +244,21 @@
             </div>
           </div>
         </section>
+
+        <!-- Code Preview Panel (VS Code-style bottom panel) -->
+        <div class="code-preview-panel collapsed" id="codePreviewPanel" style="height:240px">
+          <div class="code-preview-resize" id="codePreviewResize"></div>
+          <div class="code-preview-toolbar">
+            <button class="code-preview-tab active" data-file="src/index.ts">src/index.ts</button>
+            <button class="code-preview-tab" data-file="wrangler.toml">wrangler.toml</button>
+            <button class="code-preview-tab" data-file="package.json">package.json</button>
+            <div class="code-preview-actions">
+              <button id="codePreviewCopy" title="Copy to clipboard">Copy</button>
+              <button id="codePreviewClose" title="Close panel">✕</button>
+            </div>
+          </div>
+          <div class="code-preview-body"><pre id="codePreviewContent"></pre></div>
+        </div>
 
         <!-- Resize handle: canvas ↔ chat -->
         <div class="panel-resize-handle chat-resize-handle" id="resizeHandleChat" data-panel="chat"></div>
