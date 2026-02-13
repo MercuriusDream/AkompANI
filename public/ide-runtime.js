@@ -1473,7 +1473,7 @@ function buildOpenAiCompletionPayload(completion) {
     id: "chatcmpl_agent_builder",
     object: "chat.completion",
     created,
-    model: completion?.model || DEFAULT_LLM_MODEL || "agent-builder-sim",
+    model: completion?.model || DEFAULT_LLM_MODEL || "akompani-sim",
     choices: [
       {
         index: 0,
@@ -1493,7 +1493,7 @@ function buildOpenAiStreamResponse(completion) {
   const choice = payload.choices?.[0] || {};
   const message = choice.message || {};
   const created = payload.created || Math.floor(Date.now() / 1000);
-  const model = payload.model || DEFAULT_LLM_MODEL || "agent-builder-sim";
+  const model = payload.model || DEFAULT_LLM_MODEL || "akompani-sim";
   const encoder = new TextEncoder();
 
   const chunks = [];
@@ -1927,7 +1927,7 @@ const app = new Elysia()
       };
     }
 
-    const configured = readEnvValue(store, "LLM_MODEL") || DEFAULT_LLM_MODEL || "agent-builder-sim";
+    const configured = readEnvValue(store, "LLM_MODEL") || DEFAULT_LLM_MODEL || "akompani-sim";
     return {
       object: "list",
       data: [
@@ -1935,7 +1935,7 @@ const app = new Elysia()
           id: configured,
           object: "model",
           created: Math.floor(Date.now() / 1000),
-          owned_by: "agent-builder-runtime",
+          owned_by: "akompani-runtime",
         },
       ],
     };
@@ -2031,7 +2031,7 @@ ${withoutTsNocheck.replace("const app = new Elysia()", "const app = new Elysia({
 
 const port = Number(process.env.PORT || 8787);
 app.listen(port);
-console.log("[agent-builder] local Elysia runtime on http://localhost:" + port);
+console.log("[akompani] local Elysia runtime on http://localhost:" + port);
 `;
   }
 
@@ -2752,7 +2752,7 @@ function buildOpenAiCompletionPayload(completion) {
     id: "chatcmpl_agent_builder",
     object: "chat.completion",
     created,
-    model: completion?.model || String(completion?.raw?.model || "") || "agent-builder-sim",
+    model: completion?.model || String(completion?.raw?.model || "") || "akompani-sim",
     choices: [
       {
         index: 0,
@@ -2772,7 +2772,7 @@ function buildOpenAiStreamResponse(completion) {
   const choice = payload.choices?.[0] || {};
   const message = choice.message || {};
   const created = payload.created || Math.floor(Date.now() / 1000);
-  const model = payload.model || "agent-builder-sim";
+  const model = payload.model || "akompani-sim";
   const encoder = new TextEncoder();
 
   const chunks = [];
@@ -3163,7 +3163,7 @@ export default {
       if (!hasWorkerAccess(request, env)) {
         return json({ error: "Unauthorized. Missing or invalid worker auth / zero-trust headers." }, 401);
       }
-      const model = String(env.LLM_MODEL || "").trim() || "agent-builder-sim";
+      const model = String(env.LLM_MODEL || "").trim() || "akompani-sim";
       return json({
         object: "list",
         data: [
@@ -3171,7 +3171,7 @@ export default {
             id: model,
             object: "model",
             created: Math.floor(Date.now() / 1000),
-            owned_by: "agent-builder-runtime",
+            owned_by: "akompani-runtime",
           },
         ],
       });
@@ -3245,7 +3245,7 @@ export default {
     }
 
     const payload = {
-      name: slugify(name, "agent-builder-runtime"),
+      name: slugify(name, "akompani-runtime"),
       version: "0.1.0",
       private: true,
       type: "module",
@@ -3287,12 +3287,12 @@ export default {
       skipLibCheck: true,
       ...(isCloudflareTarget
         ? {
-            lib: ["ES2022", "WebWorker", "DOM.Iterable"],
-            types: ["@cloudflare/workers-types"],
-          }
+          lib: ["ES2022", "WebWorker", "DOM.Iterable"],
+          types: ["@cloudflare/workers-types"],
+        }
         : {
-            types: ["bun-types"],
-          }),
+          types: ["bun-types"],
+        }),
     };
 
     return `${JSON.stringify(
@@ -3401,7 +3401,7 @@ export default {
     const config = normalizeCloudflareDeployConfig(cloudflareConfig);
     const compatibilityDate = new Date().toISOString().slice(0, 10);
     const lines = [
-      `name = "${escapeTomlString(slugify(workerName, "agent-builder-runtime"))}"`,
+      `name = "${escapeTomlString(slugify(workerName, "akompani-runtime"))}"`,
       'main = "src/index.ts"',
       `compatibility_date = "${compatibilityDate}"`,
       `workers_dev = ${config.workersDevEnabled ? "true" : "false"}`,
@@ -3487,7 +3487,7 @@ export default {
   function buildDeployObject(options = {}) {
     const target = String(options.target || "cloudflare_workers_elysia_bun").trim() || "cloudflare_workers_elysia_bun";
     const targetDef = DEPLOY_TARGETS.find((row) => row.id === target) || DEPLOY_TARGETS[0];
-    const agentName = String(options.agentName || options.workerName || "agent-builder-runtime").trim() || "agent-builder-runtime";
+    const agentName = String(options.agentName || options.workerName || "akompani-runtime").trim() || "akompani-runtime";
     const description = String(options.description || "").trim();
     const providerConfig = options.providerConfig || getActiveLlmConfig();
     const cloudflareConfig = normalizeCloudflareDeployConfig(options.cloudflareConfig);
@@ -3495,7 +3495,7 @@ export default {
     const endpointMode = normalizeEndpointMode(options.endpointMode || "both");
     const drawflow = options.drawflow || { drawflow: { Home: { data: {} } } };
 
-    const rootDir = `${slugify(agentName, "agent-builder-runtime")}-${targetDef.id}-${formatDateForSlug(new Date())}`;
+    const rootDir = `${slugify(agentName, "akompani-runtime")}-${targetDef.id}-${formatDateForSlug(new Date())}`;
     const files = [];
 
     if (targetDef.id === "cloudflare_workers_elysia_bun") {
