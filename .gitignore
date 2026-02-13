@@ -16,3 +16,4 @@ deployments-smoke
 .bun-tmp/
 test-results/
 playwright-report/
+plan.md
