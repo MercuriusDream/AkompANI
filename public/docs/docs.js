@@ -10,6 +10,8 @@
   }
 
   const readerEl = document.getElementById("docContent");
+  const docTitleEl = document.getElementById("docTitle");
+  const docMetaEl = document.getElementById("docMeta");
   if (!readerEl) return;
 
   const params = new URLSearchParams(window.location.search);
@@ -29,12 +31,28 @@
   const baseDir = docPath.includes("/") ? docPath.slice(0, docPath.lastIndexOf("/") + 1) : "";
   const docsContentRoot = new URL("../docs-content/", window.location.href);
 
+  function formatDocLabel(path) {
+    return String(path || "README.md")
+      .split("/")
+      .pop()
+      .replace(/\.md$/i, "")
+      .replace(/[-_]+/g, " ")
+      .replace(/\b[a-z]/g, (char) => char.toUpperCase());
+  }
+
+  const fallbackDocLabel = formatDocLabel(docPath);
+
+  if (docTitleEl) docTitleEl.textContent = fallbackDocLabel;
+  if (docMetaEl) docMetaEl.textContent = docPath;
+
   function setError(message) {
     readerEl.textContent = "";
     const p = document.createElement("p");
     p.className = "doc-error";
     p.textContent = String(message || "Unknown docs error.");
     readerEl.appendChild(p);
+    if (docTitleEl) docTitleEl.textContent = "Document unavailable";
+    if (docMetaEl) docMetaEl.textContent = String(message || "Unknown docs error.");
   }
 
   function setPlainMarkdown(markdown) {
@@ -143,11 +161,18 @@
       const rewritten = rewriteMarkdownLinks(markdown);
       if (!window.marked || typeof window.marked.parse !== "function") {
         setPlainMarkdown(rewritten);
+        if (docTitleEl) docTitleEl.textContent = fallbackDocLabel;
+        if (docMetaEl) docMetaEl.textContent = docPath;
+        document.title = `Akompani Docs · ${fallbackDocLabel}`;
         return;
       }
       const parsed = window.marked.parse(rewritten);
       readerEl.innerHTML = sanitizeRenderedHtml(parsed);
-      document.title = `Akompani Docs · ${docPath.split("/").pop().replace(/\.md$/i, "")}`;
+      const renderedH1 = readerEl.querySelector("h1");
+      const resolvedDocTitle = String((renderedH1 && renderedH1.textContent) || fallbackDocLabel).trim();
+      if (docTitleEl) docTitleEl.textContent = resolvedDocTitle;
+      if (docMetaEl) docMetaEl.textContent = docPath;
+      document.title = `Akompani Docs · ${resolvedDocTitle}`;
     })
     .catch((error) => {
       setError(String((error && error.message) || error));

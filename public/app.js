@@ -48,9 +48,8 @@
   const deployGhTab = document.getElementById("deployGhTab");
   const deployCfPanel = document.getElementById("deployCfPanel");
   const deployGhPanel = document.getElementById("deployGhPanel");
-  const chatDrawer = document.getElementById("chatDrawer");
-  const chatDrawerClose = document.getElementById("chatDrawerClose");
   const toggleChatPanelBtn = document.getElementById("toggleChatPanel");
+  const openCodePreviewBtn = document.getElementById("openCodePreviewBtn");
   const chatLogToggle = document.getElementById("chatLogToggle");
   const chatLogNewBtn = document.getElementById("chatLogNewBtn");
   const pillChatMessages = document.getElementById("pillChatMessages");
@@ -4682,6 +4681,13 @@
     if (!isCollapsed) refreshCodePreview();
   }
 
+  function openCodePreview() {
+    const panel = document.getElementById("codePreviewPanel");
+    if (!panel) return;
+    panel.classList.remove("collapsed");
+    refreshCodePreview();
+  }
+
   function refreshCodePreview() {
     const panel = document.getElementById("codePreviewPanel");
     if (!panel || panel.classList.contains("collapsed")) return;
@@ -4890,16 +4896,14 @@
   }
 
   function bindPillEvents() {
-    // Chat drawer close button
-    if (chatDrawerClose) {
-      chatDrawerClose.addEventListener("click", () => {
-        if (state.isChatDrawerOpen) toggleChatDrawer();
-      });
-    }
-
     // Chat toggle button in layout-toggles
     if (toggleChatPanelBtn) {
       toggleChatPanelBtn.addEventListener("click", toggleChatDrawer);
+    }
+
+    // Generated code preview button in canvas toolbar
+    if (openCodePreviewBtn) {
+      openCodePreviewBtn.addEventListener("click", openCodePreview);
     }
 
     // Chat-full-log toggle (close/open sidebar)
@@ -5026,9 +5030,18 @@
     const empty = pillChatMessages.querySelector(".chat-drawer-empty");
     if (empty) empty.remove();
 
+    const avatarLabel = msg.role === "user" ? "You" : "AI";
+    const avatarClass = msg.role === "user" ? "chat-msg-avatar user" : "chat-msg-avatar assistant";
+
     const el = document.createElement("div");
-    el.className = `chat-pill-msg ${msg.role}`;
-    el.textContent = msg.content;
+    el.className = `chat-msg chat-msg-inline ${msg.role}`;
+    el.innerHTML = `
+      <div class="${avatarClass}">${avatarLabel[0]}</div>
+      <div class="chat-msg-body">
+        <span class="chat-msg-role">${avatarLabel}</span>
+        <div class="chat-msg-content">${escapeHtml(msg.content)}</div>
+      </div>
+    `;
     pillChatMessages.appendChild(el);
     pillChatMessages.scrollTop = pillChatMessages.scrollHeight;
   }
@@ -5055,7 +5068,7 @@
     pillChatMessages.innerHTML = "";
     const conv = getActiveConversation();
     if (!conv || conv.messages.length === 0) {
-      pillChatMessages.innerHTML = '<div class="chat-drawer-empty">Ask me anything about your flow.</div>';
+      pillChatMessages.innerHTML = '<div class="chat-drawer-empty">Describe your flow intent and I will draft the next step.</div>';
       return;
     }
     for (const msg of conv.messages) {

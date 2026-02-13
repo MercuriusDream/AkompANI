@@ -769,6 +769,15 @@ class ScratchCanvas {
     path.setAttribute("filter", "url(#scratchShadow)");
     g.appendChild(path);
 
+    // Clip accent stripe to the exact block shape so it never protrudes above rounded hats.
+    const accentClip = document.createElementNS("http://www.w3.org/2000/svg", "clipPath");
+    accentClip.setAttribute("id", `scratch-accent-clip-${id}`);
+    accentClip.setAttribute("clipPathUnits", "userSpaceOnUse");
+    const accentClipPath = document.createElementNS("http://www.w3.org/2000/svg", "path");
+    accentClipPath.setAttribute("class", "scratch-accent-clip-path");
+    accentClip.appendChild(accentClipPath);
+    g.appendChild(accentClip);
+
     // Left accent bar — colored stripe on left edge (inset by 1px to not cover selection stroke)
     const accent = document.createElementNS("http://www.w3.org/2000/svg", "rect");
     accent.setAttribute("class", "scratch-accent");
@@ -780,6 +789,7 @@ class ScratchCanvas {
     accent.setAttribute("fill", color);
     accent.setAttribute("opacity", "0.82");
     accent.setAttribute("pointer-events", "none");
+    accent.setAttribute("clip-path", `url(#scratch-accent-clip-${id})`);
     g.appendChild(accent);
 
     // ForeignObject for HTML content
@@ -855,6 +865,8 @@ class ScratchCanvas {
 
     const pathEl = g.querySelector(".scratch-shape");
     if (pathEl) pathEl.setAttribute("d", pathD);
+    const accentClipPathEl = g.querySelector(".scratch-accent-clip-path");
+    if (accentClipPathEl) accentClipPathEl.setAttribute("d", pathD);
 
     // Update accent bar height (inset by 1px top+bottom to not cover selection stroke)
     const accentEl = g.querySelector(".scratch-accent");

@@ -1,71 +1,142 @@
 <!doctype html>
 <html lang="en">
+
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Akompani Docs</title>
-  <meta name="description" content="Akompani documentation: first-agent tutorial, deployment guides, and release workflow." />
-  <link rel="canonical" href="https://docs.akompani.cc/" />
+  <meta name="description"
+    content="Akompani documentation: first-agent tutorial, deployment guides, and release workflow." />
+  <link rel="canonical" href="https://akompani.cc/docs/" />
   <meta property="og:type" content="website" />
   <meta property="og:title" content="Akompani Docs" />
-  <meta property="og:description" content="Documentation for building and deploying accompanying AI agents with Akompani." />
-  <meta property="og:url" content="https://docs.akompani.cc/" />
+  <meta property="og:description"
+    content="Documentation for building and deploying accompanying AI agents with Akompani." />
+  <meta property="og:url" content="https://akompani.cc/docs/" />
   <meta property="og:site_name" content="Akompani Docs" />
   <meta property="og:image" content="https://akompani.cc/icons/icon-512.png" />
   <meta name="twitter:card" content="summary_large_image" />
   <meta name="twitter:title" content="Akompani Docs" />
-  <meta name="twitter:description" content="Documentation for building and deploying accompanying AI agents with Akompani." />
+  <meta name="twitter:description"
+    content="Documentation for building and deploying accompanying AI agents with Akompani." />
   <meta name="twitter:image" content="https://akompani.cc/icons/icon-512.png" />
+  <link rel="stylesheet" href="../design-system.css" />
   <link rel="stylesheet" href="./docs.css" />
   <link rel="icon" href="../akompani.svg" type="image/svg+xml" />
-  <script>(function(){var t=localStorage.getItem('akompani-theme');if(!t)t=matchMedia('(prefers-color-scheme:dark)').matches?'dark':'light';document.documentElement.setAttribute('data-theme',t)})()</script>
+  <script>(function () { var t = localStorage.getItem('akompani-theme'); if (!t) t = matchMedia('(prefers-color-scheme:dark)').matches ? 'dark' : 'light'; document.documentElement.setAttribute('data-theme', t) })()</script>
 </head>
-<body>
-  <header class="docs-header">
-    <a class="brand" href="https://akompani.cc">Akompani</a>
-    <button id="themeToggle" class="theme-toggle" aria-label="Toggle theme">Theme</button>
-  </header>
 
-  <main class="docs-main">
-    <section class="hero">
-      <p class="kicker">Akompani Documentation</p>
+<body class="docs-page docs-index">
+  <nav class="top-nav landing-nav docs-nav">
+    <div class="top-nav-inner">
+      <a href="https://akompani.cc" class="nav-brand" aria-label="Akompani home">
+        <img src="../akompani.svg" alt="Akompani" class="nav-logo" />
+      </a>
+      <div class="nav-links">
+        <a href="https://akompani.cc/app/?mode=canvas" class="nav-link">Flow Editor</a>
+        <a href="https://akompani.cc/app/?mode=chat" class="nav-link">Chat</a>
+        <a href="https://akompani.cc/app/?mode=deploy" class="nav-link">Deploy</a>
+        <a href="./" class="nav-link active" aria-current="page">Docs</a>
+      </div>
+      <div class="nav-actions">
+        <button id="themeToggle" class="btn btn-ghost btn-icon btn-sm" title="Toggle theme" aria-label="Toggle theme">
+          <svg class="theme-icon-light" xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24"
+            fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <circle cx="12" cy="12" r="5" />
+            <line x1="12" y1="1" x2="12" y2="3" />
+            <line x1="12" y1="21" x2="12" y2="23" />
+            <line x1="4.22" y1="4.22" x2="5.64" y2="5.64" />
+            <line x1="18.36" y1="18.36" x2="19.78" y2="19.78" />
+            <line x1="1" y1="12" x2="3" y2="12" />
+            <line x1="21" y1="12" x2="23" y2="12" />
+            <line x1="4.22" y1="19.78" x2="5.64" y2="18.36" />
+            <line x1="18.36" y1="5.64" x2="19.78" y2="4.22" />
+          </svg>
+          <svg class="theme-icon-dark" xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24"
+            fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z" />
+          </svg>
+        </button>
+        <a href="https://akompani.cc/app/?mode=chat" class="btn btn-primary btn-sm press-feedback">Open App</a>
+      </div>
+    </div>
+  </nav>
+
+  <main class="docs-main container">
+    <section class="docs-hero">
+      <p class="docs-kicker">Akompani Documentation</p>
       <h1>Build accompanying AI agents with confidence.</h1>
-      <p>Start with first-time onboarding, then move into deployment, release, and architecture docs.</p>
+      <p>Start with onboarding, then move into deployment, release, and architecture with the same product language as the main Akompani experience.</p>
+      <div class="docs-hero-actions">
+        <a class="btn btn-primary btn-lg press-feedback" href="./view.html?doc=tutorials/first-agent-5-minute.md">Start the 5-Minute Tutorial</a>
+        <a class="btn btn-secondary btn-lg" href="https://akompani.cc/app/?mode=canvas">Open Flow Editor</a>
+      </div>
     </section>
 
-    <section class="grid" aria-label="Docs index">
+    <section class="docs-grid" aria-label="Docs index">
       <a class="doc-card" href="./view.html?doc=tutorials/first-agent-5-minute.md">
+        <div class="doc-card-head">
+          <span class="doc-card-type">Visual Flow Runtime</span>
+          <span class="doc-card-arrow" aria-hidden="true">Read</span>
+        </div>
         <h2>First Agent in 5 Minutes</h2>
-        <p>Step-by-step beginner path from prompt to deploy object.</p>
+        <p class="doc-card-agenda">Go from plain English to a working flow quickly.</p>
+        <p class="doc-card-brief">Step-by-step onboarding path from prompt to deploy-ready output, tuned for first-time builders.</p>
       </a>
 
       <a class="doc-card" href="./view.html?doc=project-deep-dive.md">
+        <div class="doc-card-head">
+          <span class="doc-card-type">Runtime Architecture</span>
+          <span class="doc-card-arrow" aria-hidden="true">Read</span>
+        </div>
         <h2>Project Deep Dive</h2>
-        <p>Runtime model, storage, routes, and static deployment details.</p>
+        <p class="doc-card-agenda">Understand how the IDE works under the hood.</p>
+        <p class="doc-card-brief">Runtime model, browser storage, route behavior, and static deployment contracts used across the app.</p>
       </a>
 
       <a class="doc-card" href="./view.html?doc=release-process.md">
+        <div class="doc-card-head">
+          <span class="doc-card-type">One-Click Deploy Ops</span>
+          <span class="doc-card-arrow" aria-hidden="true">Read</span>
+        </div>
         <h2>Release Process</h2>
-        <p>Checklist, versioning policy, and rollback flow.</p>
+        <p class="doc-card-agenda">Ship fast without losing reproducibility.</p>
+        <p class="doc-card-brief">Release checklist, versioning rules, and rollback procedure for production-grade delivery cadence.</p>
       </a>
 
       <a class="doc-card" href="./view.html?doc=demo-videos.md">
+        <div class="doc-card-head">
+          <span class="doc-card-type">Product Storytelling</span>
+          <span class="doc-card-arrow" aria-hidden="true">Read</span>
+        </div>
         <h2>Demo Video Scripts</h2>
-        <p>Both 5-minute and 30-second demo scripts and recording notes.</p>
+        <p class="doc-card-agenda">Show value clearly in 30 seconds or 5 minutes.</p>
+        <p class="doc-card-brief">Scripted demo flows and recording notes aligned to the same product narrative used on the landing page.</p>
       </a>
 
       <a class="doc-card" href="./view.html?doc=frontier-oss-playbook.md">
+        <div class="doc-card-head">
+          <span class="doc-card-type">Open Source</span>
+          <span class="doc-card-arrow" aria-hidden="true">Read</span>
+        </div>
         <h2>Frontier OSS Playbook</h2>
-        <p>Roadmap, governance, and quality gates for frontier-class maturity.</p>
+        <p class="doc-card-agenda">Scale contribution quality as the project grows.</p>
+        <p class="doc-card-brief">Roadmap, governance, and quality gates for building a durable AGPL ecosystem around Akompani.</p>
       </a>
 
       <a class="doc-card" href="./view.html?doc=design-guidelines.md">
+        <div class="doc-card-head">
+          <span class="doc-card-type">Design Language</span>
+          <span class="doc-card-arrow" aria-hidden="true">Read</span>
+        </div>
         <h2>Design Guidelines</h2>
-        <p>UI policy and component behavior standards.</p>
+        <p class="doc-card-agenda">Keep every surface visually consistent.</p>
+        <p class="doc-card-brief">UI policy, component behaviors, and interaction constraints that keep product surfaces aligned.</p>
       </a>
     </section>
   </main>
 
   <script src="./docs.js"></script>
 </body>
+
 </html>

@@ -1,30 +1,72 @@
 <!doctype html>
 <html lang="en">
+
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Akompani Docs</title>
   <meta name="description" content="Akompani docs viewer" />
-  <link rel="canonical" href="https://docs.akompani.cc/" />
+  <link rel="canonical" href="https://akompani.cc/docs/" />
+  <link rel="stylesheet" href="../design-system.css" />
   <link rel="stylesheet" href="./docs.css" />
   <link rel="icon" href="../akompani.svg" type="image/svg+xml" />
-  <script>(function(){var t=localStorage.getItem('akompani-theme');if(!t)t=matchMedia('(prefers-color-scheme:dark)').matches?'dark':'light';document.documentElement.setAttribute('data-theme',t)})()</script>
+  <script>(function () { var t = localStorage.getItem('akompani-theme'); if (!t) t = matchMedia('(prefers-color-scheme:dark)').matches ? 'dark' : 'light'; document.documentElement.setAttribute('data-theme', t) })()</script>
 </head>
-<body data-doc-view="true">
-  <header class="docs-header">
-    <a class="brand" href="./">Akompani Docs</a>
-    <nav class="doc-nav">
-      <a href="https://akompani.cc">Main Site</a>
-      <a href="./">All Docs</a>
-    </nav>
-    <button id="themeToggle" class="theme-toggle" aria-label="Toggle theme">Theme</button>
-  </header>
 
-  <main class="doc-reader-wrap">
-    <article id="docContent" class="doc-reader" aria-live="polite">Loading...</article>
+<body class="docs-page docs-view" data-doc-view="true">
+  <nav class="top-nav landing-nav docs-nav">
+    <div class="top-nav-inner">
+      <a href="https://akompani.cc" class="nav-brand" aria-label="Akompani home">
+        <img src="../akompani.svg" alt="Akompani" class="nav-logo" />
+      </a>
+      <div class="nav-links">
+        <a href="https://akompani.cc/app/?mode=canvas" class="nav-link">Flow Editor</a>
+        <a href="https://akompani.cc/app/?mode=chat" class="nav-link">Chat</a>
+        <a href="https://akompani.cc/app/?mode=deploy" class="nav-link">Deploy</a>
+        <a href="./" class="nav-link active" aria-current="page">Docs</a>
+      </div>
+      <div class="nav-actions">
+        <button id="themeToggle" class="btn btn-ghost btn-icon btn-sm" title="Toggle theme" aria-label="Toggle theme">
+          <svg class="theme-icon-light" xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24"
+            fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <circle cx="12" cy="12" r="5" />
+            <line x1="12" y1="1" x2="12" y2="3" />
+            <line x1="12" y1="21" x2="12" y2="23" />
+            <line x1="4.22" y1="4.22" x2="5.64" y2="5.64" />
+            <line x1="18.36" y1="18.36" x2="19.78" y2="19.78" />
+            <line x1="1" y1="12" x2="3" y2="12" />
+            <line x1="21" y1="12" x2="23" y2="12" />
+            <line x1="4.22" y1="19.78" x2="5.64" y2="18.36" />
+            <line x1="18.36" y1="5.64" x2="19.78" y2="4.22" />
+          </svg>
+          <svg class="theme-icon-dark" xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24"
+            fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z" />
+          </svg>
+        </button>
+        <a href="./" class="btn btn-secondary btn-sm">All Docs</a>
+      </div>
+    </div>
+  </nav>
+
+  <main class="docs-main container docs-view-main">
+    <section class="docs-reader-hero">
+      <p class="docs-kicker">Akompani Documentation</p>
+      <h1 id="docTitle">Loading document...</h1>
+      <p id="docMeta" class="doc-meta">Rendering from source markdown.</p>
+      <div class="docs-hero-actions">
+        <a class="btn btn-secondary btn-sm" href="./">Back to Docs Index</a>
+        <a class="btn btn-primary btn-sm press-feedback" href="https://akompani.cc/app/?mode=canvas">Open Flow Editor</a>
+      </div>
+    </section>
+
+    <section class="doc-reader-wrap">
+      <article id="docContent" class="doc-reader" aria-live="polite">Loading...</article>
+    </section>
   </main>
 
   <script src="./vendor/marked.min.js"></script>
   <script src="./docs.js"></script>
 </body>
+
 </html>
