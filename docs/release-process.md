@@ -11,6 +11,8 @@ This project ships fast in `0.x`, but each release must be reproducible and audi
 ## Release Checklist
 
 1. Confirm local quality gates:
+   - `bun run release:check`
+   - or run checks individually:
    - `bun run build`
    - `bun run test:unit`
    - `bun run test:e2e`

@@ -65,6 +65,14 @@ bun run test:e2e
 
 One smoke E2E test is included (`tests/e2e/smoke.spec.js`) along with core runtime unit tests (`tests/unit/ide-runtime.test.js`).
 
+## Public Release Check
+
+```bash
+bun run release:check
+```
+
+This runs build + test + dependency audit + tracked-secret checks in one command.
+
 ## GitHub Pages Auto-Deploy
 
 - Workflow: `.github/workflows/deploy-pages.yml`

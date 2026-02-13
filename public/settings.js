@@ -776,8 +776,24 @@
       }
 
       localStorage.removeItem("akompani-theme");
-      localStorage.removeItem("akompani_editor_mode");
-      localStorage.removeItem("akompani_right_collapsed");
+      [
+        "akompani_editor_mode",
+        "akompani_left_collapsed",
+        "akompani_chat_drawer_open",
+        "akompani_left_panel_flipped",
+        "akompani_chat_log_collapsed",
+        "akompani_panel_left_w",
+        "akompani_panel_chat_w",
+        "akompani_open_flow_tabs",
+        "akompani_active_flow_tab",
+        "akompani_conversations",
+        "akompani_active_conversation",
+        "akompani_snap_grid",
+        // Backward compatibility with older builds.
+        "akompani_right_collapsed",
+      ].forEach(function (key) {
+        localStorage.removeItem(key);
+      });
 
       Object.keys(KEYS).forEach(function (id) {
         if (els[id]) {

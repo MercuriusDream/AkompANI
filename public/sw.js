@@ -23,6 +23,25 @@ const EXTERNAL_CACHE_ALLOWLIST = new Set([
   "cdn.jsdelivr.net",
 ]);
 
+const SENSITIVE_QUERY_KEYS = new Set([
+  "access_token",
+  "auth",
+  "authorization",
+  "code",
+  "id_token",
+  "key",
+  "password",
+  "pat",
+  "refresh_token",
+  "secret",
+  "signature",
+  "sig",
+  "state",
+  "token",
+  "x-debug-token",
+  "x-worker-token",
+]);
+
 const NETWORK_FIRST_RUNTIME_PATHS = new Set([
   "/app.js",
   "/settings.js",
@@ -59,6 +78,16 @@ function hasSensitiveHeaders(request) {
     headers.has("x-worker-token") ||
     headers.has("x-debug-token")
   );
+}
+
+function hasSensitiveQueryParams(url) {
+  for (const [rawKey] of url.searchParams.entries()) {
+    const key = String(rawKey || "").trim().toLowerCase();
+    if (!key) continue;
+    if (SENSITIVE_QUERY_KEYS.has(key)) return true;
+    if (key.endsWith("_token") || key.endsWith("_secret") || key.endsWith("_key")) return true;
+  }
+  return false;
 }
 
 function isCacheableResponse(response) {
@@ -119,6 +148,7 @@ self.addEventListener("fetch", (event) => {
   if (request.method !== "GET") return;
   if (request.cache === "no-store") return;
   if (hasSensitiveHeaders(request)) return;
+  if (hasSensitiveQueryParams(url)) return;
   if (url.protocol === "ws:" || url.protocol === "wss:") return;
 
   if (request.mode === "navigate") {

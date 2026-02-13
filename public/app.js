@@ -3338,6 +3338,7 @@
     const def = NODE_CATALOG[type];
     if (!def) return;
 
+    const safeBadgeColor = sanitizeCssColor(def.color, "#5f6f81");
     const defaults = paletteHoverDefaults(def);
     const defaultRows = defaults.length
       ? defaults
@@ -3350,7 +3351,7 @@
 
     paletteHoverCard.innerHTML = `
       <div class="palette-hover-head">
-        <div class="badge" style="background:${def.color || "#5f6f81"}">${escapeHtml(def.icon || "Node")}</div>
+        <div class="badge" style="background:${safeBadgeColor}">${escapeHtml(def.icon || "Node")}</div>
         <div class="palette-hover-title-wrap">
           <div class="palette-hover-title">${escapeHtml(def.label || type)}</div>
           <div class="palette-hover-sub">${escapeHtml(groupLabelById(def.group))}</div>
@@ -3619,7 +3620,7 @@
       headBtn.className = "palette-group-head-btn";
       headBtn.innerHTML = `
         <svg class="palette-group-caret" xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
-        <span class="palette-group-label">${group.label}</span>
+        <span class="palette-group-label">${escapeHtml(group.label)}</span>
         <span class="palette-group-count">${matchedTypes.length}</span>
       `;
       headBtn.addEventListener("click", () => {
@@ -7240,6 +7241,8 @@
     let dragging = null; // "left" | "chat" | null
 
     function onPointerDown(e, side) {
+      if (side === "left" && document.body.classList.contains("left-collapsed")) return;
+      if (side === "chat" && !document.body.classList.contains("chat-drawer-open")) return;
       e.preventDefault();
       dragging = side;
       const handles = { left: handleLeft, chat: handleChat };

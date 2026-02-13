@@ -11,7 +11,8 @@
     "test:unit": "vitest run",
     "test:e2e": "playwright test",
     "test:e2e:headed": "playwright test --headed",
-    "test:e2e:install": "playwright install --with-deps chromium"
+    "test:e2e:install": "playwright install --with-deps chromium",
+    "release:check": "bash scripts/public-release-check.sh"
   },
   "devDependencies": {
     "@playwright/test": "^1.58.2",
