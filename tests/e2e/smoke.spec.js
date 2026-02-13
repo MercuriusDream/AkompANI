@@ -9,12 +9,10 @@ test("landing -> app chat -> deploy smoke path", async ({ page }) => {
   await expect(page).toHaveURL(/\/app\/?\?mode=chat/);
   await expect(page.locator("#modeChatTab")).toHaveAttribute("aria-selected", "true");
 
-  // Dismiss welcome guide overlay if visible (shown on first visit)
-  const welcomeGuide = page.locator("#welcomeGuide");
-  if (await welcomeGuide.isVisible()) {
-    await page.locator("#welcomeGuideDismiss").click();
-    await expect(welcomeGuide).toBeHidden();
-  }
+  // Dismiss welcome guide overlay (shown on first visit)
+  await expect(page.locator("#welcomeGuide")).toBeVisible();
+  await page.locator("#welcomeGuideDismiss").click();
+  await expect(page.locator("#welcomeGuide")).toBeHidden();
 
   await page.locator("#modeDeployTab").click();
   await expect(page.locator("#modeDeployTab")).toHaveAttribute("aria-selected", "true");
