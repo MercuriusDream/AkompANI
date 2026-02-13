@@ -1,13 +1,12 @@
-# Akompani (Agent Builder OSS)
+# Akompani
 
-Static-first browser IDE for building and deploying flow-based agents.
+<img width="1282" height="717" alt="image" src="https://github.com/user-attachments/assets/a66955cb-f947-4305-8e0d-d13fab7c9eb4" />
 
-- Website: <https://akompani.cc>
-- Docs: <https://docs.akompani.cc>
+<https://akompani.cc>
 
 ## Mission
 
-Build an accompanying AI agent platform for people who have not yet developed strong agentic usage patterns, while keeping generated runtime artifacts practical, readable, and production-oriented.
+An Artificial Narrow Intelligence agent platform, for people who have not yet developed strong agentic usage patterns, while keeping generated runtime artifacts practical, readable, and production-oriented.
 
 ## What It Is
 
