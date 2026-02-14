@@ -515,13 +515,12 @@ class ScratchCanvas {
    */
   static hatPath(w, h) {
     const r = ScratchCanvas.CORNER_R;
-    const hatR = 20; // Hat curve radius
     return [
-      `M 0 ${hatR}`,
-      `Q 0 0 ${hatR} 0`,
-      `h ${w - 2 * hatR}`,
-      `Q ${w} 0 ${w} ${hatR}`,
-      `v ${h - hatR - r}`,
+      `M 0 ${r}`,
+      `a ${r} ${r} 0 0 1 ${r} ${-r}`,
+      `h ${w - 2 * r}`,
+      `a ${r} ${r} 0 0 1 ${r} ${r}`,
+      `v ${h - 2 * r}`,
       `a ${r} ${r} 0 0 1 ${-r} ${r}`,
       ScratchCanvas._tabBottom(0, w - 2 * r),
       `a ${r} ${r} 0 0 1 ${-r} ${-r}`,

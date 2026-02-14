@@ -1860,12 +1860,12 @@ body.left-collapsed .panel-resize-handle[data-panel="left"] {
   align-self: end;
   position: relative;
   z-index: 12;
-  background: var(--bg-secondary, #1e1e2e);
-  border-top: 1px solid var(--border, rgba(255,255,255,0.08));
+  background: var(--bg-secondary);
+  border-top: 1px solid var(--border);
   display: flex;
   flex-direction: column;
   overflow: hidden;
-  transition: height 200ms ease;
+  transition: height var(--dur-base) var(--ease-smooth);
 }
 .code-preview-panel.collapsed { height: 0 !important; border-top: none; }
 .code-preview-resize {
@@ -1878,31 +1878,31 @@ body.left-collapsed .panel-resize-handle[data-panel="left"] {
   z-index: 10;
   background: transparent;
 }
-.code-preview-resize:hover { background: var(--brand, #6366f1); opacity: 0.5; }
+.code-preview-resize:hover { background: var(--brand); opacity: 0.38; }
 .code-preview-toolbar {
   display: flex;
   align-items: center;
   gap: 2px;
-  padding: 4px 8px;
-  border-bottom: 1px solid var(--border, rgba(255,255,255,0.08));
-  font-size: 12px;
+  padding: 0 8px;
   flex-shrink: 0;
+  background: var(--bg-tertiary);
 }
 .code-preview-tab {
-  padding: 3px 10px;
-  border-radius: 4px;
+  padding: 8px 10px;
   cursor: pointer;
   font-size: 11px;
-  font-family: var(--mono, monospace);
-  color: var(--text-secondary, #888);
-  background: transparent;
+  font-weight: var(--font-semibold);
+  font-family: var(--font-mono);
+  color: var(--text-muted);
+  background: none;
   border: none;
-  transition: background 120ms, color 120ms;
+  border-bottom: 2px solid transparent;
+  transition: color var(--dur-fast) ease;
 }
-.code-preview-tab:hover { background: var(--bg-hover, rgba(255,255,255,0.05)); }
+.code-preview-tab:hover { color: var(--text-secondary); }
 .code-preview-tab.active {
-  background: var(--bg-hover, rgba(255,255,255,0.08));
-  color: var(--text-primary, #fff);
+  color: var(--brand);
+  border-bottom-color: var(--brand);
 }
 .code-preview-actions {
   margin-left: auto;
@@ -1911,34 +1911,42 @@ body.left-collapsed .panel-resize-handle[data-panel="left"] {
 }
 .code-preview-actions button {
   font-size: 11px;
-  padding: 2px 8px;
-  border-radius: 3px;
-  border: 1px solid var(--border, rgba(255,255,255,0.12));
+  font-weight: var(--font-medium);
+  padding: 3px 10px;
+  border-radius: var(--radius-sm);
+  border: none;
   background: transparent;
-  color: var(--text-secondary, #888);
+  color: var(--text-muted);
   cursor: pointer;
+  transition: background var(--dur-fast) ease, color var(--dur-fast) ease;
 }
-.code-preview-actions button:hover { color: var(--text-primary, #fff); background: var(--bg-hover, rgba(255,255,255,0.05)); }
+.code-preview-actions button:hover { color: var(--text); background: var(--bg-hover); }
 .code-preview-body {
   flex: 1;
   overflow: auto;
-  padding: 8px 12px;
+  padding: 12px 16px;
+  background: var(--bg);
 }
 .code-preview-body pre {
   margin: 0;
   font-size: 12px;
-  line-height: 1.5;
-  font-family: var(--mono, "SF Mono", "Fira Code", "Cascadia Code", monospace);
+  line-height: 1.6;
+  font-family: var(--font-mono);
   white-space: pre;
   tab-size: 2;
-  color: var(--text-primary, #cdd6f4);
+  color: var(--text);
 }
-/* Basic syntax highlight (CSS-only via classes injected in JS) */
-.code-preview-body .kw { color: #cba6f7; } /* keywords */
-.code-preview-body .str { color: #a6e3a1; } /* strings */
-.code-preview-body .cmt { color: #585b70; font-style: italic; } /* comments */
-.code-preview-body .num { color: #fab387; } /* numbers */
-.code-preview-body .fn { color: #89b4fa; } /* function names */
+/* Syntax highlight — light-friendly palette */
+.code-preview-body .kw { color: #7c3aed; }
+.code-preview-body .str { color: #0f8f67; }
+.code-preview-body .cmt { color: var(--text-muted); font-style: italic; }
+.code-preview-body .num { color: #bc7708; }
+.code-preview-body .fn { color: #2563eb; }
+/* Dark theme overrides */
+[data-theme="dark"] .code-preview-body .kw { color: #cba6f7; }
+[data-theme="dark"] .code-preview-body .str { color: #a6e3a1; }
+[data-theme="dark"] .code-preview-body .num { color: #fab387; }
+[data-theme="dark"] .code-preview-body .fn { color: #89b4fa; }
 
 /* ===== Editor Panel (Right) ===== */
 .editor-panel {

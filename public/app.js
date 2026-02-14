@@ -2755,6 +2755,7 @@
     );
 
     updateNodeCard(createdId);
+    debouncedCodePreview();
     return createdId;
   }
 
@@ -2768,6 +2769,7 @@
   function clearEditor() {
     if (!editor) return;
     editor.clear();
+    debouncedCodePreview();
   }
 
   function createStarterFlow() {
@@ -2812,6 +2814,7 @@
         editor.removeNodeId(`node-${nodeId}`);
       } catch { /* ignore */ }
     }
+    debouncedCodePreview();
   }
 
   function duplicateSelectedNode() {
@@ -3906,6 +3909,7 @@
     if (flowNameText) flowNameText.textContent = flow.name;
     state.selectedNodeId = "";
     refreshNodeInspector();
+    debouncedCodePreview();
   }
 
   async function saveFlow() {
@@ -4031,6 +4035,7 @@
     editor.import(drawflow);
     resetNodeRuntime();
     refreshAllNodeCards();
+    debouncedCodePreview();
 
     const existing = getLocalFlowById(id);
     const record = {
@@ -4226,6 +4231,7 @@
     if (editor) editor.import(drawflow);
     resetNodeRuntime();
     refreshAllNodeCards();
+    debouncedCodePreview();
 
     const flowId = "flow_" + Date.now().toString(36) + "_" + Math.random().toString(36).slice(2, 6);
     const now = new Date().toISOString();
@@ -4822,7 +4828,7 @@
         target: "cloudflare_workers_elysia_bun",
         agentName: state.agentName || "akompani-runtime",
       });
-      if (!deployObj?.files) { pre.textContent = "// No deploy output"; return; }
+      if (!deployObj?.files) { pre.textContent = "// Add blocks to the canvas to see generated code here"; return; }
 
       const file = deployObj.files.find(f => f.path === _codePreviewActiveFile) || deployObj.files[0];
       if (!file) { pre.textContent = "// No files generated"; return; }
@@ -7985,6 +7991,9 @@
       if (runStatus && !runStatus.textContent) {
         runStatus.textContent = "Static mode ready. Flows save locally in this browser.";
       }
+
+      // Initial code preview refresh (panel starts open for real-time updates)
+      refreshCodePreview();
 
       // First-visit welcome guide
       maybeShowWelcomeGuide();
