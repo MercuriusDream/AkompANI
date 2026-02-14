@@ -4822,8 +4822,17 @@
     if (!pre) return;
 
     try {
-      const flowData = editor ? editor.export() : { drawflow: { Home: { data: {} } } };
-      const deployObj = window.IdeRuntime?.buildDeployObject?.({
+      const runtime = getIdeRuntime() || window.IdeRuntime;
+      if (!runtime?.buildDeployObject) { pre.textContent = ""; return; }
+
+      const rawFlowData = editor ? editor.export() : { drawflow: { Home: { data: {} } } };
+      const flowData =
+        rawFlowData?.drawflow?.drawflow ? rawFlowData :
+        rawFlowData?.drawflow?.Home?.data ? { drawflow: rawFlowData.drawflow } :
+        rawFlowData?.Home?.data ? { drawflow: rawFlowData } :
+        { drawflow: { Home: { data: {} } } };
+
+      const deployObj = runtime.buildDeployObject({
         drawflow: flowData,
         target: "cloudflare_workers_elysia_bun",
         agentName: state.agentName || "akompani-runtime",
