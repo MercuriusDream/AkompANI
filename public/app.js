@@ -4828,15 +4828,15 @@
         target: "cloudflare_workers_elysia_bun",
         agentName: state.agentName || "akompani-runtime",
       });
-      if (!deployObj?.files) { pre.textContent = "// Add blocks to the canvas to see generated code here"; return; }
+      if (!deployObj?.files?.length) { pre.textContent = ""; return; }
 
       const file = deployObj.files.find(f => f.path === _codePreviewActiveFile) || deployObj.files[0];
-      if (!file) { pre.textContent = "// No files generated"; return; }
+      if (!file) { pre.textContent = ""; return; }
 
       // Basic syntax highlighting
       pre.innerHTML = highlightCode(file.content || "", file.path);
-    } catch (err) {
-      pre.textContent = `// Error generating preview: ${err.message || err}`;
+    } catch {
+      pre.textContent = "";
     }
   }
 
