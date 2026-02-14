@@ -92,6 +92,8 @@ function hasSensitiveQueryParams(url) {
 
 function isCacheableResponse(response) {
   if (!response || !response.ok) return false;
+  const cacheControl = String(response.headers.get("cache-control") || "").toLowerCase();
+  if (cacheControl.includes("private") || cacheControl.includes("no-store")) return false;
   return response.type === "basic" || response.type === "cors";
 }
 

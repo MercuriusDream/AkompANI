@@ -14,8 +14,7 @@ An *Artificial Narrow Intelligence* agent suite, for people who have not yet dev
 
 - Visual flow editor at `/app`
 - Prompt-to-flow generation using user-configured LLM providers (multi-provider BYOK)
-- Direct browser deploy to Cloudflare Workers (API token)
-- Direct browser deploy to Vercel (access token)
+- Deploy package generation for Cloudflare Workers, Vercel, and local targets (step-by-step CLI guides included)
 - Direct browser push deploy objects to GitHub repos (PAT/token)
 - No project-owned backend API required for core IDE workflows
 - Generated agent endpoint mode selector: `openai`, `chat`, or `both`
@@ -95,9 +94,9 @@ Repository setting required once:
 ## Security Notes
 
 - Tokens and API keys are session-scoped in browser storage by default.
-- Cloudflare, Vercel, GitHub, and LLM calls are made directly from browser to provider APIs.
+- GitHub and LLM calls are made directly from browser to provider APIs.
+- Deploy packages are generated locally and include pre-filled `.env` files; secrets are set via platform CLIs (e.g. `wrangler secret put`).
 - Auth is scaffolded in generated agents; users configure secrets in their platform dashboards.
-- If a provider blocks direct browser API calls (CORS/network), the IDE auto-falls back to deploy-object generation.
 - Service worker uses conservative cache policy with stale-shell protections.
 
 ## Community

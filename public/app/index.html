@@ -536,11 +536,12 @@
             <h3 class="deploy-section-title">Deployment Method</h3>
             <div class="deploy-method-tabs">
               <button class="deploy-method-tab active" data-method="cloudflare" id="deployCfTab">
-                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
-                  <path
-                    d="M16.5088 16.8447c.1475-.5068.0908-.9707-.1553-1.2705-.2278-.2813-.6035-.4346-1.0615-.4551l-9.1572-.1182c-.0537-.0029-.1045-.0283-.1377-.0703-.0342-.041-.043-.0967-.0283-.1484.0215-.0684.084-.1182.1543-.127l9.2207-.1211c.9648-.042 2.0117-.8467 2.3555-1.8105l.4336-1.2178c.0166-.0489.0264-.0996.0264-.1524 0-.0733-.0186-.1436-.0449-.2109C17.5127 8.8437 14.9814 7 12.0264 7 9.4072 7 7.1279 8.4043 6.0713 10.4639c-.5537-.4053-1.2568-.6211-1.999-.5557-1.3262.1172-2.3935 1.1846-2.5107 2.5098-.0362.415.0176.8125.1367 1.1748C.7002 13.6875.001 14.6563.001 15.7891c0 .1807.0146.3584.0371.5342.0146.1094.1074.1904.2178.1904h15.9922c.0908 0 .1709-.0586.2002-.1455l.0605-.209z" />
+                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+                  <polyline points="7 10 12 15 17 10" />
+                  <line x1="12" y1="15" x2="12" y2="3" />
                 </svg>
-                Direct to Cloudflare
+                Generate &amp; Deploy
               </button>
               <button class="deploy-method-tab" data-method="github" id="deployGhTab">
                 <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
@@ -576,21 +577,7 @@
                 <label class="deploy-label" for="deployCfWorkerName">Worker Name</label>
                 <input id="deployCfWorkerName" type="text" class="form-input" placeholder="my-agent-worker" />
               </div>
-              <div class="deploy-field">
-                <label class="deploy-label" for="deployCfAccountId">Cloudflare Account ID</label>
-                <input id="deployCfAccountId" type="text" class="form-input" placeholder="account id" />
-              </div>
-              <div id="deployCfMissing" class="deploy-missing" style="display:none">
-                <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none"
-                  stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                  <circle cx="12" cy="12" r="10" />
-                  <line x1="12" y1="8" x2="12" y2="12" />
-                  <line x1="12" y1="16" x2="12.01" y2="16" />
-                </svg>
-                <span id="deployCfMissingText">Set Cloudflare token and account id in Settings to deploy
-                  directly.</span>
-              </div>
-              <button id="deployCfBtn" class="btn btn-primary press-feedback">Deploy / Generate Target Object</button>
+              <button id="deployCfBtn" class="btn btn-primary press-feedback">Generate Deploy Package</button>
               <div id="deployCfProgress" class="deploy-progress" style="display:none">
                 <div class="progress-bar">
                   <div class="progress-bar-fill progress-bar-indeterminate"></div>
@@ -729,43 +716,10 @@
                 </div>
                 <div class="settings-card-info">
                   <h3>Cloudflare Workers</h3>
-                  <p class="text-muted">Deploy agents to the edge</p>
-                </div>
-                <div class="settings-card-status" id="cfStatus">
-                  <span class="connection-dot"></span>
-                  <span class="status-label">Not connected</span>
+                  <p class="text-muted">Configure deploy settings for generated packages</p>
                 </div>
               </div>
               <div class="settings-card-body">
-                <div class="settings-field">
-                  <label for="cfApiToken">API Token</label>
-                  <div class="input-reveal">
-                    <input id="cfApiToken" type="password" class="form-input" placeholder="Your Cloudflare API token"
-                      autocomplete="off" />
-                    <button class="reveal-btn" data-target="cfApiToken" title="Show/hide">
-                      <svg class="eye-open" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor"
-                        stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                        <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" />
-                        <circle cx="12" cy="12" r="3" />
-                      </svg>
-                      <svg class="eye-closed" width="16" height="16" viewBox="0 0 24 24" fill="none"
-                        stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"
-                        style="display:none">
-                        <path
-                          d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24" />
-                        <line x1="1" y1="1" x2="23" y2="23" />
-                      </svg>
-                    </button>
-                  </div>
-                  <span class="field-hint"><a href="https://dash.cloudflare.com/profile/api-tokens" target="_blank"
-                      rel="noopener noreferrer">Create API token</a> with Workers Scripts edit permission</span>
-                </div>
-                <div class="settings-field">
-                  <label for="cfAccountId">Account ID</label>
-                  <input id="cfAccountId" type="text" class="form-input" placeholder="Your Cloudflare Account ID"
-                    autocomplete="off" />
-                  <span class="field-hint">Found in Cloudflare dashboard sidebar</span>
-                </div>
                 <div class="settings-field-grid">
                   <div class="settings-field">
                     <label for="cfD1Binding">D1 Binding Name</label>
@@ -809,7 +763,7 @@
                   </div>
                 </div>
                 <div class="settings-field">
-                  <span class="field-hint">To bind Durable Objects during direct deploy, provide a script name for an
+                  <span class="field-hint">To bind Durable Objects, provide a script name for an
                     existing namespace. See <a href="https://developers.cloudflare.com/durable-objects/" target="_blank"
                       rel="noopener noreferrer">Durable Objects docs</a>.</span>
                 </div>
@@ -873,69 +827,12 @@
                       </svg>
                     </button>
                   </div>
-                  <span class="field-hint">Stored in this browser session and uploaded as worker secret during direct
+                  <span class="field-hint">Stored in this browser session. Included in generated wrangler.toml for
                     deploy.</span>
                 </div>
-                <button id="testCf" class="btn btn-secondary btn-sm press-feedback">Test Connection</button>
               </div>
             </div>
 
-            <div class="settings-card">
-              <div class="settings-card-header">
-                <div class="settings-card-icon" style="color:#000">
-                  <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 76 65" fill="currentColor"
-                    aria-hidden="true">
-                    <path d="M37.59 0l37.59 64.84H0z" />
-                  </svg>
-                </div>
-                <div class="settings-card-info">
-                  <h3>Vercel</h3>
-                  <p class="text-muted">Direct deployment via Vercel REST API</p>
-                </div>
-                <div class="settings-card-status" id="vercelStatus">
-                  <span class="connection-dot"></span>
-                  <span class="status-label">Not connected</span>
-                </div>
-              </div>
-              <div class="settings-card-body">
-                <div class="settings-field">
-                  <label for="vercelToken">Access Token</label>
-                  <div class="input-reveal">
-                    <input id="vercelToken" type="password" class="form-input" placeholder="Vercel access token"
-                      autocomplete="off" />
-                    <button class="reveal-btn" data-target="vercelToken" title="Show/hide">
-                      <svg class="eye-open" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor"
-                        stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                        <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" />
-                        <circle cx="12" cy="12" r="3" />
-                      </svg>
-                      <svg class="eye-closed" width="16" height="16" viewBox="0 0 24 24" fill="none"
-                        stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"
-                        style="display:none">
-                        <path
-                          d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24" />
-                        <line x1="1" y1="1" x2="23" y2="23" />
-                      </svg>
-                    </button>
-                  </div>
-                </div>
-                <div class="settings-field-grid">
-                  <div class="settings-field">
-                    <label for="vercelProject">Project (optional)</label>
-                    <input id="vercelProject" type="text" class="form-input"
-                      placeholder="Existing Vercel project name/id" autocomplete="off" />
-                  </div>
-                  <div class="settings-field">
-                    <label for="vercelTeamId">Team ID (optional)</label>
-                    <input id="vercelTeamId" type="text" class="form-input" placeholder="team_xxxxxxx"
-                      autocomplete="off" />
-                  </div>
-                </div>
-                <span class="field-hint">Use when deploying the <code>Vercel (Elysia + Bun)</code> target directly from
-                  the browser.</span>
-                <button id="testVercel" class="btn btn-secondary btn-sm press-feedback">Test Connection</button>
-              </div>
-            </div>
           </section>
 
           <section class="settings-section anim-in anim-d2">

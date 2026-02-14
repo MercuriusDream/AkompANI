@@ -3079,6 +3079,235 @@ body.chat-drawer-open .chat-resize-handle {
   opacity: 1;
 }
 
+/* --- Deploy Guide (step-by-step accordion) --- */
+.deploy-guide {
+  margin-top: var(--space-4);
+  width: 100%;
+}
+
+.deploy-guide > summary {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  cursor: pointer;
+  user-select: none;
+  font-weight: 600;
+  font-size: var(--text-sm);
+  color: var(--text);
+  list-style: none;
+  transition: color 200ms ease;
+}
+
+.deploy-guide > summary::-webkit-details-marker { display: none; }
+
+.deploy-guide > summary::before {
+  content: "";
+  display: inline-block;
+  width: 16px;
+  height: 16px;
+  flex-shrink: 0;
+  background: currentColor;
+  mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' fill='none' stroke='currentColor' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M6 4l4 4-4 4'/%3E%3C/svg%3E") center/contain no-repeat;
+  -webkit-mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' fill='none' stroke='currentColor' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M6 4l4 4-4 4'/%3E%3C/svg%3E") center/contain no-repeat;
+  transition: transform 200ms ease;
+}
+
+.deploy-guide[open] > summary::before {
+  transform: rotate(90deg);
+}
+
+.deploy-guide > summary:hover {
+  color: var(--brand);
+}
+
+.deploy-guide-steps {
+  list-style: none;
+  padding: 0;
+  margin: var(--space-3) 0 0 0;
+  counter-reset: guide-step;
+}
+
+.deploy-guide-steps li {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-3);
+  padding: var(--space-2) var(--space-3);
+  border-radius: var(--radius-md);
+  margin-bottom: var(--space-1);
+  font-size: var(--text-sm);
+  color: var(--text-secondary);
+  line-height: 1.5;
+  transition: background 150ms ease;
+  animation: contentFadeIn 0.3s ease both;
+}
+
+.deploy-guide-steps li:nth-child(1) { animation-delay: 0.05s; }
+.deploy-guide-steps li:nth-child(2) { animation-delay: 0.1s; }
+.deploy-guide-steps li:nth-child(3) { animation-delay: 0.15s; }
+.deploy-guide-steps li:nth-child(4) { animation-delay: 0.2s; }
+.deploy-guide-steps li:nth-child(5) { animation-delay: 0.25s; }
+.deploy-guide-steps li:nth-child(6) { animation-delay: 0.3s; }
+.deploy-guide-steps li:nth-child(7) { animation-delay: 0.35s; }
+.deploy-guide-steps li:nth-child(8) { animation-delay: 0.4s; }
+
+.deploy-guide-steps li:hover {
+  background: var(--bg-tertiary);
+}
+
+.deploy-guide-steps li::before {
+  counter-increment: guide-step;
+  content: counter(guide-step);
+  min-width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  background: var(--brand-soft);
+  color: var(--brand);
+  font-weight: 600;
+  font-size: var(--text-xs);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  margin-top: 1px;
+}
+
+.deploy-guide-steps .guide-step-content {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.deploy-guide-steps .guide-step-hint {
+  font-size: var(--text-xs);
+  color: var(--text-muted);
+  font-style: italic;
+}
+
+.deploy-guide-steps code {
+  background: var(--bg-hover);
+  padding: 2px 6px;
+  border-radius: var(--radius-sm);
+  font-family: var(--font-mono);
+  font-size: var(--text-xs);
+  color: var(--text);
+  white-space: nowrap;
+}
+
+.deploy-guide-note {
+  font-size: var(--text-xs);
+  color: var(--text-muted);
+  margin-top: var(--space-3);
+  padding-top: var(--space-3);
+  border-top: 1px solid var(--border);
+}
+
+.deploy-guide-actions {
+  display: flex;
+  gap: var(--space-2);
+  margin-top: var(--space-3);
+  flex-wrap: wrap;
+}
+
+.deploy-guide-download {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-2) var(--space-4);
+  background: var(--brand);
+  color: #fff;
+  border: none;
+  border-radius: var(--radius-md);
+  font-family: var(--font-sans);
+  font-size: var(--text-sm);
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 200ms ease;
+}
+
+.deploy-guide-download:hover {
+  background: var(--brand-hover);
+  transform: translateY(-1px);
+  box-shadow: var(--static-shadow-sm);
+}
+
+.deploy-guide-copy-cmds {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-2) var(--space-3);
+  background: var(--bg-tertiary);
+  color: var(--text-secondary);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  font-family: var(--font-sans);
+  font-size: var(--text-sm);
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 200ms ease;
+}
+
+.deploy-guide-copy-cmds:hover {
+  background: var(--bg-hover);
+  color: var(--text);
+  border-color: var(--border-strong);
+}
+
+.deploy-guide-files {
+  margin-top: var(--space-3);
+  padding: var(--space-2) var(--space-3);
+  background: var(--bg-tertiary);
+  border-radius: var(--radius-md);
+  font-size: var(--text-xs);
+  color: var(--text-muted);
+  font-family: var(--font-mono);
+  line-height: 1.6;
+}
+
+.deploy-guide-files summary {
+  font-family: var(--font-sans);
+  font-weight: 500;
+  color: var(--text-secondary);
+  cursor: pointer;
+  user-select: none;
+  list-style: none;
+  font-size: var(--text-xs);
+}
+
+.deploy-guide-files summary::-webkit-details-marker { display: none; }
+
+.deploy-guide-files summary::before {
+  content: "▸ ";
+}
+
+.deploy-guide-files[open] summary::before {
+  content: "▾ ";
+}
+
+.deploy-guide-files ul {
+  list-style: none;
+  padding: var(--space-1) 0 0 var(--space-3);
+  margin: 0;
+}
+
+.deploy-guide-files li {
+  padding: 1px 0;
+}
+
+/* Dark mode: deploy guide */
+[data-theme="dark"] .deploy-guide-steps li:hover {
+  background: color-mix(in srgb, var(--bg-tertiary) 80%, transparent);
+}
+
+[data-theme="dark"] .deploy-guide-steps code {
+  background: var(--bg-tertiary);
+}
+
+[data-theme="dark"] .deploy-guide-copy-cmds {
+  background: var(--bg-secondary);
+  border-color: var(--border);
+}
+
 /* ===================================================================
    Scratch-Style Inline Blocks — Card Design
    =================================================================== */

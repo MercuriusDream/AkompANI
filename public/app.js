@@ -77,14 +77,9 @@
   const generateBtn = document.getElementById("generateBtn");
   const generateError = document.getElementById("generateError");
   const oauthGithubClientIdInput = document.getElementById("oauthGithubClientId");
-  const oauthCloudflareClientIdInput = document.getElementById("oauthCloudflareClientId");
   const connectGithubBtn = document.getElementById("connectGithubBtn");
   const disconnectGithubBtn = document.getElementById("disconnectGithubBtn");
-  const connectCloudflareBtn = document.getElementById("connectCloudflareBtn");
-  const disconnectCloudflareBtn = document.getElementById("disconnectCloudflareBtn");
   const githubConnectionState = document.getElementById("githubConnectionState");
-  const cloudflareConnectionState = document.getElementById("cloudflareConnectionState");
-  const deployCfAccountIdInput = document.getElementById("deployCfAccountId");
   const deployAgentIdInput = document.getElementById("deployAgentId");
   const deployEndpointModeInput = document.getElementById("deployEndpointMode");
   const llmProviderInput = document.getElementById("llmProvider");
@@ -155,18 +150,13 @@
     llmActiveProviderId: "akompani_llm_active_provider_id_v2",
     llmProviderKeysSession: "akompani_llm_provider_keys_v2",
     oauthGithubToken: "akompani_oauth_github_token",
-    oauthCloudflareToken: "akompani_oauth_cloudflare_token",
-    oauthVercelToken: "akompani_oauth_vercel_token",
     oauthGithubClientId: "akompani_oauth_github_client_id",
-    oauthCloudflareClientId: "akompani_oauth_cloudflare_client_id",
-    cloudflareAccountId: "akompani_cf_account_id",
     cloudflareWorkersDev: "akompani_cf_workers_dev",
     cloudflareZoneId: "akompani_cf_zone_id",
     cloudflareRoutePattern: "akompani_cf_route_pattern",
     cloudflareZeroTrustMode: "akompani_cf_zero_trust_mode",
     cloudflareAccessAud: "akompani_cf_access_aud",
     cloudflareAccessServiceTokenId: "akompani_cf_access_service_token_id",
-    cloudflareAccessServiceTokenSecret: "akompani_cf_access_service_token_secret",
     cloudflareD1Binding: "akompani_cf_d1_binding",
     cloudflareD1DatabaseId: "akompani_cf_d1_database_id",
     cloudflareD1DatabaseName: "akompani_cf_d1_database_name",
@@ -174,8 +164,6 @@
     cloudflareDoClassName: "akompani_cf_do_class_name",
     cloudflareDoScriptName: "akompani_cf_do_script_name",
     cloudflareDoEnvironment: "akompani_cf_do_environment",
-    vercelProject: "akompani_vercel_project",
-    vercelTeamId: "akompani_vercel_team_id",
     deployEndpointMode: "akompani_deploy_endpoint_mode",
     deployLinkedAgentId: "akompani_deploy_linked_agent_id",
   };
@@ -1753,29 +1741,6 @@
     return readSession(STORAGE_KEYS.oauthGithubToken);
   }
 
-  function getCloudflareToken() {
-    return readSession(STORAGE_KEYS.oauthCloudflareToken);
-  }
-
-  function getVercelToken() {
-    return readSession(STORAGE_KEYS.oauthVercelToken);
-  }
-
-  function getVercelProject() {
-    return readLocal(STORAGE_KEYS.vercelProject);
-  }
-
-  function getVercelTeamId() {
-    return readLocal(STORAGE_KEYS.vercelTeamId);
-  }
-
-  function getCloudflareAccountId() {
-    return (
-      String(deployCfAccountIdInput?.value || "").trim() ||
-      readLocal(STORAGE_KEYS.cloudflareAccountId) ||
-      readLocal("akompani_cf_account_id")
-    );
-  }
 
   function getIdeRuntime() {
     const runtime = window.AKOMPANI_IDE;
@@ -1864,7 +1829,7 @@
       zeroTrustMode: readLocal(STORAGE_KEYS.cloudflareZeroTrustMode),
       accessAud: readLocal(STORAGE_KEYS.cloudflareAccessAud),
       accessServiceTokenId: readLocal(STORAGE_KEYS.cloudflareAccessServiceTokenId),
-      accessServiceTokenSecret: readSession(STORAGE_KEYS.cloudflareAccessServiceTokenSecret),
+      accessServiceTokenSecret: "",
       d1Binding: readLocal(STORAGE_KEYS.cloudflareD1Binding),
       d1DatabaseId: readLocal(STORAGE_KEYS.cloudflareD1DatabaseId),
       d1DatabaseName: readLocal(STORAGE_KEYS.cloudflareD1DatabaseName),
@@ -5664,37 +5629,7 @@
 
   function refreshDeployConnectionState() {
     const hasGh = Boolean(getGithubToken());
-    const hasCf = Boolean(getCloudflareToken());
-    const hasVercel = Boolean(getVercelToken());
-    const accountId = getCloudflareAccountId();
-    const cloudflareSettings = getCloudflareDeploySettings();
-    const targetId = getSelectedDeployTarget();
-    const targetDef = getDeployTargetDefinition(targetId);
-    const targetPlatform = String(targetDef?.platform || "").trim();
-
     setConnectionBadge(githubConnectionState, hasGh, "Connected");
-    setConnectionBadge(cloudflareConnectionState, hasCf, accountId ? "Connected" : "Connected (set account)");
-
-    const cfMissing = document.getElementById("deployCfMissing");
-    const cfMissingText = document.getElementById("deployCfMissingText");
-    if (cfMissing) {
-      let message = "";
-      if (targetPlatform === "cloudflare" && !(hasCf && accountId)) {
-        message = "Set Cloudflare token and account id in Settings to deploy directly.";
-      } else if (
-        targetPlatform === "cloudflare" &&
-        cloudflareSettings.zeroTrustMode === "access_jwt" &&
-        (!cloudflareSettings.zoneId || !cloudflareSettings.routePattern || !cloudflareSettings.accessAud)
-      ) {
-        message = "Zero Trust JWT mode requires Zone ID, Route Pattern, and Access AUD in Settings.";
-      } else if (targetPlatform === "vercel" && !hasVercel) {
-        message = "Set a Vercel token in Settings to deploy directly.";
-      }
-      cfMissing.style.display = message ? "" : "none";
-      if (message && cfMissingText) {
-        cfMissingText.textContent = message;
-      }
-    }
 
     const ghMissing = document.getElementById("deployGhMissing");
     if (ghMissing) {
@@ -5719,14 +5654,6 @@
     return data.login;
   }
 
-  async function validateCloudflareToken(token) {
-    const url = "https://api.cloudflare.com/client/v4/user/tokens/verify";
-    const { response, data } = await cloudflareApiRequest(url, token, { method: "GET" });
-    if (!response.ok || !data?.success) {
-      throw new Error(extractCloudflareErrorMessage(data, response.status));
-    }
-    return true;
-  }
 
   async function connectGithub() {
     const token = window.prompt("Paste a GitHub OAuth access token (repo scope).");
@@ -5750,29 +5677,6 @@
     }
   }
 
-  async function connectCloudflare() {
-    const token = window.prompt("Paste a Cloudflare OAuth access token with Workers edit permission.");
-    if (!token) return;
-    const trimmed = token.trim();
-    if (!trimmed) return;
-
-    try {
-      await validateCloudflareToken(trimmed);
-      writeSession(STORAGE_KEYS.oauthCloudflareToken, trimmed);
-      if (deployCfAccountIdInput?.value?.trim()) {
-        writeLocal(STORAGE_KEYS.cloudflareAccountId, deployCfAccountIdInput.value);
-      }
-      if (typeof AkompaniToast !== "undefined") {
-        AkompaniToast.success({ title: "Cloudflare connected", message: "Token verified for this browser session." });
-      }
-      refreshDeployConnectionState();
-      updateAuthUiNavSignals();
-    } catch (error) {
-      if (typeof AkompaniToast !== "undefined") {
-        AkompaniToast.error({ title: "Cloudflare connect failed", message: error.message || "Token rejected." });
-      }
-    }
-  }
 
   function disconnectGithub() {
     writeSession(STORAGE_KEYS.oauthGithubToken, "");
@@ -5783,24 +5687,10 @@
     }
   }
 
-  function disconnectCloudflare() {
-    writeSession(STORAGE_KEYS.oauthCloudflareToken, "");
-    refreshDeployConnectionState();
-    updateAuthUiNavSignals();
-    if (typeof AkompaniToast !== "undefined") {
-      AkompaniToast.info({ title: "Cloudflare disconnected", message: "Session token removed." });
-    }
-  }
 
   function persistDeployConnectionInputs() {
     if (oauthGithubClientIdInput) {
       writeLocal(STORAGE_KEYS.oauthGithubClientId, oauthGithubClientIdInput.value);
-    }
-    if (oauthCloudflareClientIdInput) {
-      writeLocal(STORAGE_KEYS.oauthCloudflareClientId, oauthCloudflareClientIdInput.value);
-    }
-    if (deployCfAccountIdInput) {
-      writeLocal(STORAGE_KEYS.cloudflareAccountId, deployCfAccountIdInput.value);
     }
     if (deployEndpointModeInput) {
       writeLocal(STORAGE_KEYS.deployEndpointMode, normalizeEndpointMode(deployEndpointModeInput.value));
@@ -5813,12 +5703,6 @@
   function loadDeployConnectionInputs() {
     if (oauthGithubClientIdInput) {
       oauthGithubClientIdInput.value = readLocal(STORAGE_KEYS.oauthGithubClientId);
-    }
-    if (oauthCloudflareClientIdInput) {
-      oauthCloudflareClientIdInput.value = readLocal(STORAGE_KEYS.oauthCloudflareClientId);
-    }
-    if (deployCfAccountIdInput) {
-      deployCfAccountIdInput.value = getCloudflareAccountId();
     }
     if (deployEndpointModeInput) {
       deployEndpointModeInput.value = normalizeEndpointMode(
@@ -5946,41 +5830,6 @@
     }
   }
 
-  function extractCloudflareErrorMessage(data, status) {
-    if (data && typeof data === "object") {
-      if (Array.isArray(data.errors) && data.errors.length) {
-        const lines = data.errors
-          .map((item) => {
-            if (!item) return "";
-            const code = item.code ? `[${item.code}] ` : "";
-            const message = String(item.message || "").trim();
-            return `${code}${message}`.trim();
-          })
-          .filter(Boolean);
-        if (lines.length) return lines.join("; ");
-      }
-
-      const topLevel =
-        String(data.message || "").trim() ||
-        String(data.error || "").trim() ||
-        String(data.result?.error || "").trim();
-      if (topLevel) return topLevel;
-    }
-
-    return `Cloudflare API request failed (${status})`;
-  }
-
-  function isLikelyCloudflareAccountId(value) {
-    return /^[a-f0-9]{32}$/i.test(String(value || "").trim());
-  }
-
-  function getDeployObjectCompatibilityDate(deployObject) {
-    const files = Array.isArray(deployObject?.files) ? deployObject.files : [];
-    const wranglerFile = files.find((row) => String(row?.path || "").toLowerCase() === "wrangler.toml");
-    const content = String(wranglerFile?.content || "");
-    const match = content.match(/^\s*compatibility_date\s*=\s*"(\d{4}-\d{2}-\d{2})"\s*$/m);
-    return match?.[1] || new Date().toISOString().slice(0, 10);
-  }
 
   async function withRequestTimeout(requestFactory, timeoutMs = 30000) {
     const controller = new AbortController();
@@ -5996,428 +5845,6 @@
     } finally {
       clearTimeout(timer);
     }
-  }
-
-  async function cloudflareApiRequest(url, apiToken, options = {}) {
-    const init = options && typeof options === "object" ? options : {};
-    const headers = {
-      Authorization: `Bearer ${apiToken}`,
-      ...(init.headers || {}),
-    };
-
-    const response = await withRequestTimeout((signal) =>
-      fetch(url, {
-        ...init,
-        headers,
-        signal,
-      }),
-    );
-
-    const raw = await response.text().catch(() => "");
-    let data = null;
-    if (raw) {
-      try {
-        data = JSON.parse(raw);
-      } catch {
-        data = { error: raw };
-      }
-    }
-    return { response, data };
-  }
-
-  async function vercelApiRequest(pathname, apiToken, options = {}) {
-    const token = String(apiToken || "").trim();
-    if (!token) {
-      throw new Error("Vercel access token is required.");
-    }
-    const path = String(pathname || "").trim() || "/v13/deployments";
-    const teamId = getVercelTeamId();
-    const endpoint = `https://api.vercel.com${path}${teamId ? `${path.includes("?") ? "&" : "?"}teamId=${encodeURIComponent(teamId)}` : ""}`;
-
-    const init = options && typeof options === "object" ? options : {};
-    const response = await withRequestTimeout((signal) =>
-      fetch(endpoint, {
-        ...init,
-        headers: {
-          Authorization: `Bearer ${token}`,
-          ...(init.headers || {}),
-        },
-        signal,
-      }),
-    );
-
-    let data = null;
-    try {
-      data = await response.json();
-    } catch {
-      data = null;
-    }
-
-    if (!response.ok) {
-      const message =
-        String(data?.error?.message || "").trim() ||
-        String(data?.error?.code || "").trim() ||
-        String(data?.message || "").trim() ||
-        `Vercel API request failed (${response.status})`;
-      throw new Error(message);
-    }
-
-    return data;
-  }
-
-  async function createVercelDeployment(params) {
-    const token = String(params?.token || "").trim();
-    const deployObject = params?.deployObject;
-    const deployName = sanitizeWorkerName(String(params?.name || deployObject?.rootDir || "akompani-app"));
-    const files = (Array.isArray(deployObject?.files) ? deployObject.files : [])
-      .map((row) => ({
-        file: String(row?.path || "").replace(/^\/+/, ""),
-        data: String(row?.content || ""),
-      }))
-      .filter((row) => row.file && row.data);
-
-    if (!files.length) {
-      throw new Error("Deploy object has no files for Vercel deployment.");
-    }
-
-    const payload = {
-      name: deployName,
-      target: "production",
-      files,
-      meta: {
-        source: "akompani-static-ide",
-      },
-    };
-    const project = String(params?.project || "").trim();
-    if (project) {
-      payload.project = project;
-    }
-
-    const data = await vercelApiRequest("/v13/deployments", token, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify(payload),
-    });
-
-    const rawUrl = String(data?.inspectorUrl || data?.url || "").trim();
-    const normalizedUrl = normalizeSafeExternalUrl(
-      rawUrl && !/^https?:\/\//i.test(rawUrl) ? `https://${rawUrl.replace(/^\/+/, "")}` : rawUrl,
-    );
-
-    return {
-      id: String(data?.id || ""),
-      url: normalizedUrl,
-      raw: data,
-    };
-  }
-
-  async function uploadCloudflareWorkerScript(params) {
-    const deployUrl = String(params?.deployUrl || "").trim();
-    const apiToken = String(params?.apiToken || "").trim();
-    const script = String(params?.script || "");
-    const compatibilityDate = String(params?.compatibilityDate || "").trim() || new Date().toISOString().slice(0, 10);
-    const bindings = (Array.isArray(params?.bindings) ? params.bindings : [])
-      .filter((binding) => binding && typeof binding === "object")
-      .map((binding) => {
-        const type = String(binding.type || "").trim();
-        const name = String(binding.name || "").trim();
-        if (!type || !name) return null;
-
-        if (type === "d1") {
-          const id = String(binding.id || "").trim();
-          if (!id) return null;
-          return { type, name, id };
-        }
-
-        if (type === "durable_object_namespace") {
-          const className = String(binding.class_name || binding.className || "").trim();
-          const scriptName = String(binding.script_name || binding.scriptName || "").trim();
-          const environment = String(binding.environment || "").trim();
-          if (!className) return null;
-          return {
-            type,
-            name,
-            class_name: className,
-            ...(scriptName ? { script_name: scriptName } : {}),
-            ...(environment ? { environment } : {}),
-          };
-        }
-
-        return null;
-      })
-      .filter(Boolean);
-
-    if (!deployUrl || !apiToken) {
-      throw new Error("Cloudflare deploy URL and API token are required.");
-    }
-    if (!script.trim()) {
-      throw new Error("Generated worker script is empty.");
-    }
-    if (typeof FormData === "undefined" || typeof Blob === "undefined") {
-      throw new Error("Browser does not support required upload APIs (FormData/Blob).");
-    }
-    if (script.length > 2_500_000) {
-      throw new Error("Generated worker script is too large for direct browser deploy.");
-    }
-
-    const moduleFilename = "index.js";
-    const attempts = [
-      {
-        id: "module_multipart",
-        run: () =>
-          cloudflareApiRequest(deployUrl, apiToken, {
-            method: "PUT",
-            body: (() => {
-              const body = new FormData();
-              body.append(
-                "metadata",
-                new Blob(
-                  [
-                    JSON.stringify({
-                      main_module: moduleFilename,
-                      compatibility_date: compatibilityDate,
-                      ...(bindings.length ? { bindings } : {}),
-                    }),
-                  ],
-                  { type: "application/json" },
-                ),
-              );
-              body.append(moduleFilename, new Blob([script], { type: "application/javascript+module" }), moduleFilename);
-              return body;
-            })(),
-          }),
-      },
-      {
-        id: "service_worker_multipart",
-        run: () =>
-          cloudflareApiRequest(deployUrl, apiToken, {
-            method: "PUT",
-            body: (() => {
-              const body = new FormData();
-              body.append(
-                "metadata",
-                new Blob(
-                  [
-                    JSON.stringify({
-                      body_part: "script",
-                      compatibility_date: compatibilityDate,
-                      ...(bindings.length ? { bindings } : {}),
-                    }),
-                  ],
-                  { type: "application/json" },
-                ),
-              );
-              body.append("script", new Blob([script], { type: "application/javascript" }), "script.js");
-              return body;
-            })(),
-          }),
-      },
-    ];
-
-    if (!bindings.length) {
-      attempts.push(
-        {
-          id: "module_content_type",
-          run: () =>
-            cloudflareApiRequest(deployUrl, apiToken, {
-              method: "PUT",
-              headers: {
-                "Content-Type": "application/javascript+module",
-              },
-              body: script,
-            }),
-        },
-        {
-          id: "plain_javascript",
-          run: () =>
-            cloudflareApiRequest(deployUrl, apiToken, {
-              method: "PUT",
-              headers: {
-                "Content-Type": "application/javascript",
-              },
-              body: script,
-            }),
-        },
-      );
-    }
-
-    let lastError = null;
-    for (const attempt of attempts) {
-      const { response, data } = await attempt.run();
-      if (response.ok && (data?.success === true || data === null)) {
-        return {
-          strategy: attempt.id,
-          data,
-        };
-      }
-
-      const message = extractCloudflareErrorMessage(data, response.status);
-      if (response.status === 401 || response.status === 403 || response.status === 404 || response.status === 429) {
-        throw new Error(message);
-      }
-      lastError = new Error(message);
-    }
-
-    throw lastError || new Error("Cloudflare deploy failed.");
-  }
-
-  function routePatternToUrl(pattern) {
-    const value = String(pattern || "").trim();
-    if (!value) return "";
-    const host = value.replace(/^\*?\./, "").replace(/\/\*$/, "").replace(/\*$/, "");
-    if (!host || host.includes("*")) return "";
-    return normalizeSafeExternalUrl(`https://${host}`);
-  }
-
-  async function setCloudflareWorkerSubdomain(params) {
-    const accountId = String(params?.accountId || "").trim();
-    const workerName = String(params?.workerName || "").trim();
-    const apiToken = String(params?.apiToken || "").trim();
-    const enabled = params?.enabled !== false;
-    if (!accountId || !workerName || !apiToken) {
-      throw new Error("Cloudflare subdomain update requires account id, worker name, and API token.");
-    }
-
-    const url = `https://api.cloudflare.com/client/v4/accounts/${encodeURIComponent(accountId)}/workers/scripts/${encodeURIComponent(workerName)}/subdomain`;
-    const { response, data } = await cloudflareApiRequest(url, apiToken, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({ enabled }),
-    });
-
-    if (!response.ok || data?.success === false) {
-      throw new Error(extractCloudflareErrorMessage(data, response.status));
-    }
-    return data?.result || null;
-  }
-
-  async function upsertCloudflareWorkerRoute(params) {
-    const zoneId = String(params?.zoneId || "").trim();
-    const routePattern = normalizeCloudflareRoutePattern(params?.routePattern);
-    const workerName = String(params?.workerName || "").trim();
-    const apiToken = String(params?.apiToken || "").trim();
-    if (!zoneId || !routePattern || !workerName || !apiToken) {
-      throw new Error("Cloudflare route update requires zone id, route pattern, worker name, and API token.");
-    }
-
-    const baseUrl = `https://api.cloudflare.com/client/v4/zones/${encodeURIComponent(zoneId)}/workers/routes`;
-    let existingRoute = null;
-    let page = 1;
-    const perPage = 100;
-    for (;;) {
-      const listUrl = `${baseUrl}?page=${page}&per_page=${perPage}`;
-      const listRes = await cloudflareApiRequest(listUrl, apiToken, { method: "GET" });
-      if (!listRes.response.ok || listRes.data?.success === false) {
-        throw new Error(extractCloudflareErrorMessage(listRes.data, listRes.response.status));
-      }
-
-      const rows = Array.isArray(listRes.data?.result) ? listRes.data.result : [];
-      existingRoute = rows.find((row) => String(row?.pattern || "").trim() === routePattern) || null;
-      if (existingRoute) break;
-
-      const totalPages = Number(listRes.data?.result_info?.total_pages || 0);
-      if (totalPages > 0) {
-        if (page >= totalPages) break;
-      } else if (rows.length < perPage) {
-        break;
-      }
-      page += 1;
-      if (page > 50) break;
-    }
-
-    const payload = JSON.stringify({ pattern: routePattern, script: workerName });
-    const method = existingRoute?.id ? "PUT" : "POST";
-    const targetUrl = existingRoute?.id
-      ? `${baseUrl}/${encodeURIComponent(String(existingRoute.id))}`
-      : baseUrl;
-    const writeRes = await cloudflareApiRequest(targetUrl, apiToken, {
-      method,
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: payload,
-    });
-
-    if (!writeRes.response.ok || writeRes.data?.success === false) {
-      throw new Error(extractCloudflareErrorMessage(writeRes.data, writeRes.response.status));
-    }
-
-    return writeRes.data?.result || null;
-  }
-
-  async function setCloudflareWorkerSecret(params) {
-    const accountId = String(params?.accountId || "").trim();
-    const workerName = String(params?.workerName || "").trim();
-    const apiToken = String(params?.apiToken || "").trim();
-    const name = String(params?.name || "").trim();
-    const text = String(params?.text || "").trim();
-    if (!accountId || !workerName || !apiToken || !name) {
-      throw new Error("Cloudflare secret update requires account id, worker name, token, and secret name.");
-    }
-    if (!text) return null;
-
-    const url = `https://api.cloudflare.com/client/v4/accounts/${encodeURIComponent(accountId)}/workers/scripts/${encodeURIComponent(workerName)}/secrets`;
-    const { response, data } = await cloudflareApiRequest(url, apiToken, {
-      method: "PUT",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        name,
-        text,
-        type: "secret_text",
-      }),
-    });
-    if (!response.ok || data?.success === false) {
-      throw new Error(extractCloudflareErrorMessage(data, response.status));
-    }
-    return data?.result || null;
-  }
-
-  async function applyCloudflareDeploymentSettings(params) {
-    const accountId = String(params?.accountId || "").trim();
-    const workerName = String(params?.workerName || "").trim();
-    const apiToken = String(params?.apiToken || "").trim();
-    const settings = resolveCloudflareDeploySettings(params?.settings || {});
-    if (!accountId || !workerName || !apiToken) return { routeUrl: "" };
-
-    if (settings.zeroTrustMode === "access_jwt" && (!settings.zoneId || !settings.routePattern || !settings.accessAud)) {
-      throw new Error("Zero Trust mode access_jwt requires Cloudflare Zone ID, Route Pattern, and Access AUD.");
-    }
-
-    await setCloudflareWorkerSubdomain({
-      accountId,
-      workerName,
-      apiToken,
-      enabled: settings.workersDevEnabled,
-    });
-
-    let routeUrl = "";
-    if (settings.zoneId && settings.routePattern) {
-      await upsertCloudflareWorkerRoute({
-        zoneId: settings.zoneId,
-        routePattern: settings.routePattern,
-        workerName,
-        apiToken,
-      });
-      routeUrl = routePatternToUrl(settings.routePattern);
-    }
-
-    if (settings.zeroTrustMode === "service_token" && settings.accessServiceTokenSecret) {
-      await setCloudflareWorkerSecret({
-        accountId,
-        workerName,
-        apiToken,
-        name: "CF_ACCESS_SERVICE_TOKEN_SECRET",
-        text: settings.accessServiceTokenSecret,
-      });
-    }
-
-    return { routeUrl };
   }
 
   function getSelectedDeployTarget() {
@@ -6493,61 +5920,134 @@
   }
 
   function downloadTextFile(filename, content) {
+    const safeFilename = String(filename || "download.txt").replace(/[^\w.\-]/g, "_");
     const blob = new Blob([String(content || "")], { type: "text/plain;charset=utf-8" });
     const url = URL.createObjectURL(blob);
     const link = document.createElement("a");
     link.href = url;
-    link.download = filename;
+    link.download = safeFilename;
     document.body.appendChild(link);
     link.click();
     link.remove();
     URL.revokeObjectURL(url);
   }
 
+  function getDeployGuideSteps(targetId) {
+    const t = String(targetId || "").trim();
+    if (t === "vercel_elysia_bun") {
+      return {
+        prereqs: "Bun runtime + Vercel CLI",
+        commands: ["bun install", "npx vercel login", "npx vercel env add LLM_API_KEY", "bun run deploy"],
+        steps: [
+          { text: "Download the deploy package and extract to a folder" },
+          { text: "Open terminal in the folder", code: "cd your-agent-folder" },
+          { text: "Install dependencies", code: "bun install" },
+          { text: "Log into Vercel", code: "npx vercel login", hint: "Link to your Vercel account when prompted" },
+          { text: "Set your API key as env var", code: "npx vercel env add LLM_API_KEY", hint: "Paste your API key when prompted" },
+          { text: "Deploy", code: "bun run deploy" },
+        ],
+      };
+    }
+    if (t === "local_elysia_bun") {
+      return {
+        prereqs: "Bun runtime",
+        commands: ["bun install", "bun run dev"],
+        steps: [
+          { text: "Download the deploy package and extract to a folder" },
+          { text: "Open terminal in the folder", code: "cd your-agent-folder" },
+          { text: "Install dependencies", code: "bun install" },
+          { text: "Review .env values", code: ".env", hint: "Pre-filled with your current LLM config from the IDE" },
+          { text: "Start the dev server", code: "bun run dev" },
+        ],
+      };
+    }
+    // Default: Cloudflare Workers
+    return {
+      prereqs: "Bun runtime + Wrangler CLI",
+      commands: ["bun install", "npx wrangler login", "npx wrangler secret put LLM_API_KEY", "bun run deploy"],
+      steps: [
+        { text: "Download the deploy package and extract to a folder" },
+        { text: "Open terminal in the folder", code: "cd your-agent-folder" },
+        { text: "Install dependencies", code: "bun install" },
+        { text: "Log into Cloudflare", code: "npx wrangler login", hint: "Select your account when prompted" },
+        { text: "Set your API key as a secret", code: "npx wrangler secret put LLM_API_KEY", hint: "Paste your API key when prompted" },
+        { text: "Deploy", code: "bun run deploy" },
+      ],
+    };
+  }
+
   function renderDeployObjectResult(resultEl, deployObject, headline, opts = {}) {
     if (!resultEl || !deployObject) return;
-    const safeHeadline = escapeHtml(headline || "Deploy object generated");
-    const fileCount = Number(deployObject?.summary?.fileCount || deployObject?.files?.length || 0);
+    const safeHeadline = escapeHtml(headline || "Deploy package generated");
     const target = escapeHtml(String(deployObject.targetLabel || deployObject.target || ""));
     const rootDir = escapeHtml(String(deployObject.rootDir || ""));
     const deployUrl = normalizeSafeExternalUrl(opts.url);
     const safeDeployUrl = escapeHtml(deployUrl);
+    const guide = getDeployGuideSteps(deployObject.target);
+    const fileList = (deployObject.files || []).map((f) => escapeHtml(String(f.path || f.name || "")));
+
+    const stepsHtml = guide.steps
+      .map((s) => {
+        const codeHtml = s.code ? ` <code>${escapeHtml(s.code)}</code>` : "";
+        const hintHtml = s.hint ? `<span class="guide-step-hint">${escapeHtml(s.hint)}</span>` : "";
+        return `<li><div class="guide-step-content"><span>${escapeHtml(s.text)}${codeHtml}</span>${hintHtml}</div></li>`;
+      })
+      .join("");
+
+    const filesHtml = fileList.length
+      ? `<details class="deploy-guide-files"><summary>What's inside (${fileList.length} files)</summary><ul>${fileList.map((f) => `<li>${f}</li>`).join("")}</ul></details>`
+      : "";
 
     resultEl.className = "deploy-result success";
     resultEl.innerHTML = `
       ${safeHeadline}
-      <div class="result-url">Target: ${target}</div>
-      <div class="result-url">Files: ${fileCount}</div>
-      <div class="result-url">Folder: ${rootDir}</div>
+      <div class="result-url">Target: ${target} &middot; Requires: ${escapeHtml(guide.prereqs)}</div>
       ${
         deployUrl
           ? `<div class="result-url"><a href="${safeDeployUrl}" target="_blank" rel="noopener noreferrer">${safeDeployUrl}</a> <button class="copy-url" data-action="copyDeployUrl">Copy URL</button></div>`
           : ""
       }
-      <div class="result-url"><button class="copy-url" data-action="downloadDeployObject">Download deploy object JSON</button></div>
+      <div class="deploy-guide-actions">
+        <button class="deploy-guide-download" data-action="downloadDeployObject">&#8615; Download Package</button>
+        <button class="deploy-guide-copy-cmds" data-action="copyCmds">&#9776; Copy Commands</button>
+      </div>
+      ${filesHtml}
+      <details class="deploy-guide" open>
+        <summary>Step-by-step deployment guide</summary>
+        <ol class="deploy-guide-steps">${stepsHtml}</ol>
+        <p class="deploy-guide-note">Or push to GitHub from the GitHub tab and deploy from there.</p>
+      </details>
     `;
+
     resultEl.querySelector('[data-action="copyDeployUrl"]')?.addEventListener("click", () => {
       navigator.clipboard
         .writeText(deployUrl)
         .then(() => {
-          if (typeof AkompaniToast !== "undefined") {
-            AkompaniToast.success({ title: "Copied", message: "Deployment URL copied to clipboard." });
-          }
+          if (typeof AkompaniToast !== "undefined") AkompaniToast.success({ title: "Copied", message: "Deployment URL copied." });
         })
         .catch(() => {
-          if (typeof AkompaniToast !== "undefined") {
-            AkompaniToast.warning({ title: "Copy failed", message: "Clipboard access is not available in this browser context." });
-          }
+          if (typeof AkompaniToast !== "undefined") AkompaniToast.warning({ title: "Copy failed", message: "Clipboard not available." });
         });
     });
     resultEl.querySelector('[data-action="downloadDeployObject"]')?.addEventListener("click", () => {
-      const filename = `${deployObject.rootDir || "deploy-object"}.json`;
+      const filename = `${deployObject.rootDir || "deploy-package"}.json`;
       downloadTextFile(filename, JSON.stringify(deployObject, null, 2));
+    });
+    resultEl.querySelector('[data-action="copyCmds"]')?.addEventListener("click", () => {
+      const cmds = guide.commands.join("\n");
+      navigator.clipboard
+        .writeText(cmds)
+        .then(() => {
+          if (typeof AkompaniToast !== "undefined") AkompaniToast.success({ title: "Copied", message: "CLI commands copied to clipboard." });
+        })
+        .catch(() => {
+          if (typeof AkompaniToast !== "undefined") AkompaniToast.warning({ title: "Copy failed", message: "Clipboard not available." });
+        });
     });
     resultEl.style.display = "";
   }
 
-  // ── Deploy / generate target object ──
+  // ── Generate deploy package ──
   async function deployCf() {
     const nameInput = document.getElementById("deployAgentName");
     const descInput = document.getElementById("deployAgentDesc");
@@ -6566,25 +6066,10 @@
     }
 
     const targetId = String(targetSelect?.value || "cloudflare_workers_elysia_bun").trim();
-    const targetDef = getDeployTargetDefinition(targetId);
     const endpointMode = normalizeEndpointMode(
       deployEndpointModeInput?.value || readLocal(STORAGE_KEYS.deployEndpointMode) || "both",
     );
     const linkedAgentId = getLinkedDeployAgentId();
-    const deployObject = buildDeployObjectForCurrentFlow(name, description, targetId, endpointMode);
-
-    const targetPlatform = String(targetDef?.platform || "").trim();
-    const canDirectCloudflare = Boolean(targetPlatform === "cloudflare" && targetDef?.canDirectDeploy !== false);
-    const canDirectVercel = Boolean(targetPlatform === "vercel");
-    const cloudflareSettings = getCloudflareDeploySettings();
-    const apiToken = getCloudflareToken();
-    const accountId = String(getCloudflareAccountId() || "").trim().toLowerCase();
-    const vercelToken = getVercelToken();
-    const vercelProject = getVercelProject();
-    const hasCloudflareCreds = Boolean(apiToken && accountId);
-    if (hasCloudflareCreds && isLikelyCloudflareAccountId(accountId)) {
-      writeLocal(STORAGE_KEYS.cloudflareAccountId, accountId);
-    }
 
     const progress = document.getElementById("deployCfProgress");
     const steps = document.getElementById("deployCfSteps");
@@ -6592,264 +6077,22 @@
     const btn = document.getElementById("deployCfBtn");
     if (progress) progress.style.display = "";
     if (result) { result.style.display = "none"; result.className = "deploy-result"; }
-    if (btn) { btn.disabled = true; btn.textContent = "Running..."; }
-    if (steps) steps.innerHTML = '<div class="deploy-step active"><span class="deploy-step-icon"><svg class="spin" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83"/></svg></span><span>Generating deploy object...</span></div>';
+    if (btn) { btn.disabled = true; btn.textContent = "Generating..."; }
+    if (steps) steps.innerHTML = '<div class="deploy-step active"><span class="deploy-step-icon"><svg class="spin" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83"/></svg></span><span>Generating deploy package...</span></div>';
 
     try {
-      if (canDirectVercel) {
-        if (!vercelToken) {
-          if (steps) {
-            steps.innerHTML = '<div class="deploy-step completed"><span class="deploy-step-icon">&#x2713;</span><span>Deploy object generated</span></div>';
-          }
-          renderDeployObjectResult(
-            result,
-            deployObject,
-            "Vercel token missing. Generated deploy object for Vercel CLI/API path.",
-          );
-          appendDeploymentLog({
-            id: `obj_${Date.now().toString(36)}`,
-            agentId: linkedAgentId,
-            name,
-            target: targetId,
-            status: "generated",
-            updatedAt: new Date().toISOString(),
-            url: "",
-            deployObject,
-          });
-          loadDeployments();
-          if (typeof AkompaniToast !== "undefined") {
-            AkompaniToast.info({ title: "Deploy object ready", message: "Add Vercel token in Settings for direct browser deploy." });
-          }
-          return;
-        }
-
-        if (steps) {
-          steps.innerHTML = '<div class="deploy-step active"><span class="deploy-step-icon"><svg class="spin" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83"/></svg></span><span>Uploading deployment to Vercel...</span></div>';
-        }
-
-        const deployResult = await createVercelDeployment({
-          token: vercelToken,
-          project: vercelProject,
-          name: workerName,
-          deployObject,
-        });
-        const url = deployResult.url || "";
-        renderDeployObjectResult(
-          result,
-          deployObject,
-          "Vercel deploy submitted. Deploy object also generated.",
-          { url },
-        );
-        if (steps) steps.innerHTML = '<div class="deploy-step completed"><span class="deploy-step-icon">&#x2713;</span><span>Deployed + object generated</span></div>';
-        appendDeploymentLog({
-          id: `vercel_${Date.now().toString(36)}`,
-          agentId: linkedAgentId,
-          name,
-          target: targetId,
-          status: "deployed",
-          updatedAt: new Date().toISOString(),
-          url,
-          deployObject,
-        });
-        loadDeployments();
-        if (typeof AkompaniToast !== "undefined") {
-          AkompaniToast.success({
-            title: "Vercel deploy started",
-            message: url || `Deployment ${deployResult.id || "created"}`,
-          });
-        }
-        return;
-      }
-
-      if (!canDirectCloudflare || !hasCloudflareCreds) {
-        if (steps) {
-          steps.innerHTML = '<div class="deploy-step completed"><span class="deploy-step-icon">&#x2713;</span><span>Deploy object generated</span></div>';
-        }
-        const generatedHeadline = !canDirectCloudflare
-          ? "Target object generated (no direct deploy for this platform in browser mode)."
-          : "Cloudflare credentials missing. Generated deploy object for Wrangler/Bun path.";
-        renderDeployObjectResult(
-          result,
-          deployObject,
-          generatedHeadline,
-        );
-        appendDeploymentLog({
-          id: `obj_${Date.now().toString(36)}`,
-          agentId: linkedAgentId,
-          name,
-          target: targetId,
-          status: "generated",
-          updatedAt: new Date().toISOString(),
-          url: "",
-          deployObject,
-        });
-        loadDeployments();
-        if (typeof AkompaniToast !== "undefined") {
-          AkompaniToast.info({ title: "Deploy object ready", message: "Download JSON or push to GitHub." });
-        }
-        return;
-      }
-
-      if (!isLikelyCloudflareAccountId(accountId)) {
-        throw new Error("Cloudflare account ID looks invalid. Use the 32-character account ID from Cloudflare dashboard.");
-      }
-      if (
-        cloudflareSettings.zeroTrustMode === "access_jwt" &&
-        (!cloudflareSettings.zoneId || !cloudflareSettings.routePattern || !cloudflareSettings.accessAud)
-      ) {
-        throw new Error("Cloudflare Zero Trust JWT mode requires Zone ID, Route Pattern, and Access AUD in Settings.");
-      }
-      if (
-        cloudflareSettings.zeroTrustMode === "service_token" &&
-        (!cloudflareSettings.accessServiceTokenId || !cloudflareSettings.accessServiceTokenSecret)
-      ) {
-        throw new Error("Cloudflare Zero Trust service-token mode requires both service token ID and secret in Settings.");
-      }
+      const deployObject = buildDeployObjectForCurrentFlow(name, description, targetId, endpointMode);
 
       if (steps) {
-        steps.innerHTML = '<div class="deploy-step active"><span class="deploy-step-icon"><svg class="spin" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83"/></svg></span><span>Uploading worker script to Cloudflare...</span></div>';
+        steps.innerHTML = '<div class="deploy-step completed"><span class="deploy-step-icon">&#x2713;</span><span>Deploy package generated</span></div>';
       }
-
-      const script = generateWorkerScript(name, description, targetId, endpointMode);
-      const deployUrl = `https://api.cloudflare.com/client/v4/accounts/${encodeURIComponent(accountId)}/workers/scripts/${encodeURIComponent(workerName)}`;
-      const compatibilityDate = getDeployObjectCompatibilityDate(deployObject);
-      const d1Bindings = String(cloudflareSettings.d1DatabaseId || "").trim()
-        ? [
-            {
-              type: "d1",
-              name: normalizeCloudflareD1BindingName(cloudflareSettings.d1Binding || "DB"),
-              id: String(cloudflareSettings.d1DatabaseId || "").trim(),
-            },
-          ]
-        : [];
-      const doBindingName = normalizeCloudflareDoBindingName(cloudflareSettings.doBinding || "AGENT_DO");
-      const doClassName = normalizeCloudflareDoClassName(cloudflareSettings.doClassName || "AgentDurableObject");
-      const doScriptName = String(cloudflareSettings.doScriptName || "").trim();
-      const doEnvironment = String(cloudflareSettings.doEnvironment || "").trim();
-      const doBindings = doScriptName
-        ? [
-            {
-              type: "durable_object_namespace",
-              name: doBindingName,
-              class_name: doClassName,
-              script_name: doScriptName,
-              ...(doEnvironment ? { environment: doEnvironment } : {}),
-            },
-          ]
-        : [];
-      const metadataBindings = [...d1Bindings, ...doBindings];
-      let uploadResult = null;
-      let uploadError = null;
-      for (let attempt = 0; attempt < 3; attempt += 1) {
-        try {
-          uploadResult = await uploadCloudflareWorkerScript({
-            deployUrl,
-            apiToken,
-            script,
-            compatibilityDate,
-            bindings: metadataBindings,
-          });
-          uploadError = null;
-          break;
-        } catch (error) {
-          uploadError = error;
-          const message = toErrorMessage(error).toLowerCase();
-          const isRetryable =
-            message.includes("timed out") ||
-            message.includes("network") ||
-            message.includes("(500)") ||
-            message.includes("(502)") ||
-            message.includes("(503)") ||
-            message.includes("(504)") ||
-            message.includes("(429)");
-          if (!isRetryable || attempt >= 2) {
-            break;
-          }
-          await delay(450 * (attempt + 1));
-        }
-      }
-      if (uploadError || !uploadResult) {
-        throw uploadError || new Error("Cloudflare deploy failed.");
-      }
-
-      let routeUrl = "";
-      if (steps) {
-        steps.innerHTML = '<div class="deploy-step active"><span class="deploy-step-icon"><svg class="spin" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83"/></svg></span><span>Applying Cloudflare deployment settings...</span></div>';
-      }
-      const applied = await applyCloudflareDeploymentSettings({
-        accountId,
-        workerName,
-        apiToken,
-        settings: cloudflareSettings,
-      });
-      routeUrl = String(applied?.routeUrl || "").trim();
-
-      let workerUrl = "";
-      if (cloudflareSettings.workersDevEnabled) {
-        try {
-        if (steps) {
-          steps.innerHTML = '<div class="deploy-step active"><span class="deploy-step-icon"><svg class="spin" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83"/></svg></span><span>Resolving workers.dev URL...</span></div>';
-        }
-        const subUrl = `https://api.cloudflare.com/client/v4/accounts/${encodeURIComponent(accountId)}/workers/subdomain`;
-        const { response: subRes, data: subData } = await cloudflareApiRequest(subUrl, apiToken, { method: "GET" });
-        if (subRes.ok && subData?.success && subData?.result?.subdomain) {
-          workerUrl = `https://${workerName}.${subData.result.subdomain}.workers.dev`;
-        }
-        } catch {
-          // Keep empty URL and fall back to dashboard.
-        }
-      }
-
-      const dashboardUrl = `https://dash.cloudflare.com/?to=/:account/workers/services/view/${encodeURIComponent(workerName)}/production`;
-      const url = routeUrl || workerUrl || dashboardUrl;
-      if (result) {
-        renderDeployObjectResult(
-          result,
-          deployObject,
-          "Cloudflare deploy complete. Elysia/Bun deploy object also generated.",
-          { url },
-        );
-      }
-      if (steps) steps.innerHTML = '<div class="deploy-step completed"><span class="deploy-step-icon">&#x2713;</span><span>Deployed + object generated</span></div>';
-      appendDeploymentLog({
-        id: `cf_${Date.now().toString(36)}`,
-        agentId: linkedAgentId,
-        name,
-        target: targetId || "cloudflare_workers",
-        status: "deployed",
-        updatedAt: new Date().toISOString(),
-        url,
-        d1Binding: d1Bindings.length ? String(cloudflareSettings.d1Binding || "DB") : "",
-        d1DatabaseId: d1Bindings.length ? String(cloudflareSettings.d1DatabaseId || "").trim() : "",
-        d1DatabaseName: d1Bindings.length ? String(cloudflareSettings.d1DatabaseName || "").trim() : "",
-        doBinding: doBindings.length ? doBindingName : "",
-        doClassName: doBindings.length ? doClassName : "",
-        doScriptName: doBindings.length ? doScriptName : "",
-        doEnvironment: doBindings.length ? doEnvironment : "",
+      renderDeployObjectResult(
+        result,
         deployObject,
-      });
-      loadDeployments();
-      if (typeof AkompaniToast !== "undefined") {
-          AkompaniToast.success({
-            title: "Deployed",
-            message: `${url} (${uploadResult.strategy})`,
-          });
-        }
-    } catch (err) {
-      const message = toErrorMessage(err, "Cloudflare deploy failed.");
-      const likelyCorsOrNetwork = /(cors|network|failed to fetch|fetch failed|blocked|timeout)/i.test(message);
-      const headline = likelyCorsOrNetwork
-        ? "Direct Cloudflare deploy blocked (likely CORS/network). Generated deploy object for Wrangler/Bun path."
-        : "Cloudflare deploy failed. Generated deploy object for Wrangler/Bun path.";
-
-      if (result) {
-        renderDeployObjectResult(result, deployObject, headline);
-      }
-      if (steps) {
-        steps.innerHTML = '<div class="deploy-step completed"><span class="deploy-step-icon">&#x2713;</span><span>Deploy object generated</span></div>';
-      }
+        "Deploy package generated. Follow the steps below or push to GitHub.",
+      );
       appendDeploymentLog({
-        id: `obj_${Date.now().toString(36)}`,
+        id: `pkg_${Date.now().toString(36)}`,
         agentId: linkedAgentId,
         name,
         target: targetId,
@@ -6860,17 +6103,22 @@
       });
       loadDeployments();
       if (typeof AkompaniToast !== "undefined") {
-        AkompaniToast.warning({
-          title: "Direct deploy failed",
-          message,
-        });
+        AkompaniToast.success({ title: "Deploy package ready", message: "Download the JSON or push to GitHub." });
+      }
+    } catch (err) {
+      const message = toErrorMessage(err, "Deploy package generation failed.");
+      if (steps) {
+        steps.innerHTML = '<div class="deploy-step" style="color:var(--color-error)"><span class="deploy-step-icon">&#x2717;</span><span>Generation failed</span></div>';
+      }
+      if (typeof AkompaniToast !== "undefined") {
+        AkompaniToast.error({ title: "Generation failed", message });
       }
     } finally {
       if (progress) {
         const bar = progress.querySelector(".progress-bar");
         if (bar) bar.style.display = "";
       }
-      if (btn) { btn.disabled = false; btn.textContent = "Deploy / Generate Target Object"; }
+      if (btn) { btn.disabled = false; btn.textContent = "Generate Deploy Package"; }
     }
   }
 
@@ -7088,15 +6336,6 @@
     if (oauthGithubClientIdInput) {
       oauthGithubClientIdInput.addEventListener("change", persistDeployConnectionInputs);
     }
-    if (oauthCloudflareClientIdInput) {
-      oauthCloudflareClientIdInput.addEventListener("change", persistDeployConnectionInputs);
-    }
-    if (deployCfAccountIdInput) {
-      deployCfAccountIdInput.addEventListener("change", () => {
-        persistDeployConnectionInputs();
-        refreshDeployConnectionState();
-      });
-    }
     if (deployEndpointModeInput) {
       deployEndpointModeInput.addEventListener("change", () => {
         persistDeployConnectionInputs();
@@ -7109,8 +6348,6 @@
     }
     if (connectGithubBtn) connectGithubBtn.addEventListener("click", () => connectGithub());
     if (disconnectGithubBtn) disconnectGithubBtn.addEventListener("click", () => disconnectGithub());
-    if (connectCloudflareBtn) connectCloudflareBtn.addEventListener("click", () => connectCloudflare());
-    if (disconnectCloudflareBtn) disconnectCloudflareBtn.addEventListener("click", () => disconnectCloudflare());
     if (saveLlmConfigBtn) saveLlmConfigBtn.addEventListener("click", () => saveLlmConfig());
     if (llmProviderInput) {
       llmProviderInput.addEventListener("change", () => {

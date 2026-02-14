@@ -14,9 +14,8 @@ flowchart LR
   UI["Browser UI (/app)"] --> LS["localStorage"]
   UI --> SS["sessionStorage"]
   UI --> LLM["Configured LLM endpoint"]
-  UI --> CF["Cloudflare API"]
-  UI --> VERCEL["Vercel API"]
   UI --> GH["GitHub API"]
+  UI --> PKG["Local Deploy Packages"]
 ```
 
 ## 2. Main Files
@@ -59,4 +58,4 @@ Legacy routes retained as redirects:
 
 GitHub Pages automation is included via `.github/workflows/deploy-pages.yml` (push to `main`/`master`).
 
-Direct provider deploy calls are best-effort from browser; if CORS/network blocks a direct call, IDE falls back to generating the deploy object.
+Deploy packages are generated in-browser and downloaded locally or pushed to GitHub. Users deploy via platform CLIs (Wrangler, Vercel CLI, or `bun run dev` for local). Direct browser-to-provider API deploys were removed due to CORS/Same-Origin Policy restrictions.

@@ -11,7 +11,7 @@ Akompani is designed to help people who are not yet fluent in agentic workflows 
 By the end of this tutorial, you will:
 - generate a first agent from plain English,
 - inspect/edit its flow,
-- create a deploy artifact for Cloudflare Workers (`Elysia + Bun`).
+- generate a deploy package for Cloudflare Workers (`Elysia + Bun`).
 
 ## Prerequisites
 
@@ -58,17 +58,19 @@ Optional clip slot (GIF):
   - add a fallback instruction for unclear user requests,
   - or add KV/cache behavior for repeated queries.
 
-## 3:20-4:40 Build deploy artifact (Cloudflare Workers)
+## 3:20-4:40 Generate deploy package (Cloudflare Workers)
 
 ![Deploy mode](../assets/tutorials/first-agent/04-deploy-mode.png)
 
 - Switch to `Deploy` mode.
 - Select `Cloudflare Workers (Elysia + Wrangler + Bun)`.
-- Generate deploy object and review included files:
+- Click `Generate Deploy Package` and review included files:
   - `src/index.ts`
   - `wrangler.toml`
   - `package.json`
+  - `.env` (pre-filled with your LLM config)
   - `README.md`
+- Follow the step-by-step CLI guide or push to GitHub.
 
 Optional clip slot (GIF):
 
@@ -79,5 +81,5 @@ Optional clip slot (GIF):
 You now have a first agent that is:
 - generated from plain language,
 - editable as a flow,
-- deployable as Bun + Elysia runtime artifacts,
+- deployable as Bun + Elysia runtime artifacts (via CLI or GitHub push),
 - ready to integrate existing APIs and KV-style state patterns.

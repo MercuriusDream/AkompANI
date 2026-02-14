@@ -38,22 +38,6 @@
     llmModel: "akompani_llm_model",
     llmApiKey: "akompani_llm_api_key",
     llmApiKeyLegacy: "akompani_openai_key",
-    cfToken: "akompani_oauth_cloudflare_token",
-    cfTokenLegacy: "akompani_cf_api_token",
-    cfAccountId: "akompani_cf_account_id",
-    cfWorkersDev: "akompani_cf_workers_dev",
-    cfZoneId: "akompani_cf_zone_id",
-    cfRoutePattern: "akompani_cf_route_pattern",
-    cfZeroTrustMode: "akompani_cf_zero_trust_mode",
-    cfAccessAud: "akompani_cf_access_aud",
-    cfAccessServiceTokenId: "akompani_cf_access_service_token_id",
-    cfD1Binding: "akompani_cf_d1_binding",
-    cfD1DatabaseId: "akompani_cf_d1_database_id",
-    cfD1DatabaseName: "akompani_cf_d1_database_name",
-    cfDoBinding: "akompani_cf_do_binding",
-    cfDoClassName: "akompani_cf_do_class_name",
-    cfDoScriptName: "akompani_cf_do_script_name",
-    cfDoEnvironment: "akompani_cf_do_environment",
     workerAuthToken: "akompani_worker_auth_token",
   };
 
@@ -224,54 +208,8 @@
     return Number(evalRun?.summary?.passRate || 0) >= 100;
   }
 
-  function getCloudflareToken() {
-    return readSession(STORAGE.cfToken) || readSession(STORAGE.cfTokenLegacy);
-  }
-
-  function getCloudflareAccountId() {
-    return readLocal(STORAGE.cfAccountId);
-  }
-
   function getWorkerAuthToken() {
     return readSession(STORAGE.workerAuthToken) || readLocal(STORAGE.workerAuthToken);
-  }
-
-  function normalizeCloudflareD1BindingName(input) {
-    const clean = String(input || "").trim().toUpperCase();
-    if (!clean) return "DB";
-    return clean.replace(/[^A-Z0-9_]/g, "_").replace(/_{2,}/g, "_").replace(/^_+|_+$/g, "") || "DB";
-  }
-
-  function normalizeCloudflareDoBindingName(input) {
-    const clean = String(input || "").trim().toUpperCase();
-    if (!clean) return "AGENT_DO";
-    return clean.replace(/[^A-Z0-9_]/g, "_").replace(/_{2,}/g, "_").replace(/^_+|_+$/g, "") || "AGENT_DO";
-  }
-
-  function normalizeCloudflareDoClassName(input) {
-    const raw = String(input || "").trim();
-    if (!raw) return "AgentDurableObject";
-    const clean = raw.replace(/[^A-Za-z0-9_$]/g, "_");
-    const head = /^[A-Za-z_$]/.test(clean) ? clean : `_${clean}`;
-    return head || "AgentDurableObject";
-  }
-
-  function getCloudflareDeployConfig() {
-    return {
-      workersDevEnabled: String(readLocal(STORAGE.cfWorkersDev) || "true").toLowerCase() !== "false",
-      zoneId: readLocal(STORAGE.cfZoneId),
-      routePattern: readLocal(STORAGE.cfRoutePattern),
-      zeroTrustMode: readLocal(STORAGE.cfZeroTrustMode),
-      accessAud: readLocal(STORAGE.cfAccessAud),
-      accessServiceTokenId: readLocal(STORAGE.cfAccessServiceTokenId),
-      d1Binding: normalizeCloudflareD1BindingName(readLocal(STORAGE.cfD1Binding) || "DB"),
-      d1DatabaseId: readLocal(STORAGE.cfD1DatabaseId),
-      d1DatabaseName: readLocal(STORAGE.cfD1DatabaseName),
-      doBinding: normalizeCloudflareDoBindingName(readLocal(STORAGE.cfDoBinding) || "AGENT_DO"),
-      doClassName: normalizeCloudflareDoClassName(readLocal(STORAGE.cfDoClassName) || "AgentDurableObject"),
-      doScriptName: readLocal(STORAGE.cfDoScriptName),
-      doEnvironment: readLocal(STORAGE.cfDoEnvironment),
-    };
   }
 
   function getIdeRuntime() {
@@ -414,35 +352,6 @@
     };
   }
 
-  function sanitizeWorkerName(input, fallback = "akompani-agent") {
-    const normalized = String(input || "")
-      .trim()
-      .toLowerCase()
-      .replace(/[^a-z0-9-]+/g, "-")
-      .replace(/--+/g, "-")
-      .replace(/^-+|-+$/g, "");
-    return normalized || fallback;
-  }
-
-  function generateWorkerScript(agent) {
-    const name = String(agent?.name || "Akompani Agent");
-    const drawflow = agent?.flow || { drawflow: { Home: { data: {} } } };
-    const endpointMode = String(agent?.deploy?.preferredEndpointMode || "both");
-    const ide = getIdeRuntime();
-    if (ide?.buildCloudflareWorkerModule) {
-      return ide.buildCloudflareWorkerModule({
-        agentName: name,
-        description: String(agent?.description || ""),
-        drawflow,
-        providerConfig: getLlmConfig(),
-        endpointMode,
-        cloudflareConfig: getCloudflareDeployConfig(),
-      });
-    }
-
-    return `export default { fetch() { return new Response("Runtime generator unavailable", { status: 501 }); } };`;
-  }
-
   function persistDeployments() {
     writeJsonArray(STORAGE.localDeployments, state.deployments.slice(0, 300));
   }
@@ -539,246 +448,6 @@
       mode: "local",
       deployment: null,
     };
-  }
-
-  function extractCloudflareErrorMessage(data, status) {
-    if (data && typeof data === "object") {
-      if (Array.isArray(data.errors) && data.errors.length) {
-        const lines = data.errors
-          .map((item) => {
-            if (!item) return "";
-            const code = item.code ? `[${item.code}] ` : "";
-            const message = String(item.message || "").trim();
-            return `${code}${message}`.trim();
-          })
-          .filter(Boolean);
-        if (lines.length) return lines.join("; ");
-      }
-
-      const topLevel =
-        String(data.message || "").trim() ||
-        String(data.error || "").trim() ||
-        String(data.result?.error || "").trim();
-      if (topLevel) return topLevel;
-    }
-    return `Cloudflare API request failed (${status})`;
-  }
-
-  async function cloudflareApiRequest(url, token, options = {}) {
-    const init = options && typeof options === "object" ? options : {};
-    const response = await fetch(url, {
-      ...init,
-      headers: {
-        Authorization: `Bearer ${token}`,
-        ...(init.headers || {}),
-      },
-    });
-    const raw = await response.text().catch(() => "");
-    let data = null;
-    if (raw) {
-      try {
-        data = JSON.parse(raw);
-      } catch {
-        data = { error: raw };
-      }
-    }
-    return { response, data };
-  }
-
-  function getCompatibilityDate(scriptText) {
-    const fallback = new Date().toISOString().slice(0, 10);
-    const text = String(scriptText || "");
-    const match = text.match(/^\s*const\s+COMPATIBILITY_DATE\s*=\s*["'](\d{4}-\d{2}-\d{2})["']\s*;/m);
-    return match?.[1] || fallback;
-  }
-
-  async function deployToCloudflare(agent) {
-    const token = getCloudflareToken();
-    const accountId = getCloudflareAccountId();
-
-    if (!token || !accountId) {
-      throw new Error("Cloudflare token and account ID are required for deploy.");
-    }
-
-    if (!agent?.flow?.drawflow) {
-      throw new Error("Agent has no flow snapshot to deploy.");
-    }
-
-    const workerName = sanitizeWorkerName(agent.name || agent.id);
-    const script = generateWorkerScript(agent);
-    const deployUrl = `https://api.cloudflare.com/client/v4/accounts/${encodeURIComponent(accountId)}/workers/scripts/${encodeURIComponent(workerName)}`;
-    const compatibilityDate = getCompatibilityDate(script);
-    const moduleFilename = "index.js";
-    const cloudflareConfig = getCloudflareDeployConfig();
-    const d1DatabaseId = String(cloudflareConfig.d1DatabaseId || "").trim();
-    const d1DatabaseName = String(cloudflareConfig.d1DatabaseName || "").trim();
-    const d1Binding = normalizeCloudflareD1BindingName(cloudflareConfig.d1Binding || "DB");
-    const d1Bindings = d1DatabaseId
-      ? [
-          {
-            type: "d1",
-            name: d1Binding,
-            id: d1DatabaseId,
-          },
-        ]
-      : [];
-    const doBinding = normalizeCloudflareDoBindingName(cloudflareConfig.doBinding || "AGENT_DO");
-    const doClassName = normalizeCloudflareDoClassName(cloudflareConfig.doClassName || "AgentDurableObject");
-    const doScriptName = String(cloudflareConfig.doScriptName || "").trim();
-    const doEnvironment = String(cloudflareConfig.doEnvironment || "").trim();
-    const doBindings = doScriptName
-      ? [
-          {
-            type: "durable_object_namespace",
-            name: doBinding,
-            class_name: doClassName,
-            script_name: doScriptName,
-            ...(doEnvironment ? { environment: doEnvironment } : {}),
-          },
-        ]
-      : [];
-    const metadataBindings = [...d1Bindings, ...doBindings];
-    const moduleMetadata = {
-      main_module: moduleFilename,
-      compatibility_date: compatibilityDate,
-      ...(metadataBindings.length ? { bindings: metadataBindings } : {}),
-    };
-    const serviceWorkerMetadata = {
-      body_part: "script",
-      compatibility_date: compatibilityDate,
-      ...(metadataBindings.length ? { bindings: metadataBindings } : {}),
-    };
-    const attempts = [
-      {
-        id: "module_multipart",
-        run: () =>
-          cloudflareApiRequest(deployUrl, token, {
-            method: "PUT",
-            body: (() => {
-              const body = new FormData();
-              body.append(
-                "metadata",
-                new Blob(
-                  [
-                    JSON.stringify(moduleMetadata),
-                  ],
-                  { type: "application/json" },
-                ),
-              );
-              body.append(moduleFilename, new Blob([script], { type: "application/javascript+module" }), moduleFilename);
-              return body;
-            })(),
-          }),
-      },
-      {
-        id: "service_worker_multipart",
-        run: () =>
-          cloudflareApiRequest(deployUrl, token, {
-            method: "PUT",
-            body: (() => {
-              const body = new FormData();
-              body.append(
-                "metadata",
-                new Blob(
-                  [
-                    JSON.stringify(serviceWorkerMetadata),
-                  ],
-                  { type: "application/json" },
-                ),
-              );
-              body.append("script", new Blob([script], { type: "application/javascript" }), "script.js");
-              return body;
-            })(),
-          }),
-      },
-    ];
-
-    if (!metadataBindings.length) {
-      attempts.push(
-        {
-          id: "module_content_type",
-          run: () =>
-            cloudflareApiRequest(deployUrl, token, {
-              method: "PUT",
-              headers: {
-                "Content-Type": "application/javascript+module",
-              },
-              body: script,
-            }),
-        },
-        {
-          id: "plain_javascript",
-          run: () =>
-            cloudflareApiRequest(deployUrl, token, {
-              method: "PUT",
-              headers: {
-                "Content-Type": "application/javascript",
-              },
-              body: script,
-            }),
-        },
-      );
-    }
-
-    let uploadSucceeded = false;
-    let lastError = null;
-    for (const attempt of attempts) {
-      const { response, data } = await attempt.run();
-      if (response.ok && (data?.success === true || data === null)) {
-        uploadSucceeded = true;
-        break;
-      }
-      const message = extractCloudflareErrorMessage(data, response.status);
-      lastError = new Error(message);
-      if (response.status === 401 || response.status === 403 || response.status === 404 || response.status === 429) {
-        throw lastError;
-      }
-    }
-    if (!uploadSucceeded) {
-      throw lastError || new Error("Cloudflare deploy failed.");
-    }
-
-    let workerUrl = "";
-    try {
-      const { response: subRes, data: subData } = await cloudflareApiRequest(
-        `https://api.cloudflare.com/client/v4/accounts/${encodeURIComponent(accountId)}/workers/subdomain`,
-        token,
-        { method: "GET" },
-      );
-      if (subRes.ok && subData?.success && subData?.result?.subdomain) {
-        workerUrl = `https://${workerName}.${subData.result.subdomain}.workers.dev`;
-      }
-    } catch {
-      // Keep dashboard fallback.
-    }
-
-    const dashboardUrl = `https://dash.cloudflare.com/?to=/:account/workers/services/view/${encodeURIComponent(workerName)}/production`;
-    const url = workerUrl || dashboardUrl;
-
-    const record = {
-      id: randomId("cf"),
-      agentId: agent.id,
-      name: agent.name || workerName,
-      target: "cloudflare_workers",
-      status: "deployed",
-      updatedAt: nowIso(),
-      url,
-      workerName,
-      accountId,
-      d1Binding: d1Bindings.length ? d1Binding : "",
-      d1DatabaseId: d1Bindings.length ? d1DatabaseId : "",
-      d1DatabaseName: d1Bindings.length ? d1DatabaseName : "",
-      doBinding: doBindings.length ? doBinding : "",
-      doClassName: doBindings.length ? doClassName : "",
-      doScriptName: doBindings.length ? doScriptName : "",
-      doEnvironment: doBindings.length ? doEnvironment : "",
-      source: "chat_agents_static",
-    };
-
-    state.deployments.unshift(record);
-    state.deployments = sortByNewest(state.deployments);
-    persistDeployments();
-    return record;
   }
 
   function parseChatCompletionsContent(data) {
@@ -1349,7 +1018,6 @@
       ["Latest Release", release ? `${release.status} @ ${formatDate(release.updatedAt)}` : "(none)"],
       ["Local Threads", String(state.threads.length)],
       ["BYOK Configured", getLlmConfig().apiKey ? "yes" : "no"],
-      ["Cloudflare Connected", getCloudflareToken() && getCloudflareAccountId() ? "yes" : "no"],
     ];
 
     renderDetailsRows(rows);
@@ -1617,16 +1285,10 @@
     state.releases = sortByNewest(state.releases);
     persistReleases();
 
-    let deployment = null;
-    if (getCloudflareToken() && getCloudflareAccountId()) {
-      deployment = await deployToCloudflare(agent);
-    }
-
     setStatus({
       status: "finalized",
       eval: evalRecord,
       release: releaseRecord,
-      deployment: deployment || "skipped (no Cloudflare connection)",
     });
 
     await refreshData({ preserveStatus: true });

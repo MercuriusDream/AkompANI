@@ -80,6 +80,17 @@
     const template = document.createElement("template");
     template.innerHTML = String(html || "");
     const decodeContainer = document.createElement("textarea");
+    const urlAttributes = new Set([
+      "href",
+      "src",
+      "action",
+      "xlink:href",
+      "formaction",
+      "poster",
+      "background",
+      "cite",
+      "longdesc",
+    ]);
 
     const decodeEntities = (value) => {
       decodeContainer.innerHTML = String(value || "");
@@ -88,7 +99,33 @@
 
     const hasDangerousProtocol = (value) => {
       const normalized = decodeEntities(value).replace(/[\u0000-\u001F\u007F\s]+/g, "").toLowerCase();
-      return normalized.startsWith("javascript:") || normalized.startsWith("data:");
+      return (
+        normalized.startsWith("javascript:") ||
+        normalized.startsWith("data:") ||
+        normalized.startsWith("vbscript:") ||
+        normalized.startsWith("file:")
+      );
+    };
+
+    const hasDangerousSrcset = (value) => {
+      const decoded = decodeEntities(value);
+      return decoded
+        .split(",")
+        .map((entry) => entry.trim().split(/\s+/)[0] || "")
+        .some((candidate) => hasDangerousProtocol(candidate));
+    };
+
+    const enforceNoopener = (el) => {
+      if (String(el.getAttribute("target") || "").toLowerCase() !== "_blank") return;
+      const relTokens = new Set(
+        String(el.getAttribute("rel") || "")
+          .split(/\s+/)
+          .map((token) => token.trim().toLowerCase())
+          .filter(Boolean),
+      );
+      relTokens.add("noopener");
+      relTokens.add("noreferrer");
+      el.setAttribute("rel", Array.from(relTokens).join(" "));
     };
 
     template.content
@@ -117,7 +154,12 @@
           continue;
         }
 
-        if (["href", "src", "action", "xlink:href", "formaction"].includes(lowered) && hasDangerousProtocol(attr.value)) {
+        if (lowered === "srcset" && hasDangerousSrcset(attr.value)) {
+          el.removeAttribute(attrName);
+          continue;
+        }
+
+        if (urlAttributes.has(lowered) && hasDangerousProtocol(attr.value)) {
           if (lowered === "href") {
             el.setAttribute("href", "#");
           } else {
@@ -126,9 +168,7 @@
         }
       }
 
-      if (el.getAttribute("target") === "_blank") {
-        el.setAttribute("rel", "noopener noreferrer");
-      }
+      enforceNoopener(el);
     }
 
     return template.innerHTML;

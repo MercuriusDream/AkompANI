@@ -27,14 +27,10 @@
 
   function renderIndicator() {
     const hasGithub = hasSessionToken("akompani_oauth_github_token");
-    const hasCf = hasSessionToken("akompani_oauth_cloudflare_token");
     const dots = [];
 
     if (hasGithub) {
       dots.push('<span class="connection-dot connected" title="GitHub connected" style="width:6px;height:6px"></span>');
-    }
-    if (hasCf) {
-      dots.push('<span class="connection-dot connected" title="Cloudflare connected" style="width:6px;height:6px"></span>');
     }
 
     const existing = document.getElementById(indicatorId);

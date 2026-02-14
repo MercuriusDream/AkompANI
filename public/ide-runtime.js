@@ -68,14 +68,14 @@
       label: "Cloudflare Workers (Elysia + Wrangler + Bun)",
       platform: "cloudflare",
       runtime: "elysia-bun",
-      canDirectDeploy: true,
+      canDirectDeploy: false,
     },
     {
       id: "vercel_elysia_bun",
       label: "Vercel (Elysia + Bun)",
       platform: "vercel",
       runtime: "elysia-bun",
-      canDirectDeploy: true,
+      canDirectDeploy: false,
     },
     {
       id: "local_elysia_bun",
@@ -89,7 +89,7 @@
       label: "Cloudflare Workers (Module Fallback)",
       platform: "cloudflare",
       runtime: "worker-module",
-      canDirectDeploy: true,
+      canDirectDeploy: false,
     },
   ];
 
@@ -3684,54 +3684,143 @@ export default {
       "",
       "Generated from Agent Builder IDE.",
       "",
+    ];
+
+    // Prerequisites
+    const isCf = options.target === "cloudflare_workers_elysia_bun" || options.target === "cloudflare_workers";
+    const isVercel = options.target === "vercel_elysia_bun";
+    const isLocal = options.target === "local_elysia_bun";
+    lines.push(
+      "## Prerequisites",
+      "",
+      "- [Bun](https://bun.sh) runtime installed",
+    );
+    if (isCf) lines.push("- [Wrangler CLI](https://developers.cloudflare.com/workers/wrangler/) (`bun add -g wrangler`)");
+    if (isVercel) lines.push("- [Vercel CLI](https://vercel.com/docs/cli) (`npm i -g vercel`)");
+    lines.push("");
+
+    // What's in this package
+    lines.push(
+      "## What's in this package",
+      "",
+      "| File | Purpose |",
+      "| --- | --- |",
+      "| `src/index.ts` | Main server entry point (Elysia) |",
+      "| `package.json` | Dependencies & scripts |",
+      "| `tsconfig.json` | TypeScript configuration |",
+      "| `.env` | Pre-filled LLM config (local dev) |",
+    );
+    if (isCf) lines.push("| `wrangler.toml` | Cloudflare Workers config |");
+    if (isVercel) lines.push("| `vercel.json` | Vercel project config |");
+    lines.push("| `README.md` | This file |", "");
+
+    // Runtime
+    lines.push(
       "## Runtime",
       "",
       "- Elysia + Bun",
       ...endpointLines,
       "",
+    );
+
+    // Required env vars
+    lines.push(
       "## Required env vars",
       "",
-      "- LLM_ENDPOINT",
-      "- LLM_MODEL",
-      "- LLM_API_KEY",
+      "- `LLM_ENDPOINT`",
+      "- `LLM_MODEL`",
+      "- `LLM_API_KEY`",
       "",
       "## Optional auth env vars",
       "",
-      "- WORKER_AUTH_TOKEN (protect agent invoke endpoints)",
-      "- FLOW_DEBUG_TOKEN (protect /flow endpoint)",
-      "- CF_ZERO_TRUST_MODE (off | access_jwt | service_token)",
-      "- CF_ACCESS_AUD (required when CF_ZERO_TRUST_MODE=access_jwt)",
-      "- CF_ACCESS_SERVICE_TOKEN_ID (required when CF_ZERO_TRUST_MODE=service_token)",
-      "- CF_ACCESS_SERVICE_TOKEN_SECRET (configure via wrangler secret for service_token mode)",
-      "- CF_D1_BINDING (optional, default DB)",
-      "- CF_D1_DATABASE_ID (optional metadata hint)",
-      "- CF_D1_DATABASE_NAME (optional metadata hint)",
-      "- CF_DO_BINDING (optional, default AGENT_DO)",
-      "- CF_DO_CLASS_NAME (optional, default AgentDurableObject)",
-      "- CF_DO_SCRIPT_NAME (optional external DO worker)",
-      "- CF_DO_ENVIRONMENT (optional external DO environment)",
+      "- `WORKER_AUTH_TOKEN` — protect agent invoke endpoints",
+      "- `FLOW_DEBUG_TOKEN` — protect /flow endpoint",
+      "- `CF_ZERO_TRUST_MODE` — off | access_jwt | service_token",
+      "- `CF_ACCESS_AUD` — required when CF_ZERO_TRUST_MODE=access_jwt",
+      "- `CF_ACCESS_SERVICE_TOKEN_ID` — required when CF_ZERO_TRUST_MODE=service_token",
+      "- `CF_ACCESS_SERVICE_TOKEN_SECRET` — configure via wrangler secret",
       "",
-    ];
+    );
 
-    if (options.target === "cloudflare_workers_elysia_bun") {
-      lines.push("## Deploy (Cloudflare)", "", "```bash", "bun install", "bun run deploy", "```");
-    } else if (options.target === "vercel_elysia_bun") {
-      lines.push("## Deploy (Vercel)", "", "```bash", "bun install", "bun run deploy", "```");
-    } else if (options.target === "local_elysia_bun") {
-      lines.push("## Run local", "", "```bash", "bun install", "bun run dev", "```");
+    // Deploy steps
+    if (isCf) {
+      lines.push(
+        "## Deploy (Cloudflare Workers)",
+        "",
+        "```bash",
+        "# 1. Install dependencies",
+        "bun install",
+        "",
+        "# 2. Log into Cloudflare (select your account)",
+        "npx wrangler login",
+        "",
+        "# 3. Set your API key as a secret (paste when prompted)",
+        "npx wrangler secret put LLM_API_KEY",
+        "",
+        "# 4. Deploy",
+        "bun run deploy",
+        "```",
+        "",
+        "The `.env` file is pre-filled with your LLM config for local testing.",
+        "For production, set secrets via `wrangler secret put <KEY>`.",
+        "",
+      );
+    } else if (isVercel) {
+      lines.push(
+        "## Deploy (Vercel)",
+        "",
+        "```bash",
+        "# 1. Install dependencies",
+        "bun install",
+        "",
+        "# 2. Log into Vercel (link your account)",
+        "npx vercel login",
+        "",
+        "# 3. Set your API key as env var (paste when prompted)",
+        "npx vercel env add LLM_API_KEY",
+        "",
+        "# 4. Deploy",
+        "bun run deploy",
+        "```",
+        "",
+        "The `.env` file is pre-filled with your LLM config for local testing.",
+        "For production, set env vars via the Vercel dashboard or CLI.",
+        "",
+      );
+    } else if (isLocal) {
+      lines.push(
+        "## Run Locally",
+        "",
+        "```bash",
+        "# 1. Install dependencies",
+        "bun install",
+        "",
+        "# 2. Review .env (pre-filled with your IDE config)",
+        "cat .env",
+        "",
+        "# 3. Start dev server",
+        "bun run dev",
+        "```",
+        "",
+      );
     } else {
-      lines.push("## Deploy", "", "```bash", "bun install", "bun run deploy", "```");
+      lines.push(
+        "## Deploy",
+        "",
+        "```bash",
+        "bun install",
+        "bun run deploy",
+        "```",
+        "",
+      );
     }
 
     lines.push(
-      "",
       "## Notes",
       "",
-      "This object is generated in-browser and can be pushed to GitHub from the Deploy view.",
-      "OpenAI-style clients (including ChatKit-style frontends) can target /v1/chat/completions directly.",
-      "Configure secrets and auth tokens in your platform dashboard (Cloudflare/Vercel/GitHub), not in the IDE.",
-      "For service-token mode, set secret via: wrangler secret put CF_ACCESS_SERVICE_TOKEN_SECRET",
-      "Durable Object bindings are emitted when CF_DO_SCRIPT_NAME is set (external namespace binding).",
+      "- This deploy package is generated in-browser and can be pushed to GitHub from the Deploy view.",
+      "- OpenAI-style clients can target `/v1/chat/completions` directly.",
+      "- For service-token mode: `wrangler secret put CF_ACCESS_SERVICE_TOKEN_SECRET`",
       "",
     );
     return lines.join("\n");
@@ -3854,27 +3943,37 @@ export default {
     const rootDir = `${slugify(agentName, "akompani-runtime")}-${targetDef.id}-${formatDateForSlug(new Date())}`;
     const files = [];
 
+    const envContent = [
+      `LLM_ENDPOINT=${String(providerConfig?.endpoint || "").trim()}`,
+      `LLM_MODEL=${String(providerConfig?.model || "").trim()}`,
+      `LLM_API_KEY=${String(providerConfig?.apiKey || "").trim()}`,
+      `PORT=8787`,
+    ].join("\n") + "\n";
+
     if (targetDef.id === "cloudflare_workers_elysia_bun") {
       files.push({ path: "src/index.ts", content: buildCloudflareElysiaSource({ agentName, description, drawflow, providerConfig, endpointMode, cloudflareConfig }) });
       files.push({ path: "wrangler.toml", content: buildCloudflareWranglerToml(agentName, cloudflareConfig, r2Config) });
       files.push({ path: "package.json", content: buildPackageJson(agentName, targetDef.id) });
       files.push({ path: "tsconfig.json", content: buildTsconfig(targetDef.id) });
+      files.push({ path: ".env", content: envContent });
       files.push({ path: "README.md", content: buildReadme({ target: targetDef.id, targetLabel: targetDef.label, agentName, endpointMode }) });
     } else if (targetDef.id === "vercel_elysia_bun") {
       files.push({ path: "api/index.ts", content: buildVercelElysiaSource({ agentName, description, drawflow, providerConfig, endpointMode, cloudflareConfig: nonCloudflareConfig }) });
       files.push({ path: "vercel.json", content: buildVercelJson() });
       files.push({ path: "package.json", content: buildPackageJson(agentName, targetDef.id) });
       files.push({ path: "tsconfig.json", content: buildTsconfig(targetDef.id) });
+      files.push({ path: ".env", content: envContent });
       files.push({ path: "README.md", content: buildReadme({ target: targetDef.id, targetLabel: targetDef.label, agentName, endpointMode }) });
     } else if (targetDef.id === "local_elysia_bun") {
       files.push({ path: "src/index.ts", content: buildLocalElysiaSource({ agentName, description, drawflow, providerConfig, endpointMode, cloudflareConfig: nonCloudflareConfig }) });
       files.push({ path: "package.json", content: buildPackageJson(agentName, targetDef.id) });
       files.push({ path: "tsconfig.json", content: buildTsconfig(targetDef.id) });
-      files.push({ path: ".env.example", content: "LLM_ENDPOINT=\nLLM_MODEL=\nLLM_API_KEY=\nPORT=8787\n" });
+      files.push({ path: ".env", content: envContent });
       files.push({ path: "README.md", content: buildReadme({ target: targetDef.id, targetLabel: targetDef.label, agentName, endpointMode }) });
     } else {
       files.push({ path: "src/worker.js", content: buildCloudflareWorkerModule({ agentName, description, drawflow, providerConfig, endpointMode, cloudflareConfig }) });
       files.push({ path: "wrangler.toml", content: buildCloudflareWranglerToml(agentName, cloudflareConfig).replace('main = "src/index.ts"', 'main = "src/worker.js"') });
+      files.push({ path: ".env", content: envContent });
       files.push({ path: "README.md", content: buildReadme({ target: targetDef.id, targetLabel: targetDef.label, agentName, endpointMode }) });
     }
 

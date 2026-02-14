@@ -13,8 +13,6 @@
     localEvals: "akompani_local_evals",
     localReleases: "akompani_local_releases",
     oauthGithubToken: "akompani_oauth_github_token",
-    oauthCloudflareToken: "akompani_oauth_cloudflare_token",
-    cloudflareAccountId: "akompani_cf_account_id",
     llmEndpoint: "akompani_llm_endpoint",
     llmModel: "akompani_llm_model",
     llmApiKeySession: "akompani_llm_api_key",
@@ -45,18 +43,6 @@
       badgeClass: "badge-warning",
     },
     {
-      id: "deploy_cf_elysia",
-      title: "Deploy to Cloudflare",
-      description: "Direct browser deploy to Cloudflare Workers (session token required).",
-      payloadTemplate: {
-        workerName: "",
-        accountId: "",
-        target: "cloudflare_workers",
-      },
-      badge: "Deploy",
-      badgeClass: "badge-info",
-    },
-    {
       id: "push_github_worker",
       title: "Push Worker to GitHub",
       description: "Push generated worker files to a repository with GitHub token.",
@@ -74,7 +60,6 @@
       description: "Create local release gate (eval + release artifact + optional deploy).",
       payloadTemplate: {
         requirePassRate: 100,
-        autoDeployCloudflare: false,
         notes: "finalized from static ops console",
       },
       badge: "Release",
@@ -145,14 +130,6 @@
 
   function getGithubToken() {
     return readSession(STORAGE.oauthGithubToken);
-  }
-
-  function getCloudflareToken() {
-    return readSession(STORAGE.oauthCloudflareToken);
-  }
-
-  function getCloudflareAccountId(payloadAccountId = "") {
-    return String(payloadAccountId || "").trim() || readLocal(STORAGE.cloudflareAccountId);
   }
 
   function getIdeRuntime() {
@@ -373,226 +350,11 @@
     return text || fallback;
   }
 
-  function extractCloudflareErrorMessage(data, status) {
-    if (data && typeof data === "object") {
-      if (Array.isArray(data.errors) && data.errors.length) {
-        const lines = data.errors
-          .map((item) => {
-            if (!item) return "";
-            const code = item.code ? `[${item.code}] ` : "";
-            const message = String(item.message || "").trim();
-            return `${code}${message}`.trim();
-          })
-          .filter(Boolean);
-        if (lines.length) return lines.join("; ");
-      }
-      const topLevel = String(data.message || "").trim() || String(data.error || "").trim();
-      if (topLevel) return topLevel;
-    }
-    return `Cloudflare API request failed (${status})`;
-  }
-
-  async function withRequestTimeout(requestFactory, timeoutMs = 30000) {
-    const controller = new AbortController();
-    const timer = setTimeout(() => controller.abort(), timeoutMs);
-    try {
-      return await requestFactory(controller.signal);
-    } catch (error) {
-      if (error && error.name === "AbortError") {
-        throw new Error("Request timed out.");
-      }
-      throw error;
-    } finally {
-      clearTimeout(timer);
-    }
-  }
-
-  async function cloudflareApiRequest(url, token, options = {}) {
-    const init = options && typeof options === "object" ? options : {};
-    const response = await withRequestTimeout((signal) =>
-      fetch(url, {
-        ...init,
-        headers: {
-          Authorization: `Bearer ${token}`,
-          ...(init.headers || {}),
-        },
-        signal,
-      }),
-    );
-
-    const raw = await response.text().catch(() => "");
-    let data = null;
-    if (raw) {
-      try {
-        data = JSON.parse(raw);
-      } catch {
-        data = { error: raw };
-      }
-    }
-    return { response, data };
-  }
-
-  async function uploadCloudflareWorkerScript({ deployUrl, token, script }) {
-    const compatibilityDate = new Date().toISOString().slice(0, 10);
-    const moduleFilename = "index.js";
-    const attempts = [
-      {
-        id: "module_multipart",
-        run: () =>
-          cloudflareApiRequest(deployUrl, token, {
-            method: "PUT",
-            body: (() => {
-              const body = new FormData();
-              body.append(
-                "metadata",
-                new Blob(
-                  [
-                    JSON.stringify({
-                      main_module: moduleFilename,
-                      compatibility_date: compatibilityDate,
-                    }),
-                  ],
-                  { type: "application/json" },
-                ),
-              );
-              body.append(moduleFilename, new Blob([script], { type: "application/javascript+module" }), moduleFilename);
-              return body;
-            })(),
-          }),
-      },
-      {
-        id: "module_content_type",
-        run: () =>
-          cloudflareApiRequest(deployUrl, token, {
-            method: "PUT",
-            headers: {
-              "Content-Type": "application/javascript+module",
-            },
-            body: script,
-          }),
-      },
-      {
-        id: "plain_javascript",
-        run: () =>
-          cloudflareApiRequest(deployUrl, token, {
-            method: "PUT",
-            headers: {
-              "Content-Type": "application/javascript",
-            },
-            body: script,
-          }),
-      },
-    ];
-
-    let lastError = null;
-    for (const attempt of attempts) {
-      const { response, data } = await attempt.run();
-      if (response.ok && (data?.success === true || data === null)) {
-        return { strategy: attempt.id, data };
-      }
-      const message = extractCloudflareErrorMessage(data, response.status);
-      if (response.status === 401 || response.status === 403 || response.status === 404 || response.status === 429) {
-        throw new Error(message);
-      }
-      lastError = new Error(message);
-    }
-    throw lastError || new Error("Cloudflare deploy failed.");
-  }
-
   function generateWorkerScript(name, description, flow) {
     const safeName = JSON.stringify(name || "Akompani Agent");
     const safeDescription = String(description || "").replace(/\*\//g, "* /");
 
     return `// Generated by Akompani Ops Console (static mode)\n// Agent: ${String(name || "Unnamed").replace(/\n/g, " ")}\n// ${safeDescription}\n\nconst FLOW = ${JSON.stringify(flow?.drawflow || { drawflow: { Home: { data: {} } } }, null, 2)};\nconst AGENT_NAME = ${safeName};\n\nfunction json(data, status = 200) {\n  return new Response(JSON.stringify(data, null, 2), {\n    status,\n    headers: {\n      "content-type": "application/json; charset=utf-8",\n      "cache-control": "no-store",\n      "access-control-allow-origin": "*",\n      "access-control-allow-methods": "GET,POST,OPTIONS",\n      "access-control-allow-headers": "content-type,authorization,x-debug-token",\n    },\n  });\n}\n\nexport default {\n  async fetch(request, env) {\n    if (request.method === "OPTIONS") return json({ ok: true });\n    const url = new URL(request.url);\n\n    if (url.pathname === "/health") {\n      return json({\n        ok: true,\n        agent: AGENT_NAME,\n        nodeCount: Object.keys(FLOW?.drawflow?.Home?.data || {}).length,\n      });\n    }\n\n    if (url.pathname === "/flow") {\n      const expected = String(env.FLOW_DEBUG_TOKEN || env.DEBUG_FLOW_TOKEN || "").trim();\n      const got = String(request.headers.get("x-debug-token") || "").trim();\n      if (!expected || got !== expected) {\n        return json({ error: "Unauthorized." }, 401);\n      }\n      return json({ flow: FLOW });\n    }\n\n    if (request.method === "POST") {\n      let input = null;\n      try {\n        input = await request.json();\n      } catch {\n        // Keep null.\n      }\n      return json({\n        ok: true,\n        agent: AGENT_NAME,\n        received: input !== null,\n        note: "Attach your own runtime/LLM handler to execute FLOW.",\n      });\n    }\n\n    return json({\n      agent: AGENT_NAME,\n      status: "ready",\n      endpoints: ["/health", "/flow (debug-token)", "/ (POST)"],\n    });\n  },\n};\n`;
-  }
-
-  async function deployToCloudflare(agent, flow, payload) {
-    const token = getCloudflareToken();
-    if (!token) {
-      throw new Error("Cloudflare token not found in session. Connect in Deploy settings first.");
-    }
-
-    const accountId = getCloudflareAccountId(payload.accountId);
-    if (!accountId) {
-      throw new Error("Cloudflare account ID is required.");
-    }
-
-    const workerName = sanitizeWorkerName(payload.workerName || agent?.name || "akompani-agent");
-    const target = String(payload.target || "cloudflare_workers").trim() || "cloudflare_workers";
-    const script = generateWorkerScript(agent?.name || workerName, payload.description || agent?.description || "", flow);
-    if (!script.trim()) {
-      throw new Error("Generated worker script is empty.");
-    }
-    if (typeof FormData === "undefined" || typeof Blob === "undefined") {
-      throw new Error("Browser does not support required upload APIs (FormData/Blob).");
-    }
-    if (script.length > 2_500_000) {
-      throw new Error("Generated worker script is too large for direct browser deploy.");
-    }
-
-    const deployUrl = `https://api.cloudflare.com/client/v4/accounts/${encodeURIComponent(accountId)}/workers/scripts/${encodeURIComponent(workerName)}`;
-    let deployData = null;
-    let deployError = null;
-    for (let attempt = 0; attempt < 3; attempt += 1) {
-      try {
-        const uploaded = await uploadCloudflareWorkerScript({ deployUrl, token, script });
-        deployData = uploaded.data;
-        deployError = null;
-        break;
-      } catch (error) {
-        deployError = error;
-        const message = toErrorMessage(error).toLowerCase();
-        const isRetryable =
-          message.includes("timed out") ||
-          message.includes("network") ||
-          message.includes("(500)") ||
-          message.includes("(502)") ||
-          message.includes("(503)") ||
-          message.includes("(504)") ||
-          message.includes("(429)");
-        if (!isRetryable || attempt >= 2) break;
-        await delay(450 * (attempt + 1));
-      }
-    }
-    if (deployError) throw deployError;
-
-    let workerUrl = "";
-    try {
-      const { response: subdomainRes, data: subdomainData } = await cloudflareApiRequest(
-        `https://api.cloudflare.com/client/v4/accounts/${encodeURIComponent(accountId)}/workers/subdomain`,
-        token,
-        { method: "GET" },
-      );
-      if (subdomainRes.ok && subdomainData?.success && subdomainData?.result?.subdomain) {
-        workerUrl = `https://${workerName}.${subdomainData.result.subdomain}.workers.dev`;
-      }
-    } catch {
-      // Keep dashboard fallback.
-    }
-
-    const dashboardUrl = `https://dash.cloudflare.com/?to=/:account/workers/services/view/${encodeURIComponent(workerName)}/production`;
-    const finalUrl = workerUrl || dashboardUrl;
-
-    appendDeploymentRecord({
-      id: randomId("cf"),
-      agentId: agent?.id || "",
-      name: agent?.name || workerName,
-      target,
-      status: "generated",
-      updatedAt: nowIso(),
-      url: finalUrl,
-      workerName,
-      accountId,
-    });
-
-    return {
-      success: true,
-      workerName,
-      accountId,
-      target,
-      url: finalUrl,
-      cloudflare: deployData,
-    };
   }
 
   function toBase64Utf8(value) {
@@ -890,15 +652,9 @@
     };
     appendReleaseRecord(release);
 
-    let deployment = null;
-    if (payload.autoDeployCloudflare) {
-      deployment = await deployToCloudflare(agent, flow, payload);
-    }
-
     return {
       status: "finalized",
       release,
-      deployment,
     };
   }
 
@@ -984,11 +740,6 @@
         response = await runAgentPrompt(agent, flow, patched);
       } else if (promptId === "agent_eval_quick") {
         response = await runEvalPrompt(agent, flow, patched);
-      } else if (promptId === "deploy_cf_elysia") {
-        if (!agent && !flow) {
-          throw new Error("Select an agent or flow first.");
-        }
-        response = await deployToCloudflare(agent, flow, patched);
       } else if (promptId === "push_github_worker") {
         if (!agent && !flow) {
           throw new Error("Select an agent or flow first.");
@@ -1122,7 +873,6 @@
         releases: readJsonArray(STORAGE.localReleases).length,
         integrations: {
           githubConnected: Boolean(getGithubToken()),
-          cloudflareConnected: Boolean(getCloudflareToken()),
           llmConfigured: Boolean(getLlmConfig().endpoint && getLlmConfig().model && getLlmConfig().apiKey),
         },
       });
